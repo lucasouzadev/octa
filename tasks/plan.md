@@ -94,8 +94,8 @@ Turn the flat list into the real Library: collections as cards, a black Collecti
 ### Checkpoint 2c: PASS; physical check on iPhone Safari (version support noted).
 
 ### Phase 2d — 3D thumbs (enhancement)
-- [ ] T11 `capability.ts` (+ unit tests for each gate: no WebGL, reduced motion, Save-Data, low-end).
-- [ ] T12 `FanStack`/`PaperStack` CSS-3D renderers first (the floor): fan tilt 16°, stack rotateX 14° (DESIGN §6). e2e screenshots at 3 viewports, read before claiming done.
+- [x] T11 `capability.ts` (+ unit tests for each gate: no WebGL, reduced motion, Save-Data, low-end).
+- [x] T12 `FanStack`/`PaperStack` CSS-3D renderers first (the floor): fan tilt 16°, stack rotateX 14° (DESIGN §6). e2e screenshots at 3 viewports, read before claiming done.
 - [ ] T13 Threlte renderers behind the same props, lazy chunk loaded on idle; spring tilt (stiffness ~0.15, damping ~0.8); dispose textures/geometry on destroy (no leak on navigation).
 - [ ] T14 Measure: main JS gzip (today ~40 KB) must not grow; 3D chunk size reported; scroll/drag frame time on a mid phone. Optimize only from numbers.
 ### Checkpoint 2d: PASS + physical iPhone/iPad/desktop list.

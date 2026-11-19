@@ -5,6 +5,7 @@
 	import { ALL, videosIn } from '#lib/db/scope.ts';
 	import { markSource } from '#lib/transition.ts';
 	import Icon from '#lib/ui/Icon.svelte';
+	import PaperStack from '#lib/ui/PaperStack.svelte';
 	import Sheet from '#lib/ui/Sheet.svelte';
 
 	const scope = $derived(page.params.id ?? ALL);
@@ -123,6 +124,7 @@
 		<section class="state" aria-busy="true" aria-label="Carregando"></section>
 	{:else}
 		<section class="head">
+			{#if videos.length > 0}<PaperStack items={videos} />{/if}
 			<h1>{title}</h1>
 			<p class="count">{count}</p>
 

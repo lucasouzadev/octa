@@ -3,6 +3,7 @@
 	import { ALL } from '#lib/db/scope.ts';
 	import { searchVideos } from '#lib/search.ts';
 	import { markSource } from '#lib/transition.ts';
+	import FanStack from '#lib/ui/FanStack.svelte';
 	import Icon from '#lib/ui/Icon.svelte';
 
 	let videos = $state<Video[] | null>(null);
@@ -158,21 +159,7 @@
 			{#each cards as c (c.key)}
 				<li>
 					<a class="card" href={c.href} data-collection={c.key}>
-						<div class="thumbs">
-							{#each [0, 1, 2] as i (i)}
-								<span>
-									{#if c.items[i]?.thumbnail}
-										<img
-											src={c.items[i].thumbnail}
-											alt=""
-											loading="lazy"
-											referrerpolicy="no-referrer"
-											onerror={(e) => ((e.currentTarget as HTMLElement).style.display = 'none')}
-										/>
-									{/if}
-								</span>
-							{/each}
-						</div>
+						<FanStack items={c.items} />
 						<h2 class="title">{c.name}</h2>
 						<p class="count">{count(c.items.length)}</p>
 					</a>
@@ -413,13 +400,6 @@
 		border-radius: var(--radius-thumb);
 		overflow: hidden;
 		background: #dcdcdc;
-	}
-
-	.thumbs img {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		display: block;
 	}
 
 	.title {
