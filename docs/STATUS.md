@@ -6,7 +6,7 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 |---|---|---|
 | 0 | Docs, agent-kit, ADRs, design system | DONE 2026-11-19 |
 | 1 | Paste → resolve → card → player (YouTube long/Shorts, direct .mp4); `/v1/resolve`; URL parser + shared vectors; minimal library list | DONE 2026-11-19 — merged (PR #1, #3); API live on Render, PWA on Vercel; owner confirmed on iPhone |
-| 2 | Library + collections, Threlte fan/stack + CSS fallback, search, View Transitions (plan: `tasks/plan.md`) | 2a collections (2D) DONE (PR #6 merged, owner tested 2026-11-19); 2b search DONE (PR #7 merged, owner approved); 2c View Transitions DONE (PR #8 merged, owner tested); 2d-i CSS-3D fan and stack DONE (PR #9 merged, owner approved on iPhone); iOS findings fix DONE (PR #10 merged); 2d-ii WebGL fan DONE (PR #11 merged, owner approved); 2e-1 Library cards per the prototype IN REVIEW — branch `feat/slice-2e-library-cards`; 2e-2 Collection paper cards and 2e-3 their WebGL NOT STARTED |
+| 2 | Library + collections, Threlte fan/stack + CSS fallback, search, View Transitions (plan: `tasks/plan.md`) | 2a collections (2D) DONE (PR #6 merged, owner tested 2026-11-19); 2b search DONE (PR #7 merged, owner approved); 2c View Transitions DONE (PR #8 merged, owner tested); 2d-i CSS-3D fan and stack DONE (PR #9 merged, owner approved on iPhone); iOS findings fix DONE (PR #10 merged); 2d-ii WebGL fan DONE (PR #11 merged, owner approved); 2e-1 Library cards per the prototype DONE (PR #12 merged, owner approved); 2e-2 Collection screen as tilted 3D screens IN REVIEW — branch `feat/slice-2e2-collection-screens`; 2e-3 WebGL for those screens NOT STARTED |
 | 3 | Instagram, TikTok, HLS; `/v1/health`; health states; Dead link screen; resume | — |
 | 4 | PWA install, share target, export/import, offline shell, E2E 3 viewports, deploy (owner picks host) | — |
 
@@ -66,6 +66,13 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 - Also: the enrich e2e flaked once in a full run (waited on a time, not on the signal); it now waits for the resolve response and retries the read.
 - Differences from the prototype, on purpose or not yet: the prototype shows no "Todos" card (its three collections sum to 52 videos) while SPEC §4 says "Todos" always exists, so "Todos" stays first; shadows are soft, the prototype's are hard-edged parallelograms; the prototype's thumbnails are flat colors, ours are real covers; direct videos say "MP4" even when they are .webm/HLS (slice 3 refines).
 - NOT RUN: real iPhone/iPad look and GPU; CI.
+
+## Slice 2e-2 — evidence (2026-11-19)
+- Owner: "esses elementos são em 3D. São como monitores." The Collection screen is now a pile of tilted screens (prototype page 3): cream bezel with thickness (three edge tones + cast shadow), 16:9 screen with play button, "SOURCE · length", status (ATIVO / FORA DO AR / RESTRITO, nothing for a link never checked), serif title (2 lines), later screens in front, header "N vídeos · K fora do ar", title centered. The old paper stack above the list is gone: the screens are the 3D elements.
+- Pose and content come from `lib/shelf.ts` (`formatDuration`, `statusOf`, `shelfSummary`, `screenTilt`), 11 unit tests written first and seen red (module missing). CSS-3D renderer `ui/ScreenCard.svelte`; each row has its own perspective so every screen is foreshortened alike. Editing lays them flat and apart so Mover stays easy to hit; hover lifts a screen only with a pointer and without reduced motion.
+- Web: `pnpm test` 157 PASS (146 before), `pnpm check` 0/0, `pnpm build` PASS, `pnpm test:e2e` all PASS at 3 viewports (stacks e2e rewritten: poses, thickness, play, source/status, overlap and z-order, dead link, editing flat, reduced motion, hover, empty). Screenshots read at 390 and 1440. Main JS gzip 57.2 → 57.7 KB; 3D chunk unchanged (~194.6 KB).
+- Changed on purpose: the author no longer prints on a screen (the prototype shows only source and length); the enrich e2e now checks the recovered cover instead of the author. PaperStack.svelte removed.
+- NOT RUN: real iPhone/iPad look; WebGL for these screens (2e-3); CI.
 
 ## Known gaps carried to slice 2+
 - Rate limit on Render: `CLIENT_IP_HEADER` unset = ONE shared bucket for all users (30/min, burst 10; proven by a 40-request burst: 10x422 + 30x429). `CF-Connecting-IP` looks per-client (forging it gives 403 at the edge; a burst got no 429) but is NOT PROVEN from a single egress IP. Prove from a phone on 4G, then set it.

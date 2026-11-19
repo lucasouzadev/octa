@@ -58,28 +58,114 @@ test('the Library header summarises collections and videos', async ({ page }) =>
 	await expect(page.locator('header .heading p')).toHaveText('1 coleção · 2 vídeos');
 });
 
-test('the Collection screen shows a tipped paper stack', async ({ page }, testInfo) => {
+test('Collection screen shows tilted 3D screens: bezel, play, source, status, serif title', async ({ page }, testInfo) => {
 	await seed(page);
 	await page.goto('/c/todos');
-	const stack = page.locator('.stack');
-	await expect(stack.locator('.paper')).toHaveCount(2);
-	expect(await stack.evaluate((el) => getComputedStyle(el).perspective)).not.toBe('none');
+	const list = page.locator('ul.videos');
+	const screens = list.locator('.screen');
+	await expect(screens).toHaveCount(2);
+	expect(await list.locator('li').first().evaluate((el) => getComputedStyle(el).perspective)).not.toBe('none');
+	// Each screen is posed in 3D, has thickness (stacked edge shadows) and a play button.
+	for (const i of [0, 1]) {
+		const screen = screens.nth(i);
+		expect(await screen.evaluate((el) => getComputedStyle(el).transform)).not.toBe('none');
+		const shadow = await screen.evaluate((el) => getComputedStyle(el).boxShadow);
+		expect((shadow.match(/rgb/g) ?? []).length).toBeGreaterThanOrEqual(4);
+		await expect(screen.locator('.play')).toBeVisible();
+	}
+	// Newest first: Shorts, then YouTube. Known links say ATIVO.
+	await expect(screens.locator('.src')).toHaveText(['Shorts', 'YouTube']);
+	await expect(screens.locator('.status')).toHaveText(['Ativo', 'Ativo']);
+	expect(await screens.locator('.src').first().evaluate((el) => getComputedStyle(el).textTransform)).toBe('uppercase');
+	expect(await screens.locator('.name').first().evaluate((el) => getComputedStyle(el).fontFamily)).toContain('Newsreader');
+	await expect(page.locator('.count')).toHaveText('2 vídeos');
+	// They overlap like a pile, and the lower one is in front.
+	const first = (await screens.nth(0).boundingBox())!;
+	const second = (await screens.nth(1).boundingBox())!;
+	expect(second.y).toBeLessThan(first.y + first.height);
+	const zs = await screens.evaluateAll((els) => els.map((el) => Number(getComputedStyle(el.closest('li')!).zIndex)));
+	expect(zs[1]).toBeGreaterThan(zs[0]);
+	// The old paper stack on top is gone: the screens are the 3D elements.
+	await expect(page.locator('.stack')).toHaveCount(0);
 	await page.waitForLoadState('networkidle');
-	const dir = `test-results/slice2d/${testInfo.project.name}`;
+	const dir = `test-results/slice2e2/${testInfo.project.name}`;
 	await page.screenshot({ path: `${dir}-collection.png`, fullPage: true });
-	await page.goto('/');
-	await expect(page.locator('.fan img').first()).toBeVisible();
-	await page.waitForLoadState('networkidle');
-	await page.screenshot({ path: `${dir}-library.png`, fullPage: true });
 });
 
-test('an empty collection has no stack', async ({ page }) => {
+test('a link known to be dead says FORA DO AR and the header counts it', async ({ page }) => {
+	await seed(page);
+	await page.route('**/api/v1/resolve', async (route) => {
+		const { url } = route.request().postDataJSON() as { url: string };
+		const short = url.includes('/shorts/');
+		await route.fulfill({
+			json: {
+				source: 'youtube',
+				kind: short ? 'short' : 'video',
+				id: 'zZzZzZzZzZz',
+				canonicalUrl: 'https://www.youtube.com/watch?v=zZzZzZzZzZz',
+				embed: { type: 'iframe', src: 'https://www.youtube-nocookie.com/embed/zZzZzZzZzZz', aspect: '16:9' },
+				title: 'Link caído',
+				durationSec: 3723,
+				health: 'dead',
+				checkedAt: '2026-11-19T12:00:00Z'
+			}
+		});
+	});
+	await paste(page, 'https://youtu.be/zZzZzZzZzZz');
+	await expect(page).toHaveURL(/\/v\//);
+	await page.goto('/c/todos');
+	await expect(page.locator('.screen .status.dead')).toHaveText('Fora do ar');
+	await expect(page.locator('.screen .status.dead')).toHaveCount(1);
+	await expect(page.locator('.count')).toHaveText('3 vídeos · 1 fora do ar');
+	// The length is printed next to the source.
+	await expect(page.locator('.screen .meta').first()).toContainText('1:02:03');
+});
+
+test('editing flattens the pile so Mover is easy to hit, and Concluído puts it back', async ({ page }) => {
+	await seed(page);
+	await page.goto('/c/todos');
+	const screen = page.locator('.screen').first();
+	await page.getByRole('button', { name: 'Editar' }).click();
+	// The pose eases out over a few hundred ms, so wait for the end of it.
+	await expect.poll(() => screen.evaluate((el) => getComputedStyle(el).transform)).toBe('none');
+	await expect(page.getByRole('button', { name: /^Mover/ })).toHaveCount(2);
+	const a = (await page.locator('.screen').nth(0).boundingBox())!;
+	const b = (await page.locator('.screen').nth(1).boundingBox())!;
+	expect(b.y).toBeGreaterThanOrEqual(a.y + a.height - 1);
+	await page.getByRole('button', { name: 'Concluído' }).click();
+	await expect.poll(() => screen.evaluate((el) => getComputedStyle(el).transform)).not.toBe('none');
+});
+
+test('an empty collection has no screens', async ({ page }) => {
 	await mockNetwork(page);
 	await page.goto('/c/new');
 	await page.getByLabel('Nome da coleção').fill('Vazia');
 	await page.getByRole('button', { name: 'Criar coleção' }).click();
 	await expect(page.getByRole('heading', { name: 'Vazia' })).toBeVisible();
-	await expect(page.locator('.stack')).toHaveCount(0);
+	await expect(page.locator('.screen')).toHaveCount(0);
+});
+
+test('reduced motion: screens keep their pose but nothing animates', async ({ page }) => {
+	await page.emulateMedia({ reducedMotion: 'reduce' });
+	await seed(page);
+	await page.goto('/c/todos');
+	const screen = page.locator('.screen').first();
+	const seconds = await screen.evaluate((el) => parseFloat(getComputedStyle(el).transitionDuration));
+	expect(seconds).toBeLessThan(0.001);
+	const before = await screen.evaluate((el) => getComputedStyle(el).transform);
+	expect(before).not.toBe('none');
+	await screen.hover();
+	expect(await screen.evaluate((el) => getComputedStyle(el).transform)).toBe(before);
+});
+
+test('without reduced motion, hovering a screen lifts it toward the viewer', async ({ page }, testInfo) => {
+	test.skip(testInfo.project.name !== 'desktop', 'hover needs a pointer');
+	await seed(page);
+	await page.goto('/c/todos');
+	const screen = page.locator('.screen').first();
+	const before = await screen.evaluate((el) => getComputedStyle(el).transform);
+	await screen.hover();
+	await expect.poll(() => screen.evaluate((el) => getComputedStyle(el).transform)).not.toBe(before);
 });
 
 test('reduced motion: the fan keeps its pose but nothing animates', async ({ page }) => {
