@@ -95,3 +95,12 @@ Gradient washes, glassmorphism on content, colored chrome on B&W screens, more t
 - **Docked bar** is pinned to the visual viewport frame (`visualFrame` in `lib/keyboard.ts`), the page is locked while it is open; `?kbdebug` prints the measures on a real device.
 - **Illustrations** are redrawn: one idea per scene, no overlaps, one stroke weight.
 - NOT RUN: real iPhone/iPad.
+
+## Cinema player (slice 3c, owner 2026-11-19: "um cinema pessoal")
+
+- One look for every source. The viewer opens at once with the cover and our play button; a platform player (YouTube, TikTok, Instagram) loads only on that first tap, so there is no wait and no platform chrome on arrival.
+- YouTube runs through the IFrame Player API with `controls=0` (nocookie host); TikTok through player v1 with its chrome hidden by its documented parameters. Our single control bar (play/pause, time, progress slider, duration, fullscreen) sits BELOW the picture, never over it: YouTube's Required Minimum Functionality forbids overlays on the embedded player, and its logo/title may still show at moments. That is accepted.
+- Instagram has no control API: it keeps its own player and shows no bar of ours.
+- MP4/HLS: a plain `<video>` without browser controls, driven by the same bar.
+- Under the bar: the provider in caps and a pill with the truncated original link, which opens the platform in a new tab.
+- Never: downloading, extracting or proxying a platform's stream (ADR-0002, platform terms).

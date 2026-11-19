@@ -326,6 +326,8 @@ test.describe('R2.7 edit, rename, Assistidos, Favoritos', () => {
 	test('Favoritos: a liked video appears with a 3D heart on its monitor', async ({ page }) => {
 		await seed(page);
 		await page.getByRole('button', { name: 'Curtir' }).click();
+		await expect(page.getByRole('button', { name: 'Curtir' })).toHaveAttribute('aria-pressed', 'true');
+		await page.waitForTimeout(300); // the IndexedDB write follows the state change
 		await page.goto('/');
 		const card = page.locator('a.card[data-collection="favoritos"]');
 		await expect(card).toBeVisible();

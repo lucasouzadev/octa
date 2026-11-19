@@ -7,7 +7,7 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 | 0 | Docs, agent-kit, ADRs, design system | DONE 2026-11-19 |
 | 1 | Paste → resolve → card → player (YouTube long/Shorts, direct .mp4); `/v1/resolve`; URL parser + shared vectors; minimal library list | DONE 2026-11-19 — merged (PR #1, #3); API live on Render, PWA on Vercel; owner confirmed on iPhone |
 | 2 | Library + collections, Threlte fan/stack + CSS fallback, search, View Transitions (plan: `tasks/plan.md`) | 2a collections (2D) DONE (PR #6 merged, owner tested 2026-11-19); 2b search DONE (PR #7 merged, owner approved); 2c View Transitions DONE (PR #8 merged, owner tested); 2d-i CSS-3D fan and stack DONE (PR #9 merged, owner approved on iPhone); iOS findings fix DONE (PR #10 merged); 2d-ii WebGL fan DONE (PR #11 merged, owner approved); 2e-1 Library cards per the prototype DONE (PR #12 merged, owner approved); 2e-2 Collection screen as tilted 3D screens IN REVIEW — branch `feat/slice-2e2-collection-screens`; 2e-3 WebGL monitors IN REVIEW (branch `feat/slice-2e3-webgl-monitors`) |
-| 3 | Instagram, TikTok, HLS; `/v1/health`; health states; Dead link screen; resume | 3a sources (Instagram, TikTok, HLS) IN REVIEW — branch `feat/slice-3a-sources`; 3b `/v1/health` + real dead-link check + Continuar assistindo NOT STARTED |
+| 3 | Instagram, TikTok, HLS; `/v1/health`; health states; Dead link screen; resume | 3a sources (Instagram, TikTok, HLS) IN REVIEW — branch `feat/slice-3a-sources`; 3c cinema player IN REVIEW — branch `feat/slice-3c-cinema` (owner moved it before 3b); 3b `/v1/health` + real dead-link check + Continuar assistindo NOT STARTED |
 | 4 | PWA install, share target, export/import, offline shell, E2E 3 viewports, deploy (owner picks host) | — |
 
 ## Slice 1 — evidence (2026-11-19)
@@ -100,6 +100,14 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 - Web: `hls.ts` (spec first), `parseOrExpand` in `links.ts` (4 specs first, seen red). hls.js 1.7.4 verified in the registry (AGENTS §1.11), loaded only for HLS links. `pnpm check` 0/0, `pnpm test` 228 PASS, `pnpm build` PASS, `pnpm test:e2e` 318 PASS + 1 FAIL under full-suite load (`enrich.e2e.ts` desktop, untouched by this slice; 3/3 PASS when re-run alone: flaky, not fixed here).
 - Honest notes: NOT RUN against the live platforms (no route from this sandbox): Instagram OG/login wall, TikTok oEmbed codes and thumbnail hosts are per PROVIDERS.md, unconfirmed. Covers from Instagram/TikTok CDNs have no CORS, so those rows keep the CSS monitors (WebGL falls back per row). No CSP is configured yet (slice 4). HLS needs CORS on the stream host.
 - NOT RUN: real iPhone; CI (none); govulncheck (not installed in this sandbox).
+
+## Slice 3c — evidence (2026-11-19, cinema player, ADR-0004)
+- Owner: "um cinema pessoal" without platform clutter; option "Projetor oficial" approved (extraction/proxy refused: platform terms + ADR-0002).
+- Built: `ui/Cinema.svelte` (cover first, platform player on tap, one octa bar below the picture, provider + truncated original link), `lib/player/core.ts` (clock, start offset, YouTube state map, TikTok message envelope; 6 specs seen red first), `lib/player/adapters.ts` (YouTube IFrame API `controls=0` on the nocookie host, TikTok player v1 postMessage with source+origin check, native `<video>`). TikTok embed moved to `player/v1` with its chrome hidden (shared vectors changed first, Go seen red with `-count=1`). Old `Player.svelte` removed.
+- Web: `pnpm check` 0/0, `pnpm test` 233 PASS, `pnpm build` PASS, `pnpm test:e2e` 331 PASS + 3 FAIL in the full run, all three fixed or hardened and passing on repeat: a 2d-ii test that assumed no canvas on /c/todos (now asserts exactly one, the monitors), and a Favoritos test that navigated before the like was written (now waits).
+- API: `go test ./...` PASS.
+- Honest notes: e2e drive a stand-in for the YouTube IFrame API that follows its documented surface; the real API, TikTok player v1 messages and their chrome-hiding are NOT RUN against the live platforms. YouTube may still show logo/title (cannot be covered). Instagram keeps its own player. iPhone fullscreen for embeds is limited (Safari only fullscreens a `<video>`).
+- NOT RUN: real iPhone/iPad/desktop with real YouTube/TikTok; CI (none).
 
 ## Known gaps carried to slice 2+
 - Rate limit on Render: `CLIENT_IP_HEADER` unset = ONE shared bucket for all users (30/min, burst 10; proven by a 40-request burst: 10x422 + 30x429). `CF-Connecting-IP` looks per-client (forging it gives 403 at the edge; a burst got no 429) but is NOT PROVEN from a single egress IP. Prove from a phone on 4G, then set it.
