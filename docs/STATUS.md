@@ -45,7 +45,7 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 - From the owner's iPhone screenshots of 2d-i: (1) videos saved while Render was asleep kept the generic "Vídeo do YouTube" title (paste timeout 4 s < cold start ~50 s); (2) white strip above the black Collection screen; (3) sticky "Assistir em sequência" ran into the list rows.
 - Fix: `enrich.ts` (`needsEnrich` = health unknown and never checked; `enrichPending` one video at a time, max 5 per Library open, 60 s timeout, best-effort, keeps favorite/collection because `update()` re-reads in its transaction); `html:has(.on-dark)` paints the page dark; footer gets a fade scrim.
 - Web: `pnpm test` 135 PASS (9 new `enrich.spec.ts`, seen red first), `pnpm check` 0/0, `pnpm build` PASS, `pnpm test:e2e` 97 PASS + 2 skipped (2 new flows x 3).
-- JS gzip: 54.3 KB → see PR (measured after build).
+- JS gzip, all chunks: 54.3 KB → 54.8 KB (+0.5 KB).
 - NOT RUN: the three fixes on the real iPhone; CI. The scrim only shows with a long list; checked in code, not in a screenshot.
 - Still open: Safari bottom bar over the player thumbnail strip; centered paper stack (cosmetic).
 
