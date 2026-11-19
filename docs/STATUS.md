@@ -74,10 +74,17 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 - Changed on purpose: the author no longer prints on a screen (the prototype shows only source and length); the enrich e2e now checks the recovered cover instead of the author. PaperStack.svelte removed.
 - NOT RUN: real iPhone/iPad look; WebGL for these screens (2e-3); CI.
 
+## QA round 1 — evidence (2026-11-19, owner iPhone QA, IDs R1.1–R1.8)
+- R1.1/R1.2 docked input + Colar; R1.3 native sheet (rule for all sheets); R1.4 viewer fits, hearts on Curtir, order Compartilhar · Mover · Curtir · Próximo; R1.5 palette (contrast tests); R1.6/R1.6.1 "+" popover, empty states, no empty cards, back to top; R1.7 Assistir em sequência without band; R1.8 one color edge to edge.
+- Web: `pnpm check` 0/0, `pnpm test` 186 PASS, `pnpm build` PASS, `pnpm test:e2e` 224 PASS at 3 viewports. Screenshots read at 390 (docked bar, popover, empty library).
+- Honest notes: the R1.8 e2e and the hearts spec were written after the code (not seen red); old e2e updated to the new UI (Curtir label, 4 viewer actions, "+" menu instead of the dashed card). AGENTS "≤ 3 actions" exception recorded in DESIGN.md (owner order).
+- NOT RUN: real iPhone (keyboard dock via visualViewport, Safari toolbar fit in the viewer, safe-area colors, heart animation feel); CI (none yet).
+- Next: slice 2e-3 (WebGL for the Collection monitors).
+
 ## Known gaps carried to slice 2+
 - Rate limit on Render: `CLIENT_IP_HEADER` unset = ONE shared bucket for all users (30/min, burst 10; proven by a 40-request burst: 10x422 + 30x429). `CF-Connecting-IP` looks per-client (forging it gives 403 at the edge; a burst got no 429) but is NOT PROVEN from a single egress IP. Prove from a phone on 4G, then set it.
 - No CI workflow yet (slice 4): tests run locally only.
-- iPhone Safari bottom bar covers the player's thumbnail strip (owner screenshot 2026-11-19): likely `svh`/`dvh` + safe-area; not fixed, not in slice 2.
+- iPhone Safari bottom bar over the viewer: addressed in QA round 1 (R1.4) with `svh` layout; needs the owner's iPhone to confirm.
 
 ## Owner decisions pending
 - App icon.

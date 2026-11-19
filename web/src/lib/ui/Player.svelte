@@ -23,9 +23,10 @@
 </div>
 
 <style>
+	/* Sized from the box the page gives it (a size container), so it always fits. */
 	.frame {
 		position: relative;
-		width: 100%;
+		width: min(100cqw, calc(100cqh * 16 / 9));
 		aspect-ratio: 16 / 9;
 		border-radius: var(--radius-video);
 		overflow: hidden;
@@ -35,8 +36,7 @@
 	.frame.vertical {
 		aspect-ratio: 9 / 16;
 		width: auto;
-		height: min(62svh, 640px);
-		margin-inline: auto;
+		height: min(100cqh, calc(100cqw * 16 / 9));
 	}
 
 	iframe,

@@ -1,22 +1,22 @@
-# HANDOFF — 2026-11-19 — slice 2e-2 (Collection screens in 3D) in review
+# HANDOFF — 2026-11-19 — QA round 1 (R1.1–R1.8) in review
 
 ## Goal
-Slice 2 per `tasks/plan.md` (last section), order 2a → 2b → 2c → 2d; one PR per sub-slice, the owner merges. A video belongs to one collection only.
+Polish round from the owner's iPhone QA, one PR. Approved order: everything in one PR; docked bar via visualViewport; line-art b/w illustrations; remove empty cards in both cases.
 
 ## State (verified)
-- main at the merge of PR #12 (Library cards per the prototype, owner approved).
-- Branch `feat/slice-2e2-collection-screens`, PR open (not merged): Collection screen = pile of tilted 3D screens ("como monitores", owner's words) — `lib/shelf.ts` (pose, duration, status, summary) + `ui/ScreenCard.svelte`; PaperStack removed; header "N vídeos · K fora do ar"; editing flattens the pile.
-- `pnpm test` 157 PASS, `pnpm check` 0/0, `pnpm build` PASS, `pnpm test:e2e` all PASS. Main JS 57.7 KB gzip.
-- NOT RUN: real device look, CI. WebGL for these screens is 2e-3.
+- main at the merge of PR #14 (2e-2 Collection screens). Branch `fix/qa-round-1`, PR open (not merged).
+- IDs: R1.1/R1.2 docked input + Colar · R1.3 native sheet rule · R1.4 viewer fit + hearts + button order · R1.5 palette · R1.6/R1.6.1 "+" popover, empty states, back to top · R1.7 Assistir em sequência · R1.8 one color edge to edge.
+- `pnpm check` 0/0, `pnpm test` 186 PASS, `pnpm build` PASS, `pnpm test:e2e` 224 PASS.
+- NOT RUN: real iPhone (docked bar vs keyboard, Safari toolbar in the viewer, safe-area colors), CI (none yet).
 
 ## Decisions
-- Author is not printed on a screen (prototype shows source and length only); open to the owner in the PR.
-- Unknown health prints no status; only links known dead are counted in the header.
+- Docking is touch-only (`pointer: coarse`); mouse keeps the field in the page.
+- Viewer has four actions by owner order: recorded as an exception to "≤ 3 actions" in DESIGN.md.
+- Old e2e updated: label "Curtir", "+" menu replaces the dashed card, `fillField` helper blurs after typing (the docked bar covers the page button, as a keyboard would).
 
 ## Next step (exact)
-Owner merges and looks at the screens on iPhone/iPad. Then 2e-3: WebGL for the pile behind `canUseWebGL3D`, one canvas at a time, same pose from `screenTilt`, with a real bezel thickness (box geometry) and pointer/scroll tilt.
+Owner tests on iPhone (list in the PR) and merges. Then 2e-3: WebGL for the Collection monitors (real thickness, tilt by pointer/scroll).
 
 ## Risks / owner decisions
-- Render limiter: one shared bucket until `CF-Connecting-IP` is proven per client from a phone on 4G (see STATUS). Health Check Path `/healthz` still unset in the Render dashboard.
-- iPhone Safari bottom bar covers the player strip (not fixed; offer a separate small fix).
+- Render limiter: one shared bucket until `CF-Connecting-IP` is proven per client from a phone on 4G. Health Check Path `/healthz` unset in Render.
 - App icon open.

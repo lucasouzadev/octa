@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { mockNetwork, paste } from './e2e-helpers';
+import { mockNetwork, paste, fillField } from './e2e-helpers';
 
 test('smoke: paste a YouTube link, land on the player, see it in the library', async ({ page }) => {
 	await mockNetwork(page);
@@ -8,7 +8,7 @@ test('smoke: paste a YouTube link, land on the player, see it in the library', a
 
 	await page.getByRole('link', { name: 'Colar um link' }).click();
 	await expect(page.getByRole('heading', { name: /Cole um link/ })).toBeVisible();
-	await page.getByLabel('Link do vídeo').fill('https://youtu.be/dQw4w9WgXcQ');
+	await fillField(page.getByLabel('Link do vídeo'), 'https://youtu.be/dQw4w9WgXcQ');
 	await page.getByRole('button', { name: 'Gerar player' }).click();
 
 	await expect(page).toHaveURL(/\/v\/[0-9a-f-]{36}$/);
@@ -22,18 +22,18 @@ test('smoke: paste a YouTube link, land on the player, see it in the library', a
 	await expect(page.locator('a[data-collection="todos"]')).toContainText('1 vídeo');
 });
 
-test('player has at most three actions and favorite persists', async ({ page }) => {
+test('player has four actions in the owner\'s order and favorite persists', async ({ page }) => {
 	await mockNetwork(page);
 	await paste(page, 'https://youtu.be/dQw4w9WgXcQ');
 	const actions = page.locator('.actions button');
-	await expect(actions).toHaveCount(3);
+	await expect(actions).toHaveCount(4); // R1.4: Compartilhar, Mover, Curtir, Próximo
 
-	const fav = page.getByRole('button', { name: 'Salvar nos favoritos' });
+	const fav = page.getByRole('button', { name: 'Curtir' });
 	await expect(fav).toHaveAttribute('aria-pressed', 'false');
 	await fav.click();
 	await expect(fav).toHaveAttribute('aria-pressed', 'true');
 	await page.reload();
-	await expect(page.getByRole('button', { name: 'Salvar nos favoritos' })).toHaveAttribute('aria-pressed', 'true');
+	await expect(page.getByRole('button', { name: 'Curtir' })).toHaveAttribute('aria-pressed', 'true');
 });
 
 test('a Shorts link plays vertical and "next" moves through the library', async ({ page }) => {
@@ -64,7 +64,7 @@ test('unsupported and invalid links explain themselves and save nothing', async 
 	await mockNetwork(page);
 	await paste(page, 'https://example.com/page');
 	await expect(page.getByRole('alert')).toContainText('ainda não é suportado');
-	await page.getByLabel('Link do vídeo').fill('isso não é link');
+	await fillField(page.getByLabel('Link do vídeo'), 'isso não é link');
 	await page.getByRole('button', { name: 'Gerar player' }).click();
 	await expect(page.getByRole('alert')).toContainText('não parece um link');
 	await page.goto('/');

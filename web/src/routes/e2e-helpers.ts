@@ -1,4 +1,4 @@
-import type { Page } from '@playwright/test';
+import type { Locator, Page } from '@playwright/test';
 
 // The Go API is mocked here; its own tests cover it. Everything off localhost is
 // blocked so runs are deterministic and never hit YouTube.
@@ -31,8 +31,15 @@ export async function mockNetwork(page: Page, opts: { apiDown?: boolean } = {}) 
 	});
 }
 
+// Typing docks the field above the keyboard on touch projects, and the bar sits over the
+// page's own button. A real user taps outside first; so does this.
+export async function fillField(field: Locator, value: string) {
+	await field.fill(value);
+	await field.blur();
+}
+
 export async function paste(page: Page, link: string) {
 	await page.goto('/add');
-	await page.getByLabel('Link do vídeo').fill(link);
+	await fillField(page.getByLabel('Link do vídeo'), link);
 	await page.getByRole('button', { name: 'Gerar player' }).click();
 }

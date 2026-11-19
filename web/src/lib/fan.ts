@@ -49,7 +49,6 @@ export interface FanItem {
 }
 
 export interface PlacedCard extends FanCard {
-	/** null = an empty placeholder (empty collection). */
 	item: FanItem | null;
 	/** Shorts, Reels and TikToks stand up; everything else lies down. */
 	vertical: boolean;
@@ -57,8 +56,8 @@ export interface PlacedCard extends FanCard {
 
 /** Layout plus content: the newest video takes the top layer, older ones fall behind. */
 export function fanCards(items: readonly FanItem[]): PlacedCard[] {
-	const shown = items.length === 0 ? [] : items.slice(0, MAX_FAN);
-	const slots = fanLayout(shown.length === 0 ? 3 : shown.length);
+	const shown = items.slice(0, MAX_FAN);
+	const slots = fanLayout(shown.length);
 	const topFirst = slots.map((_, i) => i).sort((a, b) => slots[b].z - slots[a].z);
 	const content = new Map<number, FanItem | null>(
 		topFirst.map((slot, rank) => [slot, shown[rank] ?? null])

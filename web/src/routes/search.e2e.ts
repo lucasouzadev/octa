@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { mockNetwork, paste } from './e2e-helpers';
+import { mockNetwork, paste, fillField } from './e2e-helpers';
 
 const SESSAO = 'Sessão ao vivo no terraço';
 const ACORDES = 'Três acordes que mudaram tudo';
@@ -68,7 +68,7 @@ test('Escape closes the search', async ({ page }) => {
 test('search reaches videos that live inside a collection', async ({ page }) => {
 	await seedTwoVideos(page);
 	await page.goto('/c/new');
-	await page.getByLabel('Nome da coleção').fill('Música');
+	await fillField(page.getByLabel('Nome da coleção'), 'Música');
 	await page.getByRole('button', { name: 'Criar coleção' }).click();
 	await expect(page).toHaveURL(/\/c\/[0-9a-f-]{36}$/);
 

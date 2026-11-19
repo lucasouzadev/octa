@@ -3,12 +3,16 @@
 	import { page } from '$app/state';
 	import { library, type Video } from '#lib/db/index.ts';
 	import { ALL, playlistFor } from '#lib/db/scope.ts';
+	import HeartBurst from '#lib/ui/HeartBurst.svelte';
 	import Icon from '#lib/ui/Icon.svelte';
+	import MoveSheet from '#lib/ui/MoveSheet.svelte';
 	import Player from '#lib/ui/Player.svelte';
 
 	let all = $state<Video[] | null>(null);
 	let scope = $state(ALL);
 	let notice = $state('');
+	let moving = $state<Video | null>(null);
+	let likes = $state(0);
 
 	const id = $derived(page.params.id);
 	const requestedScope = $derived(page.url.searchParams.get('c'));
@@ -44,8 +48,10 @@
 
 	async function toggleFavorite() {
 		if (!video || !all) return;
-		const updated = await (await library()).update(video.id, { favorite: !video.favorite });
+		const liking = !video.favorite;
+		const updated = await (await library()).update(video.id, { favorite: liking });
 		all[index] = updated;
+		if (liking) likes += 1; // hearts only go up when liking, not when taking it back
 	}
 
 	async function share() {
@@ -81,9 +87,11 @@
 		</section>
 	{:else if video}
 		<section class="stage">
-			{#key video.id}
-				<Player {video} />
-			{/key}
+			<div class="screen">
+				{#key video.id}
+					<Player {video} />
+				{/key}
+			</div>
 
 			<div class="info">
 				{#if video.author}<p class="author">{video.author}</p>{/if}
@@ -94,19 +102,18 @@
 			</div>
 
 			<div class="actions">
-				<button type="button" aria-label="Próximo vídeo" onclick={next} disabled={all!.length < 2}>
-					<Icon name="next" size={22} />
-				</button>
-				<button
-					type="button"
-					aria-label="Salvar nos favoritos"
-					aria-pressed={video.favorite}
-					onclick={toggleFavorite}
-				>
-					<Icon name="heart" size={22} filled={video.favorite} />
-				</button>
 				<button type="button" aria-label="Compartilhar" onclick={share}>
 					<Icon name="share" size={22} />
+				</button>
+				<button type="button" aria-label="Mover" onclick={() => (moving = video)}>
+					<Icon name="move" size={22} />
+				</button>
+				<button type="button" class="like" aria-label="Curtir" aria-pressed={video.favorite} onclick={toggleFavorite}>
+					<Icon name="heart" size={22} filled={video.favorite} />
+					<HeartBurst fire={likes} />
+				</button>
+				<button type="button" aria-label="Próximo vídeo" onclick={next} disabled={all!.length < 2}>
+					<Icon name="next" size={22} />
 				</button>
 			</div>
 			<p class="notice" role="status">{notice}</p>
@@ -133,13 +140,22 @@
 	{/if}
 </main>
 
+<MoveSheet
+	video={moving}
+	onclose={() => (moving = null)}
+	onmoved={(target) => video && goto(`/v/${video.id}?c=${target ?? ALL}`, { replaceState: true })}
+/>
+
 <style>
-	.player {
-		min-height: 100svh;
+.player {
+		/* Exactly one screen tall: the video takes what is left, nothing scrolls. */
+		height: 100svh;
+		height: 100dvh;
+		overflow: hidden;
 		background: var(--color-bg-dark);
 		color: var(--color-text-dark);
-		padding: calc(var(--space-6) + env(safe-area-inset-top)) var(--screen-pad)
-			calc(var(--space-6) + env(safe-area-inset-bottom));
+		padding: calc(var(--space-4) + env(safe-area-inset-top)) var(--screen-pad)
+			calc(var(--space-3) + env(safe-area-inset-bottom));
 		display: flex;
 		flex-direction: column;
 	}
@@ -154,17 +170,30 @@
 		color: var(--color-muted-on-dark);
 	}
 
-	.stage,
+.stage,
 	.missing {
 		flex: 1;
+		min-height: 0;
 		width: 100%;
 		max-width: var(--layout-content-max);
 		margin: 0 auto;
 		display: flex;
 		flex-direction: column;
+		gap: var(--space-4);
+		padding-block: var(--space-4) 0;
+	}
+
+	.missing {
 		justify-content: center;
-		gap: var(--space-6);
-		padding-block: var(--space-6);
+	}
+
+	/* The video gets whatever height the rest leaves, and is sized to fit it. */
+	.screen {
+		flex: 1 1 0;
+		min-height: 0;
+		container-type: size;
+		display: grid;
+		place-items: center;
 	}
 
 	.missing h1 {
@@ -178,9 +207,10 @@
 	}
 
 	.info {
+		flex: none;
 		display: flex;
 		flex-direction: column;
-		gap: var(--space-3);
+		gap: var(--space-2);
 	}
 
 	.author {
@@ -195,6 +225,20 @@
 		font-size: var(--size-title);
 		line-height: 1.12;
 		letter-spacing: -0.01em;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
+	}
+
+	@media (max-height: 720px) {
+		.info h1 {
+			font-size: 24px;
+		}
+		.author {
+			font-size: 16px;
+		}
 	}
 
 	.dead {
@@ -202,13 +246,15 @@
 	}
 
 	.actions {
+		flex: none;
 		display: grid;
-		grid-template-columns: repeat(3, minmax(0, 1fr));
+		grid-template-columns: repeat(4, minmax(0, 1fr));
 		gap: var(--space-2);
 	}
 
 	.actions button {
-		height: 62px;
+		position: relative;
+		height: 56px;
 		border: none;
 		border-radius: var(--radius-pill);
 		background: var(--color-surface-dark);
@@ -229,6 +275,7 @@
 	}
 
 	.notice {
+		flex: none;
 		min-height: 1.4em;
 		text-align: center;
 		font-size: var(--size-meta);
@@ -236,9 +283,10 @@
 	}
 
 	.timeline {
+		flex: none;
 		overflow-x: auto;
 		scrollbar-width: none;
-		padding-top: var(--space-4);
+		padding-top: var(--space-3);
 	}
 
 	.timeline ol {

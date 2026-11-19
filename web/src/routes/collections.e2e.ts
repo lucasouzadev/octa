@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { mockNetwork, paste } from './e2e-helpers';
+import { mockNetwork, paste, fillField } from './e2e-helpers';
 
 const SESSAO = 'Sessão ao vivo no terraço';
 const ACORDES = 'Três acordes que mudaram tudo';
@@ -19,7 +19,7 @@ function cardOf(page: Page, name: string) {
 
 async function createCollection(page: Page, name: string) {
 	await page.goto('/c/new');
-	await page.getByLabel('Nome da coleção').fill(name);
+	await fillField(page.getByLabel('Nome da coleção'), name);
 	await page.getByRole('button', { name: 'Criar coleção' }).click();
 	await expect(page).toHaveURL(/\/c\/[0-9a-f-]{36}$/);
 	await expect(page.getByRole('heading', { name })).toBeVisible();
@@ -38,9 +38,10 @@ async function moveInto(page: Page, title: string, collection: string) {
 test('create a collection, move a video in, play it in sequence, survive a reload', async ({ page }) => {
 	await seedTwoVideos(page);
 	await page.goto('/');
-	await page.getByRole('link', { name: 'Nova coleção' }).click();
+	await page.getByRole('button', { name: 'Criar conteúdo' }).click();
+	await page.getByRole('menuitem', { name: 'Nova coleção' }).click();
 	await expect(page).toHaveURL(/\/c\/new$/);
-	await page.getByLabel('Nome da coleção').fill('  Música  ');
+	await fillField(page.getByLabel('Nome da coleção'), '  Música  ');
 	await page.getByRole('button', { name: 'Criar coleção' }).click();
 
 	await expect(page).toHaveURL(/\/c\/[0-9a-f-]{36}$/);
@@ -121,10 +122,10 @@ test('rename and delete a collection; its videos stay in Todos', async ({ page }
 test('collection names are validated: empty, reserved "Todos" and too long', async ({ page }) => {
 	await page.goto('/c/new');
 	await expect(page.getByRole('button', { name: 'Criar coleção' })).toBeDisabled();
-	await page.getByLabel('Nome da coleção').fill('todos');
+	await fillField(page.getByLabel('Nome da coleção'), 'todos');
 	await page.getByRole('button', { name: 'Criar coleção' }).click();
 	await expect(page.getByRole('alert')).toContainText('"Todos" já existe');
-	await page.getByLabel('Nome da coleção').fill('a'.repeat(61));
+	await fillField(page.getByLabel('Nome da coleção'), 'a'.repeat(61));
 	await page.getByRole('button', { name: 'Criar coleção' }).click();
 	await expect(page.getByRole('alert')).toContainText('até 60');
 });

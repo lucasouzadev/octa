@@ -5,7 +5,7 @@ Status: approved 2026-11-19 (prototype in `README.md` here). Tokens: `tokens.jso
 ## 1. Principles
 1. **Content is the interface.** One focal element per screen; everything else steps back. Empty space is intentional, not unfinished.
 2. **Black and white by default.** Library is white; collection and player are black. **Color appears only on action screens** — a whole screen of one solid color, never accents sprinkled on chrome.
-3. **≤ 3 visible actions per screen.** Secondary actions live in gestures (swipe, long press, drag) and must also be reachable by keyboard/screen reader (a "Mais" menu in the a11y tree).
+3. **≤ 3 visible actions per screen** (one recorded exception: the viewer has four, Compartilhar · Mover · Curtir · Próximo, by owner order in QA round 1). Secondary actions live in gestures (swipe, long press, drag) and must also be reachable by keyboard/screen reader (a "Mais" menu in the a11y tree).
 4. **Same layout everywhere.** Phone, tablet and desktop share one composition; only scale and spacing grow. No separate "desktop version", no sidebars.
 5. **Objects, not widgets.** Videos behave like physical things (cards, paper, stacks) — that is where 3D lives. Controls stay flat and quiet.
 
@@ -70,3 +70,15 @@ Real `<button>`/`<a href>`; icon buttons have `aria-label`; favorite uses `aria-
 
 ## 10. Do not
 Gradient washes, glassmorphism on content, colored chrome on B&W screens, more than 3 primary actions, platform logos as decoration, copying Pocket Feeds (name, icon, copy, layout code) or any reference app's assets.
+
+
+## QA round 1 rules (owner, 2026-11-19)
+
+- **Every sheet is `ui/Sheet.svelte`.** Handle, slide-in/out, drag up/down (1:1 down, rubber band up, closes past 1/3 height or on a flick), Esc and backdrop close, reduced motion = no animation. `sheet-rule.spec.ts` fails if any other file uses `<dialog` or `showModal(`.
+- **Text entry on touch devices docks above the keyboard** (`ui/DockedInput.svelte`): the page does not scroll or move, only the field comes forward over a light dim; tap outside closes and keeps the text; Enter or the send icon sends; errors render inside the bar. Mouse devices keep the field in the page. Position comes from `visualViewport` (`lib/keyboard.ts`), so the same code works in Safari, an installed PWA and Capacitor.
+- **Create content** lives in one place: the Library "+" (shown only after the first link) opens a popover from the button (+ becomes −) with "Colar link" and "Nova coleção". No dashed card, no placeholder tiles.
+- **Empty states** = line-art illustration (`ui/Illustration.svelte`, one stroke, currentColor) + action buttons. An empty collection is a plain card without the fan.
+- **Long lists** get a back-to-top arrow (`ui/BackToTop.svelte`) after ~1.2 screens of scroll.
+- **One color edge to edge:** html/body and the browser theme color follow the screen (`lib/screen.ts`): blue on /add and /c/new, white on the Library, black elsewhere.
+- **Viewer fits the screen** without scroll or cut: `100svh` layout, the player is sized from its own container (`cqw/cqh`).
+- **Surfaces:** dark cards use `surface.darkRaised`; light buttons `surface.lightButton`; contrast thresholds are tests (`contrast.spec.ts`).

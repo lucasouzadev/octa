@@ -4,6 +4,7 @@
 	import { library } from '#lib/db/index.ts';
 	import { addLink } from '#lib/links.ts';
 	import { LinkError } from '#lib/providers/parse.ts';
+	import DockedInput from '#lib/ui/DockedInput.svelte';
 	import Icon from '#lib/ui/Icon.svelte';
 
 	// ?url= lets the share target (slice 4) and bookmarklets prefill the field.
@@ -15,6 +16,18 @@
 		invalid_url: 'Isso não parece um link. Confira e tente de novo.',
 		unsupported_url: 'Esse tipo de link ainda não é suportado. Por enquanto: YouTube, Shorts e arquivos .mp4.'
 	};
+
+	// One tap instead of long-press, select, paste. The browser may ask permission.
+	async function pasteFromClipboard() {
+		error = '';
+		try {
+			const text = (await navigator.clipboard.readText()).trim();
+			if (text) value = text;
+			else error = 'A área de transferência está vazia.';
+		} catch {
+			error = 'Não consegui ler a área de transferência. Toque no campo e cole.';
+		}
+	}
 
 	async function submit(event: SubmitEvent) {
 		event.preventDefault();
@@ -32,8 +45,10 @@
 	}
 </script>
 
-<main class="paste">
-	<a class="close" href="/" aria-label="Voltar para a coleção"><Icon name="close" /></a>
+<main class="paste on-blue">
+	<header>
+		<a class="close" href="/" aria-label="Voltar para a biblioteca"><Icon name="close" /></a>
+	</header>
 
 	<div class="intro">
 		<Icon name="link" size={40} />
@@ -42,25 +57,21 @@
 	</div>
 
 	<form onsubmit={submit} novalidate>
-		<label class="label" for="link">Link do vídeo</label>
-		<input
+		<DockedInput
 			id="link"
-			name="link"
+			label="Link do vídeo"
+			bind:value
 			type="url"
 			inputmode="url"
-			autocomplete="off"
 			autocapitalize="off"
-			spellcheck="false"
+			spellcheck={false}
 			placeholder="youtube.com/watch?v=…"
-			bind:value
-			aria-invalid={error ? 'true' : undefined}
-			aria-describedby={error ? 'link-error' : 'link-hint'}
+			hint="YouTube · Shorts · .mp4 — Reels e TikTok chegam em breve"
+			{error}
+			{busy}
+			sendLabel="Enviar"
+			onpaste={pasteFromClipboard}
 		/>
-		{#if error}
-			<p id="link-error" class="error" role="alert">{error}</p>
-		{:else}
-			<p id="link-hint" class="hint">YouTube · Shorts · .mp4 — Reels e TikTok chegam em breve</p>
-		{/if}
 		<button class="cta" type="submit" disabled={busy || !value.trim()}>
 			{busy ? 'Gerando…' : 'Gerar player'}
 			<Icon name="arrow" />
@@ -72,14 +83,24 @@
 	.paste {
 		--fg: var(--color-text-dark);
 		min-height: 100svh;
+		min-height: 100dvh;
 		background: var(--color-action-create);
 		color: var(--fg);
-		padding: calc(var(--space-6) + env(safe-area-inset-top)) var(--screen-pad)
-			calc(var(--space-8) + env(safe-area-inset-bottom));
-		display: grid;
-		grid-template-rows: auto 1fr auto;
-		gap: var(--space-8);
+		padding: calc(var(--space-3) + env(safe-area-inset-top)) var(--screen-pad)
+			calc(var(--space-6) + env(safe-area-inset-bottom));
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-5);
 		max-width: 100%;
+	}
+
+	/* The close button sits on the right so the title can start higher. */
+	header {
+		display: flex;
+		justify-content: flex-end;
+		width: 100%;
+		max-width: var(--layout-content-max);
+		margin-inline: auto;
 	}
 
 	.close {
@@ -101,7 +122,6 @@
 	}
 
 	.intro {
-		align-self: center;
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-5);
@@ -127,41 +147,13 @@
 	}
 
 	form {
+		margin-top: auto;
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-3);
 	}
 
-	input {
-		background: transparent;
-		border: none;
-		border-bottom: 2px solid rgb(255 255 255 / 0.5);
-		border-radius: 0;
-		padding: var(--space-3) 0 var(--space-4);
-		font-size: 22px;
-		color: var(--fg);
-		outline: none;
-	}
 
-	input::placeholder {
-		color: rgb(255 255 255 / 0.72);
-	}
-
-	input:focus-visible {
-		border-bottom-color: var(--fg);
-	}
-
-	.hint,
-	.error {
-		font-size: var(--size-meta);
-		line-height: 1.4;
-		color: rgb(255 255 255 / 0.88);
-	}
-
-	.error {
-		color: var(--fg);
-		font-weight: 600;
-	}
 
 	.cta {
 		margin-top: var(--space-6);
