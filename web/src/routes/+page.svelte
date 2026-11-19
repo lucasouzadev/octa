@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { library, type Collection, type Video } from '#lib/db/index.ts';
 	import { ALL } from '#lib/db/scope.ts';
+	import { enrichPending } from '#lib/enrich.ts';
 	import { searchVideos } from '#lib/search.ts';
 	import { markSource } from '#lib/transition.ts';
 	import FanStack from '#lib/ui/FanStack.svelte';
@@ -12,6 +13,8 @@
 	$effect(() => {
 		library().then(async (lib) => {
 			[videos, collections] = await Promise.all([lib.list(), lib.listCollections()]);
+			// Videos saved while the API was asleep get their real title now.
+			if (await enrichPending(lib)) videos = await lib.list();
 		});
 	});
 

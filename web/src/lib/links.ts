@@ -39,12 +39,7 @@ export async function addLink(raw: string, deps: AddDeps): Promise<{ video: Vide
 
 	const meta = await tryResolve(raw, deps.resolve ?? ((u, signal) => resolveLink(u, { signal })));
 	if (meta) {
-		video.title = text(meta.title, 300) || video.title;
-		video.author = text(meta.author, 120) || undefined;
-		if (meta.thumbnail && /^https:\/\//.test(meta.thumbnail)) video.thumbnail = meta.thumbnail;
-		video.health = meta.health;
-		video.checkedAt = meta.checkedAt;
-		if (typeof meta.durationSec === 'number') video.durationSec = meta.durationSec;
+		Object.assign(video, metaPatch(meta));
 	}
 	try {
 		return { video: await deps.library.put(video), created: true };
@@ -59,12 +54,28 @@ export async function addLink(raw: string, deps: AddDeps): Promise<{ video: Vide
 	}
 }
 
-async function tryResolve(
+/**
+ * The fields a trusted-but-sanitised API answer may set. Identity (canonical URL,
+ * embed) never comes from here: the client parser owns it.
+ */
+export function metaPatch(meta: Meta): Partial<Video> {
+	const patch: Partial<Video> = { health: meta.health, checkedAt: meta.checkedAt };
+	const title = text(meta.title, 300);
+	if (title) patch.title = title;
+	const author = text(meta.author, 120);
+	if (author) patch.author = author;
+	if (meta.thumbnail && /^https:\/\//.test(meta.thumbnail)) patch.thumbnail = meta.thumbnail;
+	if (typeof meta.durationSec === 'number') patch.durationSec = meta.durationSec;
+	return patch;
+}
+
+export async function tryResolve(
 	raw: string,
-	resolve: (url: string, signal: AbortSignal) => Promise<Meta>
+	resolve: (url: string, signal: AbortSignal) => Promise<Meta>,
+	timeoutMs = RESOLVE_TIMEOUT_MS
 ): Promise<Meta | null> {
 	const ctrl = new AbortController();
-	const timer = setTimeout(() => ctrl.abort(), RESOLVE_TIMEOUT_MS);
+	const timer = setTimeout(() => ctrl.abort(), timeoutMs);
 	try {
 		return await resolve(raw, ctrl.signal);
 	} catch (e) {

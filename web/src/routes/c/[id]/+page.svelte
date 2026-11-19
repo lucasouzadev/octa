@@ -452,8 +452,11 @@
 
 	footer {
 		position: sticky;
-		bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
-		padding-top: var(--space-6);
+		bottom: 0;
+		padding-top: var(--space-8);
+		padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+		/* Rows fade out under the button instead of running into it. */
+		background: linear-gradient(to top, var(--color-bg-dark) 62%, transparent);
 	}
 
 	.cta {
