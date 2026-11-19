@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clock, resumeAt, shouldSave, startOf, tiktokEvent, tiktokCommand, ytPhase } from './core.ts';
+import { clock, resumeAt, resumeLabel, shouldSave, startOf, tiktokEvent, tiktokCommand, ytPhase } from './core.ts';
 
 describe('clock', () => {
 	it('prints m:ss and h:mm:ss, 0:00 for nothing', () => {
@@ -81,5 +81,16 @@ describe('shouldSave', () => {
 
 	it('never saves a non-finite time', () => {
 		expect(shouldSave(0, NaN)).toBe(false);
+	});
+});
+
+describe('resumeLabel', () => {
+	it('says nothing for a video that was not started', () => {
+		expect(resumeLabel(0)).toBe('');
+	});
+
+	it('says where a half-watched video was left', () => {
+		expect(resumeLabel(260)).toBe('Continuar · 4:20');
+		expect(resumeLabel(3723)).toBe('Continuar · 1:02:03');
 	});
 });

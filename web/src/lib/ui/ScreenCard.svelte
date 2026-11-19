@@ -1,6 +1,6 @@
 <script lang="ts">
 	// One video on the Collection screen (prototype page 3): a tilted "screen" in a cream
-	// bezel with thickness, a play button, "SOURCE · length", the link status and the
+	// bezel with thickness, "SOURCE · length", the link status and the
 	// title in serif. CSS-3D renderer; the pose comes from lib/shelf.ts so a WebGL
 	// version can use the same numbers.
 	import type { Video } from '#lib/db/index.ts';
@@ -45,7 +45,6 @@
 				referrerpolicy="no-referrer"
 				onerror={(e) => ((e.currentTarget as HTMLElement).style.display = 'none')}
 			/>{/if}
-		<span class="play" aria-hidden="true"><Icon name="play" size={18} /></span>
 	</span>
 	{#if heart}<span class="heart" aria-hidden="true"><Icon name="heart" size={22} filled /></span>{/if}
 </a>
@@ -115,21 +114,6 @@
 
 	.dead .thumb img {
 		filter: grayscale(1) brightness(0.85);
-	}
-
-	.play {
-		position: relative;
-		display: grid;
-		place-items: center;
-		width: 52px;
-		height: 52px;
-		border-radius: 50%;
-		background: rgb(243 241 236 / 0.94);
-		color: var(--color-text-light);
-	}
-
-	.dead .play {
-		opacity: 0.55;
 	}
 
 	.meta {

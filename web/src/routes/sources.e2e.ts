@@ -23,8 +23,8 @@ test('Instagram reel: official embed, 9:16, source label, offline title', async 
 	await net(page, () => null); // API down: the client parser carries it
 	await paste(page, 'https://www.instagram.com/reel/Cxyz123_-a/?igsh=abc');
 	await expect(page).toHaveURL(/\/v\//);
-	await page.getByRole('button', { name: /^Assistir/ }).click();
-	const frame = page.locator('.player iframe');
+	const frame = page.locator('.player iframe'); // Instagram's own player is the only one: no cover
+	await expect(page.getByRole('button', { name: /^Assistir/ })).toHaveCount(0);
 	await expect(frame).toHaveAttribute('src', 'https://www.instagram.com/reel/Cxyz123_-a/embed/');
 	await expect(page.locator('.player .frame.vertical')).toHaveCount(1);
 	await expect(page.getByText('Reels').first()).toBeVisible();

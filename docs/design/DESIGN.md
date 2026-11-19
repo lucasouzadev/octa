@@ -98,9 +98,12 @@ Gradient washes, glassmorphism on content, colored chrome on B&W screens, more t
 
 ## Cinema player (slice 3c, owner 2026-11-19: "um cinema pessoal")
 
-- One look for every source. The viewer opens at once with the cover and our play button; a platform player (YouTube, TikTok, Instagram) loads only on that first tap, so there is no wait and no platform chrome on arrival.
+- One look for every source. The viewer opens at once with the cover and our one big play button; the platform player (YouTube, TikTok) is already loaded under the cover, so the first tap starts the video with no wait. Instagram has no cover: its own player is the only one.
 - YouTube runs through the IFrame Player API with `controls=0` (nocookie host); TikTok through player v1 with its chrome hidden by its documented parameters. Our single control bar (play/pause, time, progress slider, duration, fullscreen) sits BELOW the picture, never over it: YouTube's Required Minimum Functionality forbids overlays on the embedded player, and its logo/title may still show at moments. That is accepted.
 - Instagram has no control API: it keeps its own player and shows no bar of ours.
 - MP4/HLS: a plain `<video>` without browser controls, driven by the same bar.
 - Under the bar: the provider in caps and a pill with the truncated original link, which opens the platform in a new tab.
 - Never: downloading, extracting or proxying a platform's stream (ADR-0002, platform terms).
+- **One play.** The big button exists only before the video starts; a half-watched video says where it stopped ("Continuar · 4:20"). After the first play all control is in the bar (its play button stays hidden until then).
+- **No play mark on thumbnails** in the Library, Collection or search screens: a play button belongs to the player only.
+- **Vertical video** takes ~68% of the screen height (`.screen.tall`); title, actions and the strip scroll under it.

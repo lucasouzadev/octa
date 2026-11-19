@@ -155,22 +155,6 @@ export function paintFace(canvas: HTMLCanvasElement, m: Measured, image: HTMLIma
 			g.globalCompositeOperation = 'source-over';
 		}
 	}
-	// Play button.
-	const cx = t.x + t.w / 2;
-	const cy = t.y + t.h / 2;
-	g.globalAlpha = m.dead ? 0.55 : 1;
-	g.fillStyle = 'rgba(243,241,236,0.94)';
-	g.beginPath();
-	g.arc(cx, cy, 26, 0, Math.PI * 2);
-	g.fill();
-	g.fillStyle = '#0a0a0a';
-	g.beginPath();
-	g.moveTo(cx - 6, cy - 9);
-	g.lineTo(cx + 10, cy);
-	g.lineTo(cx - 6, cy + 9);
-	g.closePath();
-	g.fill();
-	g.globalAlpha = 1;
 	g.restore();
 
 	// Meta line: SOURCE · length on the left, status on the right.

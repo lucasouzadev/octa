@@ -33,6 +33,11 @@ export function resumeAt(position?: number, duration?: number): number {
 	return Math.floor(position);
 }
 
+/** The words under the big button: only a half-watched video says where it was left. */
+export function resumeLabel(resume: number): string {
+	return resume > 0 ? `Continuar · ${clock(resume)}` : '';
+}
+
 /** Progress is written at most every 5 s (IndexedDB writes are cheap, not free). */
 export function shouldSave(lastSaved: number, time: number): boolean {
 	return Number.isFinite(time) && Math.abs(time - lastSaved) >= 5;
