@@ -2,6 +2,7 @@
 	import { library, type Collection, type Video } from '#lib/db/index.ts';
 	import { ALL } from '#lib/db/scope.ts';
 	import { searchVideos } from '#lib/search.ts';
+	import { markSource } from '#lib/transition.ts';
 	import Icon from '#lib/ui/Icon.svelte';
 
 	let videos = $state<Video[] | null>(null);
@@ -117,7 +118,7 @@
 			<ul class="results" aria-label="Resultados da busca">
 				{#each results as v (v.id)}
 					<li>
-						<a class="row" href={`/v/${v.id}?c=${ALL}`}>
+						<a class="row" href={`/v/${v.id}?c=${ALL}`} onclick={(e) => markSource(e, '.thumb')}>
 							<span class="thumb">
 								{#if v.thumbnail}<img
 										src={v.thumbnail}

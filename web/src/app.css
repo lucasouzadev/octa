@@ -96,3 +96,26 @@ img {
 .icon-button:disabled {
 	opacity: 0.4;
 }
+
+/* View Transitions (DESIGN §7). Screen colors cross-fade; the tapped thumbnail
+   morphs into the player frame. Reduced motion: short fade, no morph. */
+::view-transition-group(root) {
+	animation-duration: 320ms;
+}
+
+::view-transition-group(thumb) {
+	animation-duration: var(--motion-view-transition);
+	animation-timing-function: cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+html[data-vt='fade']::view-transition-group(root) {
+	animation-duration: 100ms;
+}
+
+.player .frame {
+	view-transition-name: thumb;
+}
+
+html[data-vt='fade'] .player .frame {
+	view-transition-name: none;
+}

@@ -1,21 +1,20 @@
-# HANDOFF — 2026-11-19 — slice 2b (search) in review
+# HANDOFF — 2026-11-19 — slice 2c (View Transitions) in review
 
 ## Goal
 Slice 2 per `tasks/plan.md` (last section), order 2a → 2b → 2c → 2d; one PR per sub-slice, the owner merges. A video belongs to one collection only.
 
 ## State (verified)
-- main at b553f60: slice 2a merged (PR #6), owner tested it in production on 2026-11-19.
-- Branch `feat/slice-2b`, PR open (not merged): `web/src/lib/search.ts` (normalize + ranked search over title and author, all words must match, stable order) and the Library header search (lupa → field, "Cancelar", Escape, status line, empty state, results → `/v/<id>?c=todos`).
-- `pnpm test` 113 PASS, `pnpm check` 0 errors, `pnpm build` PASS, `pnpm test:e2e` 66 PASS. JS gzip 51.6 → 52.8 KB.
-- NOT RUN: physical iPhone/iPad/desktop of 2b; CI (no workflow, slice 4).
+- main at 1b972fd: 2a and 2b merged (owner approved search 2026-11-19).
+- Branch `feat/slice-2c`, PR open (not merged): `onNavigate` in the root layout (`lib/transition.ts` decides none/fade/full); list rows (Collection, search results) name their thumbnail on tap so it morphs into the player frame; colors cross-fade; reduced motion = 100 ms fade, no morph.
+- `pnpm test` 117 PASS, `pnpm check` 0 errors, `pnpm build` PASS, `pnpm test:e2e` 78 PASS. JS gzip 52.8 → 53.4 KB.
+- NOT RUN: seeing it on iPhone Safari; CI (slice 4).
 
 ## Decisions
-- Search covers the whole library, not one collection; the lupa is disabled while the library is empty.
-- Ranking: word opens the title > opens any word > inside title > author only; ties keep newest first.
-- Input is 16px so iOS Safari does not zoom on focus.
+- Library cards open a Collection screen, not the player, so only list rows morph; cards just cross-fade.
+- The shared name is set on tap and cleared when the transition ends (only one element may hold it).
 
 ## Next step (exact)
-Owner merges the 2b PR and tries search on the iPhone. Then plan details for 2c (View Transitions card → player, reduced-motion fade ≤120 ms, feature-detect) and start it, tests first.
+Owner merges the 2c PR and feels it on the iPhone. Then plan and start 2d (capability detection, CSS-3D fan/stack first, then Threlte lazy-loaded), tests first.
 
 ## Risks / owner decisions
 - Render limiter: one shared bucket until `CF-Connecting-IP` is proven per client from a phone on 4G (see STATUS). Health Check Path `/healthz` still unset in the Render dashboard.

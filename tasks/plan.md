@@ -89,8 +89,8 @@ Turn the flat list into the real Library: collections as cards, a black Collecti
 ### Checkpoint 2b: same commands PASS.
 
 ### Phase 2c — View Transitions
-- [ ] T9 `onNavigate` transition: thumbnail → video frame (380 ms, `cubic-bezier(.2,.8,.2,1)`), screen color cross-fade 320 ms (white → black). Reduced motion ≤120 ms fade. Feature-detected.
-- [ ] T10 e2e: reduced-motion emulation asserts no long animation; unsupported path still navigates.
+- [x] T9 `onNavigate` transition: thumbnail → video frame (380 ms, `cubic-bezier(.2,.8,.2,1)`), screen color cross-fade 320 ms (white → black). Reduced motion ≤120 ms fade. Feature-detected.
+- [x] T10 e2e: reduced-motion emulation asserts no long animation; unsupported path still navigates.
 ### Checkpoint 2c: PASS; physical check on iPhone Safari (version support noted).
 
 ### Phase 2d — 3D thumbs (enhancement)
