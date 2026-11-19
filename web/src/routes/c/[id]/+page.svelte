@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import { CollectionError, COLLECTION_NAME_MAX, library, type Collection, type Video } from '#lib/db/index.ts';
 	import { ALL, videosIn } from '#lib/db/scope.ts';
+	import { markSource } from '#lib/transition.ts';
 	import Icon from '#lib/ui/Icon.svelte';
 	import Sheet from '#lib/ui/Sheet.svelte';
 
@@ -177,7 +178,7 @@
 			<ul class="videos">
 				{#each videos as v (v.id)}
 					<li>
-						<a class="row" href={`/v/${v.id}?c=${scope}`}>
+						<a class="row" href={`/v/${v.id}?c=${scope}`} onclick={(e) => markSource(e, '.thumb')}>
 							<span class="thumb">
 								{#if v.thumbnail}<img
 										src={v.thumbnail}

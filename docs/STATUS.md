@@ -6,7 +6,7 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 |---|---|---|
 | 0 | Docs, agent-kit, ADRs, design system | DONE 2026-11-19 |
 | 1 | Paste → resolve → card → player (YouTube long/Shorts, direct .mp4); `/v1/resolve`; URL parser + shared vectors; minimal library list | DONE 2026-11-19 — merged (PR #1, #3); API live on Render, PWA on Vercel; owner confirmed on iPhone |
-| 2 | Library + collections, Threlte fan/stack + CSS fallback, search, View Transitions (plan: `tasks/plan.md`) | 2a collections (2D) DONE (PR #6 merged, owner tested 2026-11-19); 2b search IN REVIEW — branch `feat/slice-2b`; 2c View Transitions, 2d 3D NOT STARTED |
+| 2 | Library + collections, Threlte fan/stack + CSS fallback, search, View Transitions (plan: `tasks/plan.md`) | 2a collections (2D) DONE (PR #6 merged, owner tested 2026-11-19); 2b search DONE (PR #7 merged, owner approved); 2c View Transitions IN REVIEW — branch `feat/slice-2c`; 2d 3D NOT STARTED |
 | 3 | Instagram, TikTok, HLS; `/v1/health`; health states; Dead link screen; resume | — |
 | 4 | PWA install, share target, export/import, offline shell, E2E 3 viewports, deploy (owner picks host) | — |
 
@@ -26,6 +26,12 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 - JS gzip, all chunks, same method: 2a 51.6 KB → 2b 52.8 KB (+1.2 KB).
 - Search is client-side over title + author of the whole library (not just one collection), results link to `/v/<id>?c=todos`.
 - NOT RUN: iPhone/iPad/desktop physical checks of 2b (iOS keyboard, focus, zoom); CI (no workflow, slice 4).
+
+## Slice 2c — evidence (2026-11-19)
+- Web: `pnpm test` 117 PASS (4 new `transition.spec.ts`), `pnpm check` 0 errors, `pnpm build` PASS, `pnpm test:e2e` 78 PASS (26 flows x 3 viewports; 4 new, repeated 3x after a test race was fixed).
+- JS gzip, all chunks, same method: 2b 52.8 KB → 2c 53.4 KB (+0.6 KB).
+- Behavior: screen colors cross-fade 320 ms; a tapped list row's thumbnail morphs into the player frame (380 ms); reduced motion = 100 ms fade, no morph; no View Transitions = plain navigation. Library cards go to a Collection screen, so they only cross-fade (no shared element there).
+- NOT RUN: seeing the animation (Playwright records the mode and the shared name at the call, not the pixels); iPhone Safari support and feel; CI.
 
 ## Known gaps carried to slice 2+
 - Rate limit on Render: `CLIENT_IP_HEADER` unset = ONE shared bucket for all users (30/min, burst 10; proven by a 40-request burst: 10x422 + 30x429). `CF-Connecting-IP` looks per-client (forging it gives 403 at the edge; a burst got no 429) but is NOT PROVEN from a single egress IP. Prove from a phone on 4G, then set it.
