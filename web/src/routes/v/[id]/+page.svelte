@@ -10,7 +10,7 @@
 	import Icon from '#lib/ui/Icon.svelte';
 	import MoreSheet from '#lib/ui/MoreSheet.svelte';
 	import MoveSheet from '#lib/ui/MoveSheet.svelte';
-	import Player from '#lib/ui/Player.svelte';
+	import Cinema from '#lib/ui/Cinema.svelte';
 
 	let all = $state<Video[] | null>(null);
 	let scope = $state(ALL);
@@ -144,11 +144,9 @@
 		</section>
 	{:else if video}
 		<section class="stage">
-			<div class="screen">
-				{#key `${video.id}|${video.canonicalUrl}`}
-					<Player {video} onended={markWatched} />
-				{/key}
-			</div>
+			{#key `${video.id}|${video.canonicalUrl}`}
+				<Cinema {video} onended={markWatched} />
+			{/key}
 
 			<div class="info">
 				{#if video.author}<p class="author">{video.author}</p>{/if}
@@ -282,13 +280,6 @@
 	}
 
 	/* The video gets whatever height the rest leaves, and is sized to fit it. */
-	.screen {
-		flex: 1 1 0;
-		min-height: 0;
-		container-type: size;
-		display: grid;
-		place-items: center;
-	}
 
 	.missing h1 {
 		font-family: var(--font-display);
