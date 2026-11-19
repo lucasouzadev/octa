@@ -15,8 +15,37 @@ export interface AddDeps {
 	resolve?: (url: string, signal: AbortSignal) => Promise<Meta>;
 }
 
+const TIKTOK_SHORT = /^(?:https?:\/\/)?(?:vm|vt)\.tiktok\.com\//i;
+
+/**
+ * parseLink, plus one case the client cannot do alone: a TikTok short link only turns
+ * into /@user/video/ID through a redirect, which the API follows. The API's answer is
+ * never trusted for identity: its canonical URL goes back through parseLink and must
+ * be a TikTok video.
+ */
+async function parseOrExpand(
+	raw: string,
+	resolve: (url: string, signal: AbortSignal) => Promise<Meta>
+): Promise<{ ref: Ref; meta: Meta | null }> {
+	try {
+		return { ref: parseLink(raw), meta: null };
+	} catch (e) {
+		if (!(e instanceof LinkError) || e.code !== 'unsupported_url' || !TIKTOK_SHORT.test(raw.trim())) throw e;
+		const meta = await tryResolve(raw, resolve);
+		if (!meta) throw e;
+		try {
+			const ref = parseLink(meta.canonicalUrl);
+			if (ref.source === 'tiktok') return { ref, meta };
+		} catch {
+			// fall through to the original error
+		}
+		throw e;
+	}
+}
+
 export async function addLink(raw: string, deps: AddDeps): Promise<{ video: Video; created: boolean }> {
-	const ref = parseLink(raw); // throws LinkError before anything is saved or sent
+	const resolve = deps.resolve ?? ((u, signal) => resolveLink(u, { signal }));
+	const { ref, meta: expanded } = await parseOrExpand(raw, resolve); // throws LinkError before anything is saved
 	const existing = await deps.library.findByCanonical(ref.canonicalUrl);
 	if (existing) return { video: existing, created: false };
 
@@ -37,7 +66,7 @@ export async function addLink(raw: string, deps: AddDeps): Promise<{ video: Vide
 		updatedAt: now
 	};
 
-	const meta = await tryResolve(raw, deps.resolve ?? ((u, signal) => resolveLink(u, { signal })));
+	const meta = expanded ?? (await tryResolve(raw, resolve));
 	if (meta) {
 		Object.assign(video, metaPatch(meta));
 	}
@@ -88,7 +117,16 @@ export async function tryResolve(
 
 function fallbackTitle(ref: Ref): string {
 	if (ref.title) return ref.title;
-	return ref.source === 'youtube' ? 'Vídeo do YouTube' : 'Vídeo';
+	switch (ref.source) {
+		case 'youtube':
+			return 'Vídeo do YouTube';
+		case 'instagram':
+			return ref.kind === 'reel' ? 'Reel do Instagram' : 'Vídeo do Instagram';
+		case 'tiktok':
+			return 'Vídeo do TikTok';
+		default:
+			return 'Vídeo';
+	}
 }
 
 function fallbackThumb(ref: Ref): string | undefined {
@@ -133,7 +171,8 @@ export async function editVideo(
 		return title && title !== current.title ? deps.library.update(id, { title }) : current;
 	}
 
-	const ref = parseLink(raw); // throws LinkError before anything changes
+	const resolve = deps.resolve ?? ((u, signal) => resolveLink(u, { signal }));
+	const { ref, meta: expanded } = await parseOrExpand(raw, resolve); // throws LinkError before anything changes
 	if (ref.canonicalUrl !== current.canonicalUrl) {
 		const other = await deps.library.findByCanonical(ref.canonicalUrl);
 		if (other && other.id !== id) throw new EditError('duplicate');
@@ -153,7 +192,7 @@ export async function editVideo(
 		health: 'unknown',
 		deadStreak: 0
 	};
-	const meta = await tryResolve(raw, deps.resolve ?? ((u, signal) => resolveLink(u, { signal })));
+	const meta = expanded ?? (await tryResolve(raw, resolve));
 	if (meta) Object.assign(patch, metaPatch(meta));
 	if (title) patch.title = title; // what the person typed wins over the YouTube title
 	try {

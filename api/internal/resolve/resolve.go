@@ -45,6 +45,11 @@ type Resolver struct {
 	cache         *cache.TTL[string, Meta]
 	now           func() time.Time
 	youtubeOEmbed string
+	tiktokOEmbed  string
+	// instagramPage maps a canonical post URL to the page that is fetched (tests only).
+	instagramPage func(canonical string) string
+	// expand follows a TikTok short link to its /@user/video/ID URL.
+	expand func(ctx context.Context, short string) (string, bool)
 }
 
 func New(f *fetch.Client, now func() time.Time) *Resolver {
@@ -53,12 +58,22 @@ func New(f *fetch.Client, now func() time.Time) *Resolver {
 		cache:         cache.New[string, Meta](10_000, now),
 		now:           now,
 		youtubeOEmbed: "https://www.youtube.com/oembed",
+		tiktokOEmbed:  "https://www.tiktok.com/oembed",
+		instagramPage: func(canonical string) string { return canonical },
+		expand:        defaultExpand(f),
 	}
 }
 
 // Resolve returns provider.ErrInvalid / ErrUnsupported for bad input; every
 // other outcome is a Meta (possibly with health "unknown").
 func (r *Resolver) Resolve(ctx context.Context, raw string) (Meta, error) {
+	if short, ok := provider.ShortTikTokURL(raw); ok {
+		exp, ok := r.expand(ctx, short)
+		if !ok {
+			return Meta{}, provider.ErrUnsupported
+		}
+		raw = exp
+	}
 	ref, err := provider.Parse(raw)
 	if err != nil {
 		return Meta{}, err
@@ -70,6 +85,10 @@ func (r *Resolver) Resolve(ctx context.Context, raw string) (Meta, error) {
 	switch ref.Source {
 	case "youtube":
 		r.youtube(ctx, &m)
+	case "tiktok":
+		r.tiktok(ctx, &m)
+	case "instagram":
+		r.instagram(ctx, &m)
 	case "direct":
 		r.direct(ctx, &m)
 	}

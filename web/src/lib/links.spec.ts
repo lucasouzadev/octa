@@ -117,6 +117,60 @@ describe('addLink', () => {
 	});
 });
 
+describe('addLink: TikTok short links (only the API can follow the redirect)', () => {
+	const tiktokMeta = (over: Partial<Meta> = {}): Meta =>
+		aliveMeta({
+			source: 'tiktok',
+			kind: 'short',
+			id: '7234567890123456789',
+			canonicalUrl: 'https://www.tiktok.com/@u/video/7234567890123456789',
+			embed: { type: 'iframe', src: 'https://www.tiktok.com/embed/v2/7234567890123456789', aspect: '9:16' },
+			title: 'Receita rápida',
+			thumbnail: undefined,
+			...over
+		});
+
+	it('asks the API, then trusts only what the client parser makes of the canonical URL', async () => {
+		let asked = 0;
+		const { video } = await addLink('https://vm.tiktok.com/ZMabc123/', {
+			library: lib,
+			resolve: async () => (asked++, tiktokMeta())
+		});
+		expect(asked).toBe(1); // not asked a second time for metadata
+		expect(video.source).toBe('tiktok');
+		expect(video.canonicalUrl).toBe('https://www.tiktok.com/@u/video/7234567890123456789');
+		expect(video.embed.src).toBe('https://www.tiktok.com/embed/v2/7234567890123456789');
+		expect(video.title).toBe('Receita rápida');
+	});
+
+	it('is unsupported when the API is down: nothing is saved', async () => {
+		await expect(
+			addLink('https://vm.tiktok.com/ZMabc123/', {
+				library: lib,
+				resolve: async () => {
+					throw new ApiError(502);
+				}
+			})
+		).rejects.toMatchObject({ code: 'unsupported_url' });
+		expect(await lib.list()).toHaveLength(0);
+	});
+
+	it('is unsupported when the API points somewhere that is not a TikTok video', async () => {
+		await expect(
+			addLink('https://vm.tiktok.com/ZMabc123/', {
+				library: lib,
+				resolve: async () => tiktokMeta({ canonicalUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ' })
+			})
+		).rejects.toBeInstanceOf(LinkError);
+	});
+
+	it('does not ask the API to expand other unsupported links', async () => {
+		let asked = 0;
+		await expect(addLink('https://example.com/x', { library: lib, resolve: async () => (asked++, tiktokMeta()) })).rejects.toBeInstanceOf(LinkError);
+		expect(asked).toBe(0);
+	});
+});
+
 describe('newId', () => {
 	it('works where crypto.randomUUID is missing (http on the local network, e.g. iPhone testing)', async () => {
 		const { newId } = await import('#lib/links.ts');

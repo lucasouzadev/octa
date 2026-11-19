@@ -1,3 +1,4 @@
+import type { Kind, Source } from './providers/parse.ts';
 // The fan of cards on a Library card (prototype page 2). One layout, used by both
 // the CSS-3D renderer and the WebGL scene so they always line up.
 export const MAX_FAN = 5;
@@ -34,8 +35,11 @@ export function fanLayout(count: number): FanCard[] {
 }
 
 /** The source name printed on a card (the renderer upper-cases it). */
-export function cardLabel(v: { source: 'youtube' | 'direct'; kind: 'video' | 'short' | 'direct' }): string {
+export function cardLabel(v: { source: Source; kind: Kind }): string {
+	if (v.source === 'tiktok') return 'TikTok';
+	if (v.source === 'instagram') return v.kind === 'reel' ? 'Reels' : 'Instagram';
 	if (v.kind === 'short') return 'Shorts';
+	if (v.kind === 'hls') return 'HLS';
 	return v.source === 'youtube' ? 'YouTube' : 'MP4';
 }
 
@@ -43,8 +47,8 @@ export function cardLabel(v: { source: 'youtube' | 'direct'; kind: 'video' | 'sh
 export interface FanItem {
 	id?: string;
 	thumbnail?: string;
-	source: 'youtube' | 'direct';
-	kind: 'video' | 'short' | 'direct';
+	source: Source;
+	kind: Kind;
 	embed: { aspect: string };
 }
 

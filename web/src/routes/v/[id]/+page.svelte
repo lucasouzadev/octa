@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { cardLabel } from '#lib/fan.ts';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { library, type Video } from '#lib/db/index.ts';
@@ -48,7 +49,7 @@
 		library().then((lib) => lib.update(current.id, { lastOpenedAt: new Date().toISOString() }));
 	});
 
-	const sourceLabel = (v: Video) => (v.kind === 'short' ? 'Shorts' : v.source === 'youtube' ? 'YouTube' : 'Arquivo');
+	const sourceLabel = (v: Video) => (v.source === 'direct' ? 'Arquivo' : cardLabel(v));
 
 	function next() {
 		if (!all || all.length < 2) return;

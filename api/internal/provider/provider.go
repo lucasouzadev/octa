@@ -26,8 +26,8 @@ type Embed struct {
 
 // Ref is everything the parser knows without touching the network.
 type Ref struct {
-	Source       string `json:"source"` // youtube | direct
-	Kind         string `json:"kind"`   // video | short | direct
+	Source       string `json:"source"` // youtube | instagram | tiktok | direct
+	Kind         string `json:"kind"`   // video | short | reel | direct | hls
 	ID           string `json:"id"`
 	CanonicalURL string `json:"canonicalUrl"`
 	Embed        Embed  `json:"embed"`
@@ -46,6 +46,15 @@ func Parse(raw string) (Ref, error) {
 		return ref, nil
 	}
 	if isYouTubeHost(u.Hostname()) {
+		return Ref{}, ErrUnsupported
+	}
+	if ref, ok := parseInstagram(u); ok {
+		return ref, nil
+	}
+	if ref, ok := parseTikTok(u); ok {
+		return ref, nil
+	}
+	if isInstagramHost(u.Hostname()) || isTikTokHost(u.Hostname()) {
 		return Ref{}, ErrUnsupported
 	}
 	if ref, ok := parseDirect(u); ok {

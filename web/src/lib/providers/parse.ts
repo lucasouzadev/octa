@@ -3,8 +3,8 @@
 
 export const MAX_URL_LENGTH = 2048;
 
-export type Source = 'youtube' | 'direct';
-export type Kind = 'video' | 'short' | 'direct';
+export type Source = 'youtube' | 'instagram' | 'tiktok' | 'direct';
+export type Kind = 'video' | 'short' | 'reel' | 'direct' | 'hls';
 export type Aspect = '16:9' | '9:16';
 
 export interface Embed {
@@ -40,6 +40,10 @@ const YT_HOSTS = new Set([
 	'youtube-nocookie.com'
 ]);
 const DIRECT_EXTS = new Set(['.mp4', '.m4v', '.webm', '.mov']);
+const IG_CODE_RE = /^[A-Za-z0-9_-]+$/;
+const TT_ID_RE = /^[0-9]{5,25}$/;
+const TT_USER_RE = /^@[A-Za-z0-9._-]{1,64}$/;
+const TT_HOSTS = new Set(['tiktok.com', 'm.tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com']);
 
 export function parseLink(raw: string): Ref {
 	const u = normalize(raw);
@@ -49,9 +53,53 @@ export function parseLink(raw: string): Ref {
 		if (!ref) throw new LinkError('unsupported_url');
 		return ref;
 	}
+	if (host === 'instagram.com') {
+		const ref = parseInstagram(u);
+		if (!ref) throw new LinkError('unsupported_url');
+		return ref;
+	}
+	if (TT_HOSTS.has(host)) {
+		// vm./vt. short links only resolve through a redirect, which the API follows.
+		const ref = parseTikTok(u, host);
+		if (!ref) throw new LinkError('unsupported_url');
+		return ref;
+	}
 	const direct = parseDirect(u);
 	if (direct) return direct;
 	throw new LinkError('unsupported_url');
+}
+
+function parseInstagram(u: URL): Ref | null {
+	const segs = u.pathname.replace(/^\/+|\/+$/g, '').split('/');
+	const code = segs[1] ?? '';
+	if (segs.length < 2 || !IG_CODE_RE.test(code)) return null;
+	let kind: Kind;
+	let canonical: string;
+	if (segs[0] === 'reel' || segs[0] === 'reels') [kind, canonical] = ['reel', `https://www.instagram.com/reel/${code}/`];
+	else if (segs[0] === 'p') [kind, canonical] = ['video', `https://www.instagram.com/p/${code}/`];
+	else if (segs[0] === 'tv') [kind, canonical] = ['video', `https://www.instagram.com/tv/${code}/`];
+	else return null;
+	return {
+		source: 'instagram',
+		kind,
+		id: code,
+		canonicalUrl: canonical,
+		embed: { type: 'iframe', src: `${canonical}embed/`, aspect: '9:16' }
+	};
+}
+
+function parseTikTok(u: URL, host: string): Ref | null {
+	if (host !== 'tiktok.com' && host !== 'm.tiktok.com') return null;
+	const segs = u.pathname.replace(/^\/+|\/+$/g, '').split('/');
+	if (segs.length < 3 || !TT_USER_RE.test(segs[0]) || segs[1] !== 'video' || !TT_ID_RE.test(segs[2])) return null;
+	const id = segs[2];
+	return {
+		source: 'tiktok',
+		kind: 'short',
+		id,
+		canonicalUrl: `https://www.tiktok.com/${segs[0]}/video/${id}`,
+		embed: { type: 'iframe', src: `https://www.tiktok.com/embed/v2/${id}`, aspect: '9:16' }
+	};
 }
 
 function normalize(raw: string): URL {
@@ -106,7 +154,8 @@ function parseDirect(u: URL): Ref | null {
 	const base = u.pathname.split('/').pop() ?? '';
 	const dot = base.lastIndexOf('.');
 	const ext = dot >= 0 ? base.slice(dot).toLowerCase() : '';
-	if (!DIRECT_EXTS.has(ext)) return null;
+	const hls = ext === '.m3u8';
+	if (!DIRECT_EXTS.has(ext) && !hls) return null;
 	const c = new URL(u.href);
 	c.hash = '';
 	const canonical = c.href;
@@ -118,10 +167,10 @@ function parseDirect(u: URL): Ref | null {
 	}
 	return {
 		source: 'direct',
-		kind: 'direct',
+		kind: hls ? 'hls' : 'direct',
 		id: canonical,
 		canonicalUrl: canonical,
-		embed: { type: 'video', src: canonical, aspect: '16:9' },
+		embed: { type: hls ? 'hls' : 'video', src: canonical, aspect: '16:9' },
 		title
 	};
 }

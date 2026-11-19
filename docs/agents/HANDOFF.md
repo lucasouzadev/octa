@@ -1,18 +1,18 @@
-# HANDOFF — 2026-11-19 — slice 2e-3 (WebGL monitors) in review
+# HANDOFF — 2026-11-19 — slice 3a (Instagram, TikTok, HLS) in review
 
 ## Goal
-Close the main plan in order 2e-3 -> 3 -> 4 (owner choice). 2e-3: WebGL monitors on the Collection screen, one fixed canvas.
+Close the main plan: 2e-3 (merged, PR #17) -> 3a sources -> 3b health -> 4 PWA + CI.
 
 ## State (verified)
-- R2 (PR #16) merged. Branch `feat/slice-2e3-webgl-monitors`, PR open (not merged).
-- `pnpm check` 0/0, `pnpm test` 213 PASS, `pnpm build` PASS, `pnpm test:e2e` PASS at 3 viewports.
-- NOT RUN: real iPhone/iPad GPU, CI (none).
+- Branch `feat/slice-3a-sources`, PR open (not merged).
+- API: `go vet`, `go test -race ./...` PASS. Web: check 0/0, 228 unit PASS, build PASS, e2e 318 PASS + 1 flaky (`enrich.e2e.ts` desktop, passes alone).
+- NOT RUN: live Instagram/TikTok behaviour (no route from sandbox), real iPhone, CI, govulncheck.
 
-## Decisions
-- One canvas over the pile; faces painted from the DOM row; CSS monitors stay as fallback and for editing.
+## Open owner question (2026-11-19 16:27)
+Owner wants a "projector": play YouTube/Instagram/TikTok videos as if native, without the platform HUD, with the provider and a truncated link below. This conflicts with ADR-0002 (official players only, no extraction/proxy) and the platforms' terms. Options were put to the owner; nothing built yet. Do not start slice 3b until answered if the answer changes the player.
 
 ## Next step (exact)
-Owner tests 2e-3 on iPhone and merges. Then slice 3 (Instagram, TikTok, HLS, /v1/health, real dead-link check, Continuar assistindo), then slice 4 (PWA install, share target, export/import, offline shell, CI).
+Owner answers the player question and tests 3a. Then 3b (/v1/health, real dead-link check, Continuar assistindo), then slice 4.
 
 ## Risks / owner decisions
-- Row-to-player morph starts from a transparent row with WebGL on. Render limiter shared bucket; `/healthz` unset; app icon open.
+- Render limiter shared bucket; `/healthz` unset; app icon open; no CSP yet.
