@@ -134,6 +134,63 @@ func TestRateLimitPerIP(t *testing.T) {
 	}
 }
 
+func newHandlerWithIPHeader(header string, burst int) http.Handler {
+	return New(Config{
+		Resolver:       fakeResolver{},
+		RatePerMinute:  60,
+		Burst:          burst,
+		ClientIPHeader: header,
+	})
+}
+
+const okBody = `{"url":"https://youtu.be/dQw4w9WgXcQ"}`
+
+func TestClientIPHeaderSeparatesBuckets(t *testing.T) {
+	h := newHandlerWithIPHeader("True-Client-IP", 1)
+	a := map[string]string{"True-Client-IP": "203.0.113.7"}
+	b := map[string]string{"True-Client-IP": "203.0.113.8"}
+	codes := []int{post(h, okBody, a).Code, post(h, okBody, b).Code, post(h, okBody, a).Code}
+	if codes[0] != 200 || codes[1] != 200 || codes[2] != http.StatusTooManyRequests {
+		t.Fatalf("codes = %v, want [200 200 429]", codes)
+	}
+}
+
+func TestClientIPHeaderIgnoredWhenNotConfigured(t *testing.T) {
+	h := newHandlerWithIPHeader("", 1)
+	first := post(h, okBody, map[string]string{"True-Client-IP": "203.0.113.7"}).Code
+	second := post(h, okBody, map[string]string{"True-Client-IP": "203.0.113.8"}).Code
+	if first != 200 || second != http.StatusTooManyRequests {
+		t.Fatalf("codes = [%d %d], want [200 429]: a spoofed header must not change the bucket", first, second)
+	}
+}
+
+func TestClientIPHeaderInvalidValueFallsBackToRemoteAddr(t *testing.T) {
+	h := newHandlerWithIPHeader("True-Client-IP", 1)
+	for i, v := range []string{"", "not-an-ip", "203.0.113.7, 198.51.100.1", "999.1.1.1"} {
+		hdr := map[string]string{}
+		if v != "" {
+			hdr["True-Client-IP"] = v
+		}
+		code := post(h, okBody, hdr).Code
+		want := 200
+		if i > 0 {
+			want = http.StatusTooManyRequests // all share the RemoteAddr bucket
+		}
+		if code != want {
+			t.Fatalf("value %q: status = %d, want %d", v, code, want)
+		}
+	}
+}
+
+func TestClientIPHeaderNormalizesValue(t *testing.T) {
+	h := newHandlerWithIPHeader("True-Client-IP", 1)
+	first := post(h, okBody, map[string]string{"True-Client-IP": "2001:db8::1"}).Code
+	second := post(h, okBody, map[string]string{"True-Client-IP": " 2001:0db8:0:0:0:0:0:1 "}).Code
+	if first != 200 || second != http.StatusTooManyRequests {
+		t.Fatalf("codes = [%d %d], want [200 429]: equivalent IPs share one bucket", first, second)
+	}
+}
+
 func TestHealthz(t *testing.T) {
 	rec := httptest.NewRecorder()
 	newHandler(t, 10).ServeHTTP(rec, httptest.NewRequest(http.MethodGet, "/healthz", nil))

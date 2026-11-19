@@ -1,30 +1,22 @@
-# HANDOFF — 2026-11-19 — slice 1 (paste → resolve → card → player)
+# HANDOFF — 2026-11-19 — API on Render (free): image + client IP ready, not deployed
 
 ## Goal
-First vertical slice — approved 2026-11-19 by owner ("pode dar início ao projeto"): YouTube long/Shorts + direct .mp4, Go `/v1/resolve`, PWA paste/library/player. Plan: `tasks/plan.md`.
+Host the Go API on Render free so the Vercel PWA can resolve links. Plan: `tasks/plan.md` (last section).
 
-## State (verified, with evidence)
-- Implementation: done on branch `feat/slice-1` (commits 97f1d69, f3f14d0, 651f6ce + docs commit).
-- Merge: PR open against `main`, **not merged** (owner reviews).
-- Production: none — no deploy target chosen.
-- QA automated: API `go test -race ./...` PASS, `go vet` PASS, govulncheck clean; web `pnpm test` 74 PASS, `pnpm check` 0 errors, `pnpm build` PASS, `pnpm test:e2e` 24 PASS (390/834/1440). CI: N/A — no workflow until slice 4.
-- QA physical: pending — owner on iPhone Safari, iPad, desktop (see PR test list).
+## State (verified)
+- Main at f6315e2 (slice 1 merged). Web production on Vercel (project `web`, `web-chi-nine-h1xmk9enwg.vercel.app`) READY; `/v/teste` returns 200 with the app shell (rewrite OK). Real `/v/<id>` reload in a browser: NOT RUN.
+- Branch `feat/render-api` (PR open, not merged): `CLIENT_IP_HEADER` + tests, `api/Dockerfile`, `.dockerignore`.
+- API `go test -race ./...` PASS, `go vet` PASS. Native static build + local run: healthz 200, CORS preflight OK, limiter per forged header IP OK.
+- `docker build`: BLOCKED (no Docker daemon in the agent sandbox). Render builds it on deploy; check the build log.
+- Render workspace "My Workspace" (`tea-d3a28ibuibrs73bl99dg`) has one free service (`Hotel-Flor-de-Lima`); no octa service yet. Deploy: NOT DONE.
 
-## Decisions (and why)
-- Client parser owns identity (canonical URL, embed src); API only adds title/author/thumb/health → a bad API response cannot redirect the player.
-- Upstream failure returns 200 + `health: unknown` (doc updated) so links still save offline/API-down.
-- SSRF guard checks the dialed IP (covers redirects/DNS rebinding); no HTTP proxy in the fetch client.
-- SvelteKit 3 + TypeScript 6 (scaffold default); `#lib/*.ts` subpath imports.
+## Decisions
+- Client IP: trusted single-IP header via env, fallback RemoteAddr; never XFF on Render. `True-Client-IP` to be confirmed by a forged-header burst test after deploy.
+- CORS allowlist = Vercel production URL only.
 
-## Files touched
-- `api/**` — Go module (provider, fetch, cache, resolve, httpapi, cmd/api).
-- `web/**` — SvelteKit app, routes `/`, `/add`, `/v/[id]`, tests.
-- `testdata/urls.json` — shared parser vectors.
-- `docs/architecture/ARCHITECTURE.md`, `docs/STATUS.md`, `tasks/plan.md`.
+## Next step (exact)
+After the PR is merged: ask "yes" to create the Render web service (plan step 3), then "yes" for `VITE_API_BASE` + Vercel redeploy (step 4), then smoke (step 5).
 
-## Next step (exact, first action)
-Boot; check the PR state with GitHub tools; if merged, plan slice 2 (collections, Threlte fan/stack + CSS fallback, search, View Transitions) and ask for "yes".
-
-## Risks / blocked / owner decisions needed
-- Gaps listed in `docs/STATUS.md` (skeleton, client IP behind proxy, no CI, double-paste race).
-- Owner: app icon; hosting before slice 4.
+## Risks / owner decisions
+- If the forged-header test shows `True-Client-IP` is forgeable, change strategy before exposing widely (fallback: RemoteAddr = one shared bucket, or Cloud Run).
+- App icon still open. Slice 2 unplanned and not approved.

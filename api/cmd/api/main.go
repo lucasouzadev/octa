@@ -1,7 +1,8 @@
 // Command api runs the octa link resolver.
 //
 // Env: PORT (default 8080), ALLOWED_ORIGINS (comma-separated, default
-// http://localhost:5173).
+// http://localhost:5173), CLIENT_IP_HEADER (header with the real client IP set
+// by a trusted proxy, e.g. True-Client-IP on Render; default none = RemoteAddr).
 package main
 
 import (
@@ -29,6 +30,7 @@ func main() {
 	api := httpapi.New(httpapi.Config{
 		Resolver:       resolve.New(fetch.New(fetch.Options{}), func() time.Time { return time.Now().UTC() }),
 		AllowedOrigins: origins,
+		ClientIPHeader: strings.TrimSpace(os.Getenv("CLIENT_IP_HEADER")),
 		Logger:         logger,
 	})
 
