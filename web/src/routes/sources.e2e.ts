@@ -23,6 +23,7 @@ test('Instagram reel: official embed, 9:16, source label, offline title', async 
 	await net(page, () => null); // API down: the client parser carries it
 	await paste(page, 'https://www.instagram.com/reel/Cxyz123_-a/?igsh=abc');
 	await expect(page).toHaveURL(/\/v\//);
+	await page.getByRole('button', { name: /^Assistir/ }).click();
 	const frame = page.locator('.player iframe');
 	await expect(frame).toHaveAttribute('src', 'https://www.instagram.com/reel/Cxyz123_-a/embed/');
 	await expect(page.locator('.player .frame.vertical')).toHaveCount(1);
@@ -30,7 +31,7 @@ test('Instagram reel: official embed, 9:16, source label, offline title', async 
 	await expect(page.getByText('Reel do Instagram').first()).toBeVisible();
 });
 
-test('TikTok video: embed v2, 9:16, API title wins', async ({ page }) => {
+test('TikTok video: player v1 without its chrome, 9:16, API title wins', async ({ page }) => {
 	await net(page, () => ({
 		source: 'tiktok',
 		kind: 'short',
@@ -45,7 +46,8 @@ test('TikTok video: embed v2, 9:16, API title wins', async ({ page }) => {
 	}));
 	await paste(page, 'https://www.tiktok.com/@user.name/video/7234567890123456789?is_from_webapp=1');
 	await expect(page).toHaveURL(/\/v\//);
-	await expect(page.locator('.player iframe')).toHaveAttribute('src', 'https://www.tiktok.com/embed/v2/7234567890123456789');
+	await page.getByRole('button', { name: /^Assistir/ }).click();
+	await expect(page.locator('.player iframe')).toHaveAttribute('src', 'https://www.tiktok.com/player/v1/7234567890123456789?controls=0&progress_bar=0&play_button=0&volume_control=0&fullscreen_button=0&timestamp=0&music_info=0&description=0&rel=0&native_context_menu=0');
 	await expect(page.getByText('Receita rápida').first()).toBeVisible();
 	await expect(page.getByText('TikTok').first()).toBeVisible();
 });
@@ -68,7 +70,8 @@ test('TikTok short link is expanded by the API; with the API down it says unsupp
 	);
 	await paste(page, 'https://vm.tiktok.com/ZMabc123/');
 	await expect(page).toHaveURL(/\/v\//);
-	await expect(page.locator('.player iframe')).toHaveAttribute('src', 'https://www.tiktok.com/embed/v2/7234567890123456789');
+	await page.getByRole('button', { name: /^Assistir/ }).click();
+	await expect(page.locator('.player iframe')).toHaveAttribute('src', 'https://www.tiktok.com/player/v1/7234567890123456789?controls=0&progress_bar=0&play_button=0&volume_control=0&fullscreen_button=0&timestamp=0&music_info=0&description=0&rel=0&native_context_menu=0');
 
 	const down = await page.context().newPage();
 	await net(down, () => null);

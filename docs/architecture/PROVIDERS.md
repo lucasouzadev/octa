@@ -36,7 +36,7 @@ type Provider interface {
 ## TikTok
 - Hosts: `tiktok.com`, `www.`, `m.`, `vm.tiktok.com`, `vt.tiktok.com` (short links: follow redirects through `internal/fetch` to get `/@user/video/ID`). ID = digits.
 - Kind: `short` (9:16). Canonical: `https://www.tiktok.com/@user/video/ID`.
-- Embed: `https://www.tiktok.com/embed/v2/ID` in an iframe.
+- Embed: `https://www.tiktok.com/player/v1/ID?controls=0&...` (TikTok chrome hidden, octa control bar drives it via postMessage, slice 3c).
 - Metadata: oEmbed `https://www.tiktok.com/oembed?url=<canonical>` → title, author_name, thumbnail_url (thumbnail URLs expire: re-resolve when the image 403s).
 - Health: oEmbed 200 `alive`; 400/404 `dead`; other `unknown`.
 

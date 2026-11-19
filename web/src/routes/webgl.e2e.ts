@@ -180,7 +180,10 @@ test('going back and forth does not pile up canvases', async ({ page }) => {
 		await expect(page.locator('a.card[data-collection="todos"] .fan.gl')).toHaveCount(1);
 		await page.locator('a.card[data-collection="todos"]').click();
 		await expect(page).toHaveURL(/\/c\/todos$/);
-		await expect(page.locator('canvas')).toHaveCount(0);
+		// The Collection screen has its own single canvas (the monitors, slice 2e-3):
+		// the Library's fan canvas must be gone, never two at once.
+		await expect(page.locator('canvas')).toHaveCount(1, { timeout: 10_000 });
+		await expect(page.locator('.fan.gl')).toHaveCount(0);
 		await page.getByRole('link', { name: 'Voltar' }).click();
 		await expect(page.locator('canvas')).toHaveCount(1, { timeout: 10_000 });
 	}
