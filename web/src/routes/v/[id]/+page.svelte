@@ -2,20 +2,31 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { library, type Video } from '#lib/db/index.ts';
+	import { ALL, playlistFor } from '#lib/db/scope.ts';
 	import Icon from '#lib/ui/Icon.svelte';
 	import Player from '#lib/ui/Player.svelte';
 
 	let all = $state<Video[] | null>(null);
+	let scope = $state(ALL);
 	let notice = $state('');
 
 	const id = $derived(page.params.id);
+	const requestedScope = $derived(page.url.searchParams.get('c'));
+	// Links inside the player keep the collection the person came from.
+	const at = (videoId: string) => `/v/${videoId}?c=${scope}`;
 	const index = $derived(all ? all.findIndex((v) => v.id === id) : -1);
 	const video = $derived(index >= 0 && all ? all[index] : undefined);
 
 	$effect(() => {
+		const wanted = requestedScope;
+		const videoId = id;
+		if (!videoId) return;
 		library()
-			.then((lib) => lib.list())
-			.then((list) => (all = list));
+			.then((lib) => playlistFor(lib, wanted, videoId))
+			.then((p) => {
+				all = p.videos;
+				scope = p.scope;
+			});
 	});
 
 	$effect(() => {
@@ -28,7 +39,7 @@
 
 	function next() {
 		if (!all || all.length < 2) return;
-		goto(`/v/${all[(index + 1) % all.length].id}`, { replaceState: true });
+		goto(at(all[(index + 1) % all.length].id), { replaceState: true });
 	}
 
 	async function toggleFavorite() {
@@ -59,7 +70,7 @@
 
 <main class="player on-dark">
 	<header>
-		<a class="icon-button" href="/" aria-label="Fechar"><Icon name="close" /></a>
+		<a class="icon-button" href={scope === ALL && !requestedScope ? '/' : `/c/${scope}`} aria-label="Fechar"><Icon name="close" /></a>
 		{#if video}<span class="label source">{sourceLabel(video)}</span>{/if}
 	</header>
 
@@ -107,7 +118,7 @@
 					{#each all as v (v.id)}
 						<li>
 							<a
-								href={`/v/${v.id}`}
+								href={at(v.id)}
 								data-sveltekit-replacestate
 								aria-label={v.title}
 								aria-current={v.id === video.id ? 'true' : undefined}
