@@ -12,7 +12,7 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 
 ## Slice 1 — evidence (2026-11-19)
 - API: `go test -race ./...` PASS (provider vectors, SSRF guard incl. redirect to 169.254.169.254, resolver, handlers), `go vet` PASS, `govulncheck` no vulns.
-- Web: `pnpm test` 73 PASS, `pnpm check` 0 errors, `pnpm build` PASS (~40 KB gzip JS), `pnpm test:e2e` 24 PASS (8 flows × 3 viewports).
+- Web: `pnpm test` 74 PASS, `pnpm check` 0 errors, `pnpm build` PASS (~40 KB gzip JS), `pnpm test:e2e` 24 PASS (8 flows × 3 viewports).
 - Manual: real API + preview resolved a real YouTube video; screenshots read at 390 and 1440.
 
 ## Known gaps carried to slice 2+
