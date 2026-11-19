@@ -92,6 +92,44 @@ test('Collection screen shows tilted 3D screens: bezel, play, source, status, se
 	await page.screenshot({ path: `${dir}-collection.png`, fullPage: true });
 });
 
+test('with many videos the Assistir em sequência button stays in front of the pile', async ({ page }) => {
+	await mockNetwork(page);
+	// Distinct videos, so the list is long enough to scroll under the sticky button.
+	await page.route('**/api/v1/resolve', async (route) => {
+		const { url } = route.request().postDataJSON() as { url: string };
+		const id = url.split('/').pop()!.padEnd(11, 'x').slice(0, 11);
+		await route.fulfill({
+			json: {
+				source: 'youtube',
+				kind: 'video',
+				id,
+				canonicalUrl: `https://www.youtube.com/watch?v=${id}`,
+				embed: { type: 'iframe', src: `https://www.youtube-nocookie.com/embed/${id}`, aspect: '16:9' },
+				title: `Vídeo ${id}`,
+				health: 'alive',
+				checkedAt: '2026-11-19T12:00:00Z'
+			}
+		});
+	});
+	for (const id of ['aaaaaaaaaaa', 'bbbbbbbbbbb', 'ccccccccccc', 'ddddddddddd', 'eeeeeeeeeee', 'fffffffffff']) {
+		await paste(page, `https://youtu.be/${id}`);
+		await expect(page).toHaveURL(/\/v\//);
+	}
+	await page.goto('/c/todos');
+	await expect(page.locator('.screen')).toHaveCount(6);
+	for (const where of ['bottom', 'middle']) {
+		await page.evaluate((w) => window.scrollTo(0, w === 'bottom' ? document.body.scrollHeight : document.body.scrollHeight / 2), where);
+		await page.waitForTimeout(300);
+		const cta = page.getByRole('link', { name: 'Assistir em sequência' });
+		const box = (await cta.boundingBox())!;
+		const hit = await page.evaluate(
+			([x, y]) => document.elementFromPoint(x, y)?.closest('a.cta') !== null,
+			[box.x + box.width / 2, box.y + box.height / 2]
+		);
+		expect(hit, `button covered at scroll ${where}`).toBe(true);
+	}
+});
+
 test('a link known to be dead says FORA DO AR and the header counts it', async ({ page }) => {
 	await seed(page);
 	await page.route('**/api/v1/resolve', async (route) => {
