@@ -1,22 +1,24 @@
-# HANDOFF — 2026-11-19 — API on Render (free): image + client IP ready, not deployed
+# HANDOFF — 2026-11-19 — API live on Render, web points to it
 
 ## Goal
-Host the Go API on Render free so the Vercel PWA can resolve links. Plan: `tasks/plan.md` (last section).
+Video library from links; API on Render free + PWA on Vercel. Plan: `tasks/plan.md` (last section).
 
 ## State (verified)
-- Main at f6315e2 (slice 1 merged). Web production on Vercel (project `web`, `web-chi-nine-h1xmk9enwg.vercel.app`) READY; `/v/teste` returns 200 with the app shell (rewrite OK). Real `/v/<id>` reload in a browser: NOT RUN.
-- Branch `feat/render-api` (PR open, not merged): `CLIENT_IP_HEADER` + tests, `api/Dockerfile`, `.dockerignore`.
-- API `go test -race ./...` PASS, `go vet` PASS. Native static build + local run: healthz 200, CORS preflight OK, limiter per forged header IP OK.
-- `docker build`: BLOCKED (no Docker daemon in the agent sandbox). Render builds it on deploy; check the build log.
-- Render workspace "My Workspace" (`tea-d3a28ibuibrs73bl99dg`) has one free service (`Hotel-Flor-de-Lima`); no octa service yet. Deploy: NOT DONE.
+- main at 33532b1 (PR #4 merged: `CLIENT_IP_HEADER`, `api/Dockerfile`).
+- Render: service `octa-api` (`srv-dbv7k1qjnfac73crs94g`, virginia, free, Docker, context `api`) live at https://octa-api-os09.onrender.com. `/healthz` 200; real YouTube long and Short resolved with title/thumbnail; CORS only for https://web-chi-nine-h1xmk9enwg.vercel.app.
+- Render env now: `ALLOWED_ORIGINS` only (`CLIENT_IP_HEADER` unset) -> one shared rate-limit bucket for everyone. Health Check Path not set (tool cannot): owner sets `/healthz` in the dashboard.
+- Vercel: project `web` (`prj_aqPIj4gibbtfj9T5zK853FvpcGgf`), env `VITE_API_BASE` (production) = Render URL; production deploy READY at 33532b1 with alias web-chi-nine-h1xmk9enwg.vercel.app; the Render URL is in the built JS (route chunk). Other Vercel aliases (web-lucasouzadevs-projects..., web-git-main...) are NOT in the CORS allowlist.
+- NOT RUN: in-browser paste of a real link on the Vercel app (title/thumbnail), reload of a real `/v/<id>`, iPhone/iPad checks. No CI workflow (slice 4).
 
-## Decisions
-- Client IP: trusted single-IP header via env, fallback RemoteAddr; never XFF on Render. `True-Client-IP` to be confirmed by a forged-header burst test after deploy.
-- CORS allowlist = Vercel production URL only.
+## Decisions (and why)
+- Never `X-Forwarded-For` on Render (appends; first entry forgeable, last is the edge).
+- `True-Client-IP` rejected: not overwritten by the edge (forged values gave separate buckets, no 429).
+- `CF-Connecting-IP`: forged -> 403 at the edge; burst got no 429 (value varies per request from the sandbox). Per-client behaviour unproven; header unset until a phone test.
 
 ## Next step (exact)
-After the PR is merged: ask "yes" to create the Render web service (plan step 3), then "yes" for `VITE_API_BASE` + Vercel redeploy (step 4), then smoke (step 5).
+Owner: set Health Check Path `/healthz` in Render; on iPhone (4G) paste a real YouTube link in the app. Then, if wanted: agent bursts the API from the sandbox while the phone still resolves -> proves `CF-Connecting-IP` separates clients -> set `CLIENT_IP_HEADER=CF-Connecting-IP` (owner yes, redeploys).
 
 ## Risks / owner decisions
-- If the forged-header test shows `True-Client-IP` is forgeable, change strategy before exposing widely (fallback: RemoteAddr = one shared bucket, or Cloud Run).
-- App icon still open. Slice 2 unplanned and not approved.
+- Free instance sleeps after 15 min idle (~50 s cold start); web saves the link from the parser when the API fails.
+- Shared bucket: one abuser or burst can 429 everyone for a minute.
+- App icon open. Slice 2 (collections, 3D thumbnails, search, View Transitions) unplanned and not approved.
