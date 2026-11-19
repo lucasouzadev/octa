@@ -28,6 +28,22 @@ const aliveMeta = (over: Partial<Meta> = {}): Meta => ({
 	...over
 });
 
+describe('addLink double paste', () => {
+	it('two simultaneous pastes of the same link save one video and both get it back', async () => {
+		const slow = async () => {
+			await new Promise((r) => setTimeout(r, 20));
+			return aliveMeta();
+		};
+		const [a, b] = await Promise.all([
+			addLink('https://youtu.be/dQw4w9WgXcQ', { library: lib, resolve: slow }),
+			addLink('https://youtu.be/dQw4w9WgXcQ', { library: lib, resolve: slow })
+		]);
+		expect(a.video.id).toBe(b.video.id);
+		expect([a.created, b.created].sort()).toEqual([false, true]);
+		expect(await lib.list()).toHaveLength(1);
+	});
+});
+
 describe('addLink', () => {
 	it('saves a resolved video with API metadata', async () => {
 		const { video, created } = await addLink('https://youtu.be/dQw4w9WgXcQ', {

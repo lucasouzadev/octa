@@ -1,6 +1,7 @@
 // The user's library lives on the device (ADR-0001). Schema: ARCHITECTURE §5.
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { Embed, Kind, Source } from '#lib/providers/parse.ts';
+import { newId } from '#lib/id.ts';
 
 export type Health = 'alive' | 'dead' | 'restricted' | 'unknown';
 
@@ -25,26 +26,76 @@ export interface Video {
 	updatedAt: string;
 }
 
+/** A user collection. "Todos" is virtual (every video) and never stored. */
+export interface Collection {
+	id: string;
+	name: string;
+	/** Video ids, in play order. A video is in at most one collection. */
+	order: string[];
+	createdAt: string;
+	updatedAt: string;
+}
+
+export type CollectionErrorCode = 'empty_name' | 'name_too_long' | 'reserved_name' | 'not_found' | 'bad_order';
+
+export class CollectionError extends Error {
+	constructor(readonly code: CollectionErrorCode) {
+		super(code);
+		this.name = 'CollectionError';
+	}
+}
+
+export const COLLECTION_NAME_MAX = 60;
+
+const fold = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
+
+function cleanName(raw: string): string {
+	const name = raw.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
+	if (!name) throw new CollectionError('empty_name');
+	if (name.length > COLLECTION_NAME_MAX) throw new CollectionError('name_too_long');
+	if (fold(name) === 'todos') throw new CollectionError('reserved_name');
+	return name;
+}
+
+// Strictly increasing within this tab so "oldest first" never ties.
+let lastStamp = 0;
+function stamp(): string {
+	lastStamp = Math.max(Date.now(), lastStamp + 1);
+	return new Date(lastStamp).toISOString();
+}
+
 interface OctaDB extends DBSchema {
 	videos: {
 		key: string;
 		value: Video;
 		indexes: { canonicalUrl: string; createdAt: string };
 	};
+	collections: {
+		key: string;
+		value: Collection;
+		indexes: { createdAt: string };
+	};
 }
 
 export const DB_NAME = 'octa';
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 
 export class Library {
 	private constructor(private db: IDBPDatabase<OctaDB>) {}
 
 	static async open(name = DB_NAME): Promise<Library> {
 		const db = await openDB<OctaDB>(name, DB_VERSION, {
-			upgrade(db) {
-				const videos = db.createObjectStore('videos', { keyPath: 'id' });
-				videos.createIndex('canonicalUrl', 'canonicalUrl', { unique: true });
-				videos.createIndex('createdAt', 'createdAt');
+			upgrade(db, oldVersion) {
+				// Additive only: an upgrade never touches existing videos.
+				if (oldVersion < 1) {
+					const videos = db.createObjectStore('videos', { keyPath: 'id' });
+					videos.createIndex('canonicalUrl', 'canonicalUrl', { unique: true });
+					videos.createIndex('createdAt', 'createdAt');
+				}
+				if (oldVersion < 2) {
+					const collections = db.createObjectStore('collections', { keyPath: 'id' });
+					collections.createIndex('createdAt', 'createdAt');
+				}
 			}
 		});
 		return new Library(db);
@@ -73,6 +124,89 @@ export class Library {
 		const current = await tx.store.get(id);
 		if (!current) throw new Error(`video ${id} not found`);
 		const next = { ...current, ...patch, updatedAt: new Date().toISOString() };
+		await tx.store.put(next);
+		await tx.done;
+		return next;
+	}
+
+	listCollections(): Promise<Collection[]> {
+		return this.db.getAllFromIndex('collections', 'createdAt');
+	}
+
+	getCollection(id: string): Promise<Collection | undefined> {
+		return this.db.get('collections', id);
+	}
+
+	async createCollection(rawName: string): Promise<Collection> {
+		const name = cleanName(rawName);
+		const now = stamp();
+		const collection: Collection = { id: newId(), name, order: [], createdAt: now, updatedAt: now };
+		await this.db.put('collections', collection);
+		return collection;
+	}
+
+	async renameCollection(id: string, rawName: string): Promise<Collection> {
+		const name = cleanName(rawName);
+		const tx = this.db.transaction('collections', 'readwrite');
+		const current = await tx.store.get(id);
+		if (!current) throw new CollectionError('not_found');
+		const next = { ...current, name, updatedAt: stamp() };
+		await tx.store.put(next);
+		await tx.done;
+		return next;
+	}
+
+	/** Deletes the collection only; its videos stay in the library (and in "Todos"). */
+	async deleteCollection(id: string): Promise<void> {
+		const tx = this.db.transaction('collections', 'readwrite');
+		if (!(await tx.store.get(id))) throw new CollectionError('not_found');
+		await tx.store.delete(id);
+		await tx.done;
+	}
+
+	/**
+	 * Puts the video at the end of `collectionId` (or in none when null),
+	 * removing it from wherever it was. One transaction: all or nothing.
+	 */
+	async moveVideo(videoId: string, collectionId: string | null): Promise<void> {
+		const tx = this.db.transaction(['videos', 'collections'], 'readwrite');
+		const videos = tx.objectStore('videos');
+		const collections = tx.objectStore('collections');
+		if (!(await videos.get(videoId))) throw new CollectionError('not_found');
+		const target = collectionId === null ? null : ((await collections.get(collectionId)) ?? null);
+		if (collectionId !== null && !target) throw new CollectionError('not_found');
+		for (const c of await collections.getAll()) {
+			const has = c.order.includes(videoId);
+			if (c.id === collectionId) {
+				if (!has) await collections.put({ ...c, order: [...c.order, videoId], updatedAt: stamp() });
+			} else if (has) {
+				await collections.put({ ...c, order: c.order.filter((x) => x !== videoId), updatedAt: stamp() });
+			}
+		}
+		await tx.done;
+	}
+
+	async collectionOf(videoId: string): Promise<Collection | undefined> {
+		return (await this.db.getAll('collections')).find((c) => c.order.includes(videoId));
+	}
+
+	/** The collection's videos in play order; ids without a video are skipped. */
+	async listVideos(collectionId: string): Promise<Video[]> {
+		const c = await this.db.get('collections', collectionId);
+		if (!c) throw new CollectionError('not_found');
+		const found = await Promise.all(c.order.map((id) => this.db.get('videos', id)));
+		return found.filter((v): v is Video => v !== undefined);
+	}
+
+	/** `ids` must be a permutation of the current order. */
+	async reorder(collectionId: string, ids: string[]): Promise<Collection> {
+		const tx = this.db.transaction('collections', 'readwrite');
+		const c = await tx.store.get(collectionId);
+		if (!c) throw new CollectionError('not_found');
+		const same =
+			ids.length === c.order.length && new Set(ids).size === ids.length && ids.every((id) => c.order.includes(id));
+		if (!same) throw new CollectionError('bad_order');
+		const next = { ...c, order: [...ids], updatedAt: stamp() };
 		await tx.store.put(next);
 		await tx.done;
 		return next;

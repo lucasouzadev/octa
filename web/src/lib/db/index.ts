@@ -7,4 +7,5 @@ export function library(): Promise<Library> {
 	return (opening ??= Library.open());
 }
 
-export type { Video, Health } from './library';
+export { CollectionError, COLLECTION_NAME_MAX } from './library';
+export type { Video, Health, Collection } from './library';
