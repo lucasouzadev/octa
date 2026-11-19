@@ -1,0 +1,72 @@
+# DESIGN — octa
+
+Status: approved 2026-11-19 (prototype in `README.md` here). Tokens: `tokens.json` → generated into `web/src/lib/tokens.css`. When the prototype and this file disagree, this file wins; when the owner says otherwise, the owner wins.
+
+## 1. Principles
+1. **Content is the interface.** One focal element per screen; everything else steps back. Empty space is intentional, not unfinished.
+2. **Black and white by default.** Library is white; collection and player are black. **Color appears only on action screens** — a whole screen of one solid color, never accents sprinkled on chrome.
+3. **≤ 3 visible actions per screen.** Secondary actions live in gestures (swipe, long press, drag) and must also be reachable by keyboard/screen reader (a "Mais" menu in the a11y tree).
+4. **Same layout everywhere.** Phone, tablet and desktop share one composition; only scale and spacing grow. No separate "desktop version", no sidebars.
+5. **Objects, not widgets.** Videos behave like physical things (cards, paper, stacks) — that is where 3D lives. Controls stay flat and quiet.
+
+## 2. Color
+| Token | Value | Use |
+|---|---|---|
+| `bg.light` | `#FFFFFF` | Library |
+| `bg.dark` | `#000000` | Collection, Player |
+| `surface.light` | `#F4F4F4` | collection cards; icon buttons `#F2F2F2` |
+| `surface.dark` | `#161616` | pills and icon buttons on black |
+| `paper` | `#F3F1EC` | video cards in the stack (paper object), edges `#D8D5CE → #A19E98` |
+| `text.light` / `text.dark` | `#0A0A0A` / `#FFFFFF` | |
+| `muted.onLight` | `#5C5C5C` | meta on white (passes 4.5:1) |
+| `muted.onDark` | `#A3A3A3` (meta), `#8A8A8A` (hints ≥ 12px) | |
+| `action.create` | `#1A3CFF` | Paste link / add / onboarding screen |
+| `action.alert` | `#FF6A2B` (text `#0A0A0A`) | Dead link / restricted |
+| `action.success` | `#00804A` | reserved: import done, first collection |
+| `status.dead` | `#C2410C` | small "Fora do ar" label on paper |
+
+Author tokens in `oklch()` in CSS (hex here is the reference). Screen color changes animate the background through View Transitions (cross-fade 320 ms), never a hard cut. Every color pair must pass 4.5:1 (3:1 for ≥ 24px text).
+
+## 3. Type
+- **Display / content titles:** Newsreader (serif), weight 400, tracking −0.01 to −0.02em. Video titles, collection names, screen headlines.
+- **UI:** Inter 400/500/600. Buttons, meta, labels.
+- Fluid scale (min @390px → max @1440px): display `clamp(46px, 4vw + 30px, 72px)`; title `clamp(30px, 1.5vw + 24px, 40px)`; h2 `clamp(24px, 1vw + 20px, 30px)`; body 16–17px; meta 13px; label 12px uppercase, tracking 0.12em, weight 600.
+- Copy is pt-BR, short, human ("Cole um link.", "Esse link saiu do ar.").
+
+## 4. Space, shape, layout
+- Spacing scale (px): 4, 8, 12, 16, 20, 24, 28, 36, 48, 64, 96. Screen padding 24–28 (phone) → 5vw (desktop).
+- Content column: `max-width: 720px`, centered. Library cards: one column on every size (they just get wider, up to the column).
+- Radius: pill = height/2; icon button 44×44 circle; collection card 30; video frame 20 (24 desktop); thumb 12; paper card 10.
+- Touch targets ≥ 44px. Primary pill height 60 (phone) / 56 (desktop row of three).
+- Use container queries on components (`@container`), not viewport breakpoints.
+
+## 5. Screens (prototype names)
+| # | Screen | Ground | Focal element | Actions (max 3) |
+|---|---|---|---|---|
+| 1 | Paste link | `action.create` | headline + one URL field | Gerar player |
+| 2 | Library | white | collection cards with fanned 3D thumbs | search, add |
+| 3 | Collection | black | 3D paper stack of videos | back, Assistir em sequência |
+| 4 | Player | black | the video | next, save, share (+ close, timeline) |
+| 5 | Dead link | `action.alert` | headline + faded tilted thumb | Remover da coleção, Manter e checar de novo |
+| 6 | Player desktop | black | same as 4, more space | same as 4 |
+
+## 6. 3D (spot use — ADR-0003)
+- **Where:** fanned thumbnails on Library cards; the paper stack in Collection; the tilted dead thumb. **Never** on a playing video or on controls.
+- **How:** Threlte scene per component (`FanStack`, `PaperStack`) with textured planes, soft shadow, slight perspective; tilt follows drag/scroll with a spring (stiffness ~0.15, damping ~0.8). Defaults: fan tilt 16°, stack rotateX 14°.
+- **Fallback (required):** the same composition in CSS 3D (`perspective`, `rotateY/rotateZ`) — used when `prefers-reduced-motion`, WebGL missing, `navigator.hardwareConcurrency ≤ 4`, or Save-Data. With reduced motion, no tilt animation at all.
+- One WebGL canvas visible at a time; stop the render loop when off-screen.
+
+## 7. Motion
+- Card → Player: View Transition with shared `view-transition-name` on the thumbnail → video frame (380 ms, `cubic-bezier(.2,.8,.2,1)`).
+- Screen color change: background cross-fade 320 ms.
+- Buttons: press scale 0.97, 120 ms. No bounce on text.
+- Everything respects `prefers-reduced-motion: reduce` (transitions become instant fades ≤ 120 ms).
+
+## 8. Iconography
+Inline stroke SVG, 1.8px stroke, round caps, 20–22px in 44px targets. Set: search, plus, back, close, play (filled), next, heart (outline/filled), share, link. No emoji, no icon fonts.
+
+## 9. Accessibility
+Real `<button>`/`<a href>`; icon buttons have `aria-label`; favorite uses `aria-pressed`; iframes get `title` = video title; focus ring visible (2px, white on black / black on white, 2px offset); timeline is a horizontal list navigable by arrow keys; gestures always have a button equivalent.
+
+## 10. Do not
+Gradient washes, glassmorphism on content, colored chrome on B&W screens, more than 3 primary actions, platform logos as decoration, copying Pocket Feeds (name, icon, copy, layout code) or any reference app's assets.
