@@ -378,6 +378,8 @@
 		list-style: none;
 		padding: 0 var(--space-1);
 		margin-block: 0;
+		/* The screens' z-index and 3D lift stay inside the pile, below the sticky button. */
+		isolation: isolate;
 	}
 
 	/* Each screen gets its own vanishing point, so every one is foreshortened the same
@@ -415,6 +417,7 @@
 	footer {
 		position: sticky;
 		bottom: 0;
+		z-index: 100;
 		padding-top: var(--space-8);
 		padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
 		/* Rows fade out under the button instead of running into it. */
