@@ -11,6 +11,7 @@
 	import Icon from '#lib/ui/Icon.svelte';
 	import Illustration from '#lib/ui/Illustration.svelte';
 	import ScreenCard from '#lib/ui/ScreenCard.svelte';
+	import { canUseWebGL3D, readEnv } from '#lib/capability.ts';
 	import MoveSheet from '#lib/ui/MoveSheet.svelte';
 
 	const scope = $derived(page.params.id ?? ALL);
@@ -57,6 +58,34 @@
 	const title = $derived(
 		scope === ALL ? 'Todos' : scope === FAVORITES ? 'Favoritos' : scope === WATCHED ? 'Assistidos' : (collection?.name ?? '')
 	);
+	// WebGL monitors (slice 2e-3): one fixed canvas, loaded only when the device can run it
+	// and the pile is not being edited. Anything else keeps the CSS-3D monitors.
+	let list = $state<HTMLElement | null>(null);
+	let Layer = $state<(typeof import('#lib/ui/MonitorLayer.svelte'))['default'] | null>(null);
+	let glReady = $state(false);
+	let glFailed = $state(false);
+	let glOff = $state(new Set<string>());
+	const wantGl = $derived(!editing && !glFailed && !!videos?.length);
+
+	$effect(() => {
+		if (!wantGl || Layer || !list || typeof window === 'undefined') return;
+		if (!canUseWebGL3D(readEnv())) return;
+		const load = () =>
+			import('#lib/ui/MonitorLayer.svelte')
+				.then((m) => (Layer = m.default))
+				.catch(() => (glFailed = true));
+		if ('requestIdleCallback' in window) {
+			const h = requestIdleCallback(load, { timeout: 1500 });
+			return () => cancelIdleCallback(h);
+		}
+		const t = setTimeout(load, 200);
+		return () => clearTimeout(t);
+	});
+
+	$effect(() => {
+		if (!wantGl) glReady = false;
+	});
+
 	const count = $derived(videos ? shelfSummary(videos) : '');
 
 	const messages: Record<string, string> = {
@@ -207,9 +236,18 @@
 				</div>
 			</section>
 		{:else}
-			<ul class="videos" class:editing>
+			{#if Layer && wantGl && list}
+				<Layer
+					{list}
+					heart={scope === FAVORITES}
+					onready={() => (glReady = true)}
+					onfail={() => (glFailed = true)}
+					onrowfail={(id) => (glOff = new Set(glOff).add(id))}
+				/>
+			{/if}
+			<ul class="videos" class:editing class:gl={glReady && wantGl} bind:this={list}>
 				{#each videos as v, i (v.id)}
-					<li style={`z-index: ${i + 1}`}>
+					<li style={`z-index: ${i + 1}`} data-id={v.id} class:gl-off={glOff.has(v.id)}>
 						<ScreenCard video={v} index={i} href={`/v/${v.id}?c=${scope}`} flat={editing} heart={scope === FAVORITES} />
 						{#if editing}
 							<div class="row-buttons">
@@ -432,6 +470,20 @@
 		position: relative;
 		perspective: 900px;
 		perspective-origin: 50% 30%;
+	}
+
+	/* WebGL monitors drawn: the rows keep their box, link and text for touch, focus and
+	   screen readers, but paint nothing (the canvas behind draws them). A row whose cover
+	   cannot be used in WebGL (no CORS) stays a CSS monitor. */
+	.videos.gl li:not(.gl-off) :global(.screen) {
+		background: transparent;
+		box-shadow: none;
+		transform: none;
+		transition: none;
+	}
+
+	.videos.gl li:not(.gl-off) :global(.screen > *) {
+		opacity: 0;
 	}
 
 	.videos li + li {

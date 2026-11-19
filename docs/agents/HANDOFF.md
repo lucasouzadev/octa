@@ -1,18 +1,18 @@
-# HANDOFF — 2026-11-19 — QA round 2 (R2.1–R2.7) in review
+# HANDOFF — 2026-11-19 — slice 2e-3 (WebGL monitors) in review
 
 ## Goal
-Second iPhone QA round, one PR (`fix/qa-round-2`): menu from the button, no zoom/selection, docked bar on visualViewport, orange delete screens, redrawn illustrations, edit, Assistidos, Favoritos, inline rename.
+Close the main plan in order 2e-3 -> 3 -> 4 (owner choice). 2e-3: WebGL monitors on the Collection screen, one fixed canvas.
 
 ## State (verified)
-- R1 (PR #15) merged. Branch `fix/qa-round-2`, PR open (not merged).
-- `pnpm check` 0/0, `pnpm test` 204 PASS, `pnpm build` PASS, `pnpm test:e2e` PASS at 3 viewports.
-- NOT RUN: real iPhone (docked bar, viewer fit, safe areas), CI (none).
+- R2 (PR #16) merged. Branch `feat/slice-2e3-webgl-monitors`, PR open (not merged).
+- `pnpm check` 0/0, `pnpm test` 213 PASS, `pnpm build` PASS, `pnpm test:e2e` PASS at 3 viewports.
+- NOT RUN: real iPhone/iPad GPU, CI (none).
 
 ## Decisions
-- Zoom and selection blocked (owner choice; a11y tradeoff recorded). Watched = manual + auto on native end. Favoritos 3D is minimal for now.
+- One canvas over the pile; faces painted from the DOM row; CSS monitors stay as fallback and for editing.
 
 ## Next step (exact)
-Owner tests on iPhone and merges. If the docked bar still fails, open `?kbdebug` and send a screenshot. Then 2e-3: WebGL for the Collection monitors.
+Owner tests 2e-3 on iPhone and merges. Then slice 3 (Instagram, TikTok, HLS, /v1/health, real dead-link check, Continuar assistindo), then slice 4 (PWA install, share target, export/import, offline shell, CI).
 
 ## Risks / owner decisions
-- Render limiter shared bucket; `/healthz` unset; app icon open; real dead-link health check is slice 3.
+- Row-to-player morph starts from a transparent row with WebGL on. Render limiter shared bucket; `/healthz` unset; app icon open.

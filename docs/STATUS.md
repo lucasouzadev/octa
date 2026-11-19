@@ -6,7 +6,7 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 |---|---|---|
 | 0 | Docs, agent-kit, ADRs, design system | DONE 2026-11-19 |
 | 1 | Paste → resolve → card → player (YouTube long/Shorts, direct .mp4); `/v1/resolve`; URL parser + shared vectors; minimal library list | DONE 2026-11-19 — merged (PR #1, #3); API live on Render, PWA on Vercel; owner confirmed on iPhone |
-| 2 | Library + collections, Threlte fan/stack + CSS fallback, search, View Transitions (plan: `tasks/plan.md`) | 2a collections (2D) DONE (PR #6 merged, owner tested 2026-11-19); 2b search DONE (PR #7 merged, owner approved); 2c View Transitions DONE (PR #8 merged, owner tested); 2d-i CSS-3D fan and stack DONE (PR #9 merged, owner approved on iPhone); iOS findings fix DONE (PR #10 merged); 2d-ii WebGL fan DONE (PR #11 merged, owner approved); 2e-1 Library cards per the prototype DONE (PR #12 merged, owner approved); 2e-2 Collection screen as tilted 3D screens IN REVIEW — branch `feat/slice-2e2-collection-screens`; 2e-3 WebGL for those screens NOT STARTED |
+| 2 | Library + collections, Threlte fan/stack + CSS fallback, search, View Transitions (plan: `tasks/plan.md`) | 2a collections (2D) DONE (PR #6 merged, owner tested 2026-11-19); 2b search DONE (PR #7 merged, owner approved); 2c View Transitions DONE (PR #8 merged, owner tested); 2d-i CSS-3D fan and stack DONE (PR #9 merged, owner approved on iPhone); iOS findings fix DONE (PR #10 merged); 2d-ii WebGL fan DONE (PR #11 merged, owner approved); 2e-1 Library cards per the prototype DONE (PR #12 merged, owner approved); 2e-2 Collection screen as tilted 3D screens IN REVIEW — branch `feat/slice-2e2-collection-screens`; 2e-3 WebGL monitors IN REVIEW (branch `feat/slice-2e3-webgl-monitors`) |
 | 3 | Instagram, TikTok, HLS; `/v1/health`; health states; Dead link screen; resume | — |
 | 4 | PWA install, share target, export/import, offline shell, E2E 3 viewports, deploy (owner picks host) | — |
 
@@ -86,6 +86,13 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 - Web: `pnpm check` 0/0, `pnpm test` 204 PASS (new specs seen red first: visualFrame, manage, edit), `pnpm build` PASS, `pnpm test:e2e` all PASS at 3 viewports after updating 3 old tests (rename inline, reserved-name message); two flaky old tests (sheet drag on desktop, viewer actions order) passed 3x repeated.
 - Honest notes: Favoritos 3D is minimal (heart badge on the monitor); "Manter e checar de novo" only resets the streak (real health check is slice 3).
 - NOT RUN: real iPhone (docked bar, viewer fit, safe areas); CI (none yet).
+
+## Slice 2e-3 — evidence (2026-11-19)
+- Owner choice: ONE fixed canvas over the pile (keeps the one-canvas rule). `ui/MonitorLayer` + `MonitorScene` draw only monitors near the viewport (built on demand, freed when far), real thickness (extruded rounded body, 12 px), shadow, Favoritos heart standing off the corner. Faces are painted from the live DOM row (`monitorPaint.ts`), so WebGL and CSS cannot drift. Rows stay links with transparent paint (touch, focus, screen readers). Tilt = base pose + scroll position + mouse spring; touch tilts by scroll only.
+- Gates unchanged: no WebGL, weak device, Save-Data, reduced motion, editing, a lost context, or a cover host without CORS (that row only) keep the CSS monitors.
+- Web: `pnpm check` 0/0, `pnpm test` 213 PASS (9 new `monitor.spec.ts`, seen red first), `pnpm build` PASS, `pnpm test:e2e` all PASS at 3 viewports (5 new flows: one canvas and links, cover not grey, CSS fallbacks, Favoritos heart, idle draws nothing). One new test was flaky under full-suite load; hardened to wait for a stable draw count, 12/12 on repeat.
+- Honest notes: the shared-element morph from a row into the player starts from a transparent row when WebGL is on (CSS monitors morph fine); thickness is subtle at the small resting angles; software GL only, no real GPU.
+- NOT RUN: real iPhone/iPad GPU feel, scroll smoothness and battery; CI (none).
 
 ## Known gaps carried to slice 2+
 - Rate limit on Render: `CLIENT_IP_HEADER` unset = ONE shared bucket for all users (30/min, burst 10; proven by a 40-request burst: 10x422 + 30x429). `CF-Connecting-IP` looks per-client (forging it gives 403 at the edge; a burst got no 429) but is NOT PROVEN from a single egress IP. Prove from a phone on 4G, then set it.

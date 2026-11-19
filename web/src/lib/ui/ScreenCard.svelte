@@ -52,6 +52,7 @@
 
 <style>
 	.screen {
+		position: relative; /* offset* measures (WebGL monitors) are taken from here */
 		--bezel: 10px;
 		display: grid;
 		/* Read order is title first (screen readers); the eye sees thumb, meta, title. */

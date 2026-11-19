@@ -122,4 +122,4 @@ Instagram/TikTok/HLS, `/v1/health` and dead-link screen (slice 3), PWA install/s
 Source: `docs/design/prototype.pdf` (same file the owner sent). Order: 2e-1 Library cards (CSS + WebGL, one shared layout) · 2e-2 Collection as a stack of tilted cream paper cards (thumb with play, "SOURCE · duration", status ATIVO / FORA DO AR, serif title; keep edit/move; CTA floats over a fade) · 2e-3 WebGL for that stack · dead-link tilted thumb belongs to slice 3.
 - [x] 2e-1 Library cards per prototype page 2
 - [x] 2e-2 Collection screen as tilted 3D screens ("como monitores") per prototype page 3, CSS-3D
-- [ ] 2e-3 WebGL Collection stack
+- [x] 2e-3 WebGL Collection monitors (one fixed canvas, owner choice 2026-11-19)
