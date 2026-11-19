@@ -36,7 +36,7 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 ## Slice 2d-i — evidence (2026-11-19)
 - Scope: the CSS-3D floor only (ADR-0003 fallback). `FanStack` on Library cards, `PaperStack` on the Collection screen, `capability.ts` (gates for the later WebGL renderer). No `three` or Threlte yet.
 - Web: `pnpm test` 126 PASS (9 new `capability.spec.ts`, seen red first), `pnpm check` 0 errors 0 warnings, `pnpm build` PASS, `pnpm test:e2e` 91 PASS + 2 skipped (hover test runs on desktop only), 31 flows x 3 viewports.
-- JS gzip, all chunks: 2c 53.4 KB → 2d-i 54.5 KB (+1.1 KB; mostly the capability module). CSS grew with the two components.
+- JS gzip, all chunks: 2c 53.4 KB → 2d-i 54.3 KB (+0.9 KB). CSS grew with the two components.
 - Screenshots read at 390 (Library fan, Collection stack): composition matches DESIGN §6. Not read at 834 and 1440.
 - Reduced motion: pose kept, no transition, no hover fan-out. No pointer/drag tilt exists yet (the plan's spring tilt belongs to the Threlte renderer).
 - NOT RUN: iPhone/iPad/desktop physical checks; frame time while scrolling (T14); CI.

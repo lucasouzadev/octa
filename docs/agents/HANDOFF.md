@@ -6,7 +6,7 @@ Slice 2 per `tasks/plan.md` (last section), order 2a → 2b → 2c → 2d; one P
 ## State (verified)
 - main at 519258d: 2a, 2b, 2c merged and tested by the owner.
 - Branch `feat/slice-2d-css3d`, PR open (not merged): `lib/capability.ts` (+9 tests), `ui/FanStack.svelte` (Library cards, rotateY 16°, hover fan-out), `ui/PaperStack.svelte` (Collection, rotateX 14°). CSS only; no `three`/Threlte yet.
-- `pnpm test` 126 PASS, `pnpm check` 0/0, `pnpm build` PASS, `pnpm test:e2e` 91 PASS + 2 skipped. JS gzip 53.4 → 54.5 KB.
+- `pnpm test` 126 PASS, `pnpm check` 0/0, `pnpm build` PASS, `pnpm test:e2e` 91 PASS + 2 skipped. JS gzip 53.4 → 54.3 KB.
 - NOT RUN: physical checks, frame time (T14), CI.
 
 ## Decisions
