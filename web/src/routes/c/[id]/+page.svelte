@@ -1,10 +1,13 @@
 <script lang="ts">
+	import { tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { CollectionError, COLLECTION_NAME_MAX, library, type Collection, type Video } from '#lib/db/index.ts';
-	import { ALL, videosIn } from '#lib/db/scope.ts';
+	import { ALL, FAVORITES, WATCHED, isVirtual, videosIn } from '#lib/db/scope.ts';
 	import { shelfSummary } from '#lib/shelf.ts';
 	import BackToTop from '#lib/ui/BackToTop.svelte';
+	import DangerScreen from '#lib/ui/DangerScreen.svelte';
+	import EditVideoSheet from '#lib/ui/EditVideoSheet.svelte';
 	import Icon from '#lib/ui/Icon.svelte';
 	import Illustration from '#lib/ui/Illustration.svelte';
 	import ScreenCard from '#lib/ui/ScreenCard.svelte';
@@ -12,6 +15,7 @@
 
 	const scope = $derived(page.params.id ?? ALL);
 	const isAll = $derived(scope === ALL);
+	const virtual = $derived(isVirtual(scope));
 
 	let collection = $state<Collection | undefined>();
 	let collections = $state<Collection[]>([]);
@@ -23,12 +27,16 @@
 	let renameValue = $state('');
 	let confirmingDelete = $state(false);
 	let moving = $state<Video | null>(null);
+	let editingVideo = $state<Video | null>(null);
+	let removingVideo = $state<Video | null>(null);
+	let dangerBusy = $state(false);
+	let titleInput = $state<HTMLInputElement>();
 	let error = $state('');
 
 	async function load() {
 		const lib = await library();
 		collections = await lib.listCollections();
-		if (isAll) {
+		if (virtual) {
 			collection = undefined;
 			missing = false;
 		} else {
@@ -46,13 +54,15 @@
 		load();
 	});
 
-	const title = $derived(isAll ? 'Todos' : (collection?.name ?? ''));
+	const title = $derived(
+		scope === ALL ? 'Todos' : scope === FAVORITES ? 'Favoritos' : scope === WATCHED ? 'Assistidos' : (collection?.name ?? '')
+	);
 	const count = $derived(videos ? shelfSummary(videos) : '');
 
 	const messages: Record<string, string> = {
 		empty_name: 'Dê um nome à coleção.',
 		name_too_long: `Use até ${COLLECTION_NAME_MAX} caracteres.`,
-		reserved_name: '"Todos" já existe. Escolha outro nome.'
+		reserved_name: 'Esse nome é reservado (Todos, Favoritos, Assistidos). Escolha outro.'
 	};
 	const explain = (e: unknown) =>
 		e instanceof CollectionError ? (messages[e.code] ?? 'Algo mudou. Atualize e tente de novo.') : 'Não deu para salvar agora.';
@@ -63,16 +73,51 @@
 		error = '';
 	}
 
-	async function rename(event: SubmitEvent) {
-		event.preventDefault();
+	// The title itself becomes the field: no second input underneath.
+	async function startRename() {
 		if (!collection) return;
+		renameValue = collection.name;
+		renaming = true;
+		error = '';
+		await tick();
+		titleInput?.focus();
+		titleInput?.select();
+	}
+
+	async function commitRename() {
+		if (!renaming || !collection) return;
+		const next = renameValue;
+		if (next.trim() === collection.name) {
+			renaming = false;
+			return;
+		}
 		try {
-			await (await library()).renameCollection(collection.id, renameValue);
+			await (await library()).renameCollection(collection.id, next);
 			renaming = false;
 			error = '';
 			await load();
 		} catch (e) {
 			error = explain(e);
+			titleInput?.focus();
+		}
+	}
+
+	function cancelRename() {
+		renaming = false;
+		error = '';
+	}
+
+	async function removeVideo() {
+		if (!removingVideo || dangerBusy) return;
+		dangerBusy = true;
+		try {
+			await (await library()).deleteVideo(removingVideo.id);
+			removingVideo = null;
+			await load();
+		} catch {
+			error = 'Não deu para apagar agora. Tente de novo.';
+		} finally {
+			dangerBusy = false;
 		}
 	}
 
@@ -107,41 +152,36 @@
 		<section class="state" aria-busy="true" aria-label="Carregando"></section>
 	{:else}
 		<section class="head">
-			<h1>{title}</h1>
+			{#if renaming}
+				<form
+					class="rename"
+					onsubmit={(e) => {
+						e.preventDefault();
+						commitRename();
+					}}
+				>
+					<input
+						class="title-edit"
+						aria-label="Novo nome da coleção"
+						type="text"
+						bind:this={titleInput}
+						bind:value={renameValue}
+						autocomplete="off"
+						enterkeyhint="done"
+						onblur={commitRename}
+						onkeydown={(e) => e.key === 'Escape' && cancelRename()}
+					/>
+				</form>
+			{:else}
+				<h1>{title}</h1>
+			{/if}
 			<p class="count">{count}</p>
 
 			{#if editing && collection}
-				{#if renaming}
-					<form class="inline" onsubmit={rename} novalidate>
-						<label class="label" for="rename">Novo nome</label>
-						<input id="rename" type="text" bind:value={renameValue} autocomplete="off" />
-						<div class="row-buttons">
-							<button class="chip primary" type="submit">Salvar</button>
-							<button class="chip" type="button" onclick={() => (renaming = false)}>Cancelar</button>
-						</div>
-					</form>
-				{:else if confirmingDelete}
-					<div class="inline" role="alertdialog" aria-label="Confirmar exclusão">
-						<p>Excluir “{collection.name}”? Os vídeos continuam em Todos.</p>
-						<div class="row-buttons">
-							<button class="chip danger" type="button" onclick={remove}>Excluir coleção</button>
-							<button class="chip" type="button" onclick={() => (confirmingDelete = false)}>Cancelar</button>
-						</div>
-					</div>
-				{:else}
-					<div class="row-buttons">
-						<button
-							class="chip"
-							type="button"
-							onclick={() => {
-								renameValue = collection?.name ?? '';
-								renaming = true;
-								error = '';
-							}}>Renomear</button
-						>
-						<button class="chip" type="button" onclick={() => (confirmingDelete = true)}>Excluir</button>
-					</div>
-				{/if}
+				<div class="row-buttons">
+					<button class="chip" type="button" onmousedown={(e) => e.preventDefault()} onclick={startRename}>Renomear</button>
+					<button class="chip" type="button" onclick={() => (confirmingDelete = true)}>Excluir</button>
+				</div>
 			{/if}
 			{#if error}<p class="error" role="alert">{error}</p>{/if}
 		</section>
@@ -153,6 +193,10 @@
 				<p>
 					{#if isAll}
 						Cole um link para começar.
+					{:else if scope === FAVORITES}
+						Toque no coração de um vídeo e ele aparece aqui.
+					{:else if scope === WATCHED}
+						Marque um vídeo como assistido, ou deixe um arquivo terminar, e ele aparece aqui.
 					{:else}
 						Abra Todos, toque em Editar e mova vídeos para esta coleção.
 					{/if}
@@ -166,11 +210,13 @@
 			<ul class="videos" class:editing>
 				{#each videos as v, i (v.id)}
 					<li style={`z-index: ${i + 1}`}>
-						<ScreenCard video={v} index={i} href={`/v/${v.id}?c=${scope}`} flat={editing} />
+						<ScreenCard video={v} index={i} href={`/v/${v.id}?c=${scope}`} flat={editing} heart={scope === FAVORITES} />
 						{#if editing}
-							<button class="chip" type="button" onclick={() => (moving = v)} aria-label={`Mover “${v.title}”`}>
-								Mover
-							</button>
+							<div class="row-buttons">
+								<button class="chip" type="button" onclick={() => (editingVideo = v)} aria-label={`Editar “${v.title}”`}>Editar</button>
+								<button class="chip" type="button" onclick={() => (moving = v)} aria-label={`Mover “${v.title}”`}>Mover</button>
+								<button class="chip" type="button" onclick={() => (removingVideo = v)} aria-label={`Apagar “${v.title}”`}>Apagar</button>
+							</div>
 						{/if}
 					</li>
 				{/each}
@@ -188,7 +234,32 @@
 	{/if}
 </main>
 
-<BackToTop lift={editing || !videos?.length ? 0 : 72} />
+<BackToTop onDark lift={editing || !videos?.length ? 0 : 96} />
+
+{#if confirmingDelete && collection}
+	<DangerScreen
+		title={`Excluir “${collection.name}”?`}
+		body="Os vídeos continuam em Todos. Só a coleção e a ordem dela somem."
+		confirmLabel="Excluir coleção"
+		onconfirm={remove}
+		oncancel={() => (confirmingDelete = false)}
+	/>
+{/if}
+
+{#if removingVideo}
+	<DangerScreen
+		title="Apagar este vídeo?"
+		body="Ele sai da sua biblioteca e das coleções. O link original não é afetado."
+		confirmLabel="Apagar vídeo"
+		thumb={removingVideo.thumbnail}
+		busy={dangerBusy}
+		{error}
+		onconfirm={removeVideo}
+		oncancel={() => (removingVideo = null)}
+	/>
+{/if}
+
+<EditVideoSheet video={editingVideo} onclose={() => (editingVideo = null)} onsaved={() => load()} />
 
 <MoveSheet video={moving} onclose={() => (moving = null)} onmoved={() => load()} />
 
@@ -270,39 +341,28 @@
 		font-size: var(--size-meta);
 	}
 
-	.chip.primary {
-		background: var(--color-text-dark);
-		color: var(--color-bg-dark);
+	/* The title turns into its own field: same type, same place, no second input. */
+	.rename {
+		width: 100%;
 	}
 
-	.chip.danger {
-		background: var(--color-action-alert);
-		color: var(--color-bg-dark);
-	}
-
-	.inline {
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-3);
-		align-self: stretch;
-		text-align: left;
-	}
-
-	.inline p {
-		line-height: 1.4;
-	}
-
-	.inline input {
-		background: transparent;
+	.title-edit {
+		width: 100%;
 		border: none;
-		border-bottom: 2px solid #3a3a3a;
-		padding: var(--space-3) 0;
-		font-size: 20px;
+		border-bottom: 2px solid var(--color-surface-dark-raised);
+		background: transparent;
 		color: var(--color-text-dark);
+		font-family: var(--font-display);
+		font-weight: 400;
+		font-size: var(--size-display);
+		line-height: 1.02;
+		letter-spacing: -0.02em;
+		text-align: center;
 		outline: none;
+		padding: 0 0 var(--space-1);
 	}
 
-	.inline input:focus-visible {
+	.title-edit:focus-visible {
 		border-bottom-color: var(--color-text-dark);
 	}
 
@@ -403,7 +463,8 @@
 		bottom: 0;
 		z-index: 100;
 		padding-top: var(--space-6);
-		padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
+		/* Room for the shadow below the button: Safari cuts the page at its toolbar. */
+		padding-bottom: calc(var(--space-6) + env(safe-area-inset-bottom));
 		/* No band or gradient: the button floats, and its own shadow keeps it readable. */
 		background: none;
 		pointer-events: none;
@@ -423,8 +484,8 @@
 		text-decoration: none;
 		pointer-events: auto;
 		box-shadow:
-			0 2px 6px rgb(0 0 0 / 0.35),
-			0 10px 28px rgb(0 0 0 / 0.45);
+			0 1px 3px rgb(0 0 0 / 0.4),
+			0 4px 14px rgb(0 0 0 / 0.45);
 		transition: transform var(--motion-press);
 	}
 

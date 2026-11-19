@@ -3,8 +3,11 @@
 	import { page } from '$app/state';
 	import { library, type Video } from '#lib/db/index.ts';
 	import { ALL, playlistFor } from '#lib/db/scope.ts';
+	import DangerScreen from '#lib/ui/DangerScreen.svelte';
+	import EditVideoSheet from '#lib/ui/EditVideoSheet.svelte';
 	import HeartBurst from '#lib/ui/HeartBurst.svelte';
 	import Icon from '#lib/ui/Icon.svelte';
+	import MoreSheet from '#lib/ui/MoreSheet.svelte';
 	import MoveSheet from '#lib/ui/MoveSheet.svelte';
 	import Player from '#lib/ui/Player.svelte';
 
@@ -13,6 +16,12 @@
 	let notice = $state('');
 	let moving = $state<Video | null>(null);
 	let likes = $state(0);
+	let more = $state<Video | null>(null);
+	let editing = $state<Video | null>(null);
+	let removing = $state(false);
+	let removeBusy = $state(false);
+	let removeError = $state('');
+	let keptDead = $state<string | null>(null); // dead-link screen dismissed for this video
 
 	const id = $derived(page.params.id);
 	const requestedScope = $derived(page.url.searchParams.get('c'));
@@ -54,6 +63,48 @@
 		if (liking) likes += 1; // hearts only go up when liking, not when taking it back
 	}
 
+	// Everything below keeps the list the player walks in step with what was saved.
+	function replace(updated: Video) {
+		if (all) all[all.findIndex((v) => v.id === updated.id)] = updated;
+	}
+
+	async function toggleWatched() {
+		if (!video) return;
+		replace(await (await library()).update(video.id, { watched: !video.watched }));
+	}
+
+	async function markWatched() {
+		if (!video || video.watched) return;
+		replace(await (await library()).update(video.id, { watched: true }));
+	}
+
+	async function remove() {
+		if (!video || !all || removeBusy) return;
+		removeBusy = true;
+		removeError = '';
+		try {
+			const gone = video.id;
+			const rest = all.filter((v) => v.id !== gone);
+			await (await library()).deleteVideo(gone);
+			removing = false;
+			if (rest.length === 0) await goto(scope === ALL ? '/' : `/c/${scope}`, { replaceState: true });
+			else await goto(at(rest[Math.min(index, rest.length - 1)].id), { replaceState: true });
+		} catch {
+			removeError = 'Não deu para apagar agora. Tente de novo.';
+		} finally {
+			removeBusy = false;
+		}
+	}
+
+	async function keepDead() {
+		if (!video) return;
+		keptDead = video.id;
+		replace(await (await library()).update(video.id, { deadStreak: 0 }));
+	}
+
+	// SPEC: dead twice in a row shows the orange screen; one failure only marks the card.
+	const deadScreen = $derived(!!video && video.health === 'dead' && video.deadStreak >= 2 && keptDead !== video.id);
+
 	async function share() {
 		if (!video) return;
 		try {
@@ -77,7 +128,12 @@
 <main class="player on-dark">
 	<header>
 		<a class="icon-button" href={scope === ALL && !requestedScope ? '/' : `/c/${scope}`} aria-label="Fechar"><Icon name="close" /></a>
-		{#if video}<span class="label source">{sourceLabel(video)}</span>{/if}
+		{#if video}
+			<span class="label source">{sourceLabel(video)}</span>
+			<button class="icon-button" type="button" aria-label="Mais ações" onclick={() => (more = video)}>
+				<Icon name="more" />
+			</button>
+		{/if}
 	</header>
 
 	{#if all && !video}
@@ -88,8 +144,8 @@
 	{:else if video}
 		<section class="stage">
 			<div class="screen">
-				{#key video.id}
-					<Player {video} />
+				{#key `${video.id}|${video.canonicalUrl}`}
+					<Player {video} onended={markWatched} />
 				{/key}
 			</div>
 
@@ -139,6 +195,43 @@
 		{/if}
 	{/if}
 </main>
+
+{#if video && (deadScreen || removing)}
+	{#if removing}
+		<DangerScreen
+			title="Apagar este vídeo?"
+			body="Ele sai da sua biblioteca e das coleções. O link original não é afetado."
+			confirmLabel="Apagar vídeo"
+			thumb={video.thumbnail}
+			busy={removeBusy}
+			error={removeError}
+			onconfirm={remove}
+			oncancel={() => (removing = false)}
+		/>
+	{:else}
+		<DangerScreen
+			title="Esse vídeo saiu do ar."
+			body="O link não responde mais. Apague da biblioteca ou mantenha e a gente confere de novo depois."
+			confirmLabel="Apagar da biblioteca"
+			cancelLabel="Manter e checar de novo"
+			thumb={video.thumbnail}
+			busy={removeBusy}
+			error={removeError}
+			onconfirm={() => (removing = true)}
+			oncancel={keepDead}
+		/>
+	{/if}
+{/if}
+
+<MoreSheet
+	video={more}
+	onclose={() => (more = null)}
+	onwatched={toggleWatched}
+	onedit={() => (editing = video ?? null)}
+	onremove={() => (removing = true)}
+/>
+
+<EditVideoSheet video={editing} onclose={() => (editing = null)} onsaved={replace} />
 
 <MoveSheet
 	video={moving}

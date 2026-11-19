@@ -107,8 +107,8 @@ test('rename and delete a collection; its videos stay in Todos', async ({ page }
 
 	await page.getByRole('button', { name: 'Editar' }).click();
 	await page.getByRole('button', { name: 'Renomear' }).click();
-	await page.getByLabel('Novo nome').fill('Culinária');
-	await page.getByRole('button', { name: 'Salvar' }).click();
+	await page.getByLabel('Novo nome da coleção').fill('Culinária');
+	await page.getByLabel('Novo nome da coleção').press('Enter');
 	await expect(page.getByRole('heading', { name: 'Culinária' })).toBeVisible();
 
 	await page.getByRole('button', { name: 'Excluir', exact: true }).click();
@@ -124,7 +124,7 @@ test('collection names are validated: empty, reserved "Todos" and too long', asy
 	await expect(page.getByRole('button', { name: 'Criar coleção' })).toBeDisabled();
 	await fillField(page.getByLabel('Nome da coleção'), 'todos');
 	await page.getByRole('button', { name: 'Criar coleção' }).click();
-	await expect(page.getByRole('alert')).toContainText('"Todos" já existe');
+	await expect(page.getByRole('alert')).toContainText('Esse nome é reservado');
 	await fillField(page.getByLabel('Nome da coleção'), 'a'.repeat(61));
 	await page.getByRole('button', { name: 'Criar coleção' }).click();
 	await expect(page.getByRole('alert')).toContainText('até 60');

@@ -100,3 +100,66 @@ function text(v: unknown, max: number): string {
 	const s = v.replace(/[\u0000-\u001f\u007f]/g, ' ').trim();
 	return s.length > max ? s.slice(0, max - 1).trimEnd() + '…' : s;
 }
+
+export class EditError extends Error {
+	constructor(public code: 'empty_title' | 'title_too_long' | 'duplicate' | 'not_found') {
+		super(code);
+		this.name = 'EditError';
+	}
+}
+
+/**
+ * Corrects a saved video: a new title, a new link, or both. A new link goes through the
+ * same parser and metadata path as a paste, resets health and position, and keeps the
+ * video's id, likes, watched mark and collection.
+ */
+export async function editVideo(
+	id: string,
+	changes: { title?: string; url?: string },
+	deps: AddDeps
+): Promise<Video> {
+	const current = await deps.library.get(id);
+	if (!current) throw new EditError('not_found');
+
+	let title: string | undefined;
+	if (changes.title !== undefined) {
+		title = changes.title.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
+		if (!title) throw new EditError('empty_title');
+		if (title.length > 300) throw new EditError('title_too_long');
+	}
+
+	const raw = changes.url?.trim();
+	if (!raw || raw === current.url.trim()) {
+		return title && title !== current.title ? deps.library.update(id, { title }) : current;
+	}
+
+	const ref = parseLink(raw); // throws LinkError before anything changes
+	if (ref.canonicalUrl !== current.canonicalUrl) {
+		const other = await deps.library.findByCanonical(ref.canonicalUrl);
+		if (other && other.id !== id) throw new EditError('duplicate');
+	}
+	const patch: Partial<Video> = {
+		url: raw,
+		canonicalUrl: ref.canonicalUrl,
+		source: ref.source,
+		kind: ref.kind,
+		embed: ref.embed,
+		title: fallbackTitle(ref),
+		thumbnail: fallbackThumb(ref),
+		author: undefined,
+		durationSec: undefined,
+		positionSec: undefined,
+		checkedAt: undefined,
+		health: 'unknown',
+		deadStreak: 0
+	};
+	const meta = await tryResolve(raw, deps.resolve ?? ((u, signal) => resolveLink(u, { signal })));
+	if (meta) Object.assign(patch, metaPatch(meta));
+	if (title) patch.title = title; // what the person typed wins over the YouTube title
+	try {
+		return await deps.library.update(id, patch);
+	} catch (e) {
+		if ((e as { name?: string } | null)?.name === 'ConstraintError') throw new EditError('duplicate');
+		throw e;
+	}
+}

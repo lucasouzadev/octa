@@ -2,6 +2,11 @@ import { CollectionError, type Library, type Video } from './library';
 
 /** URL scope meaning "the whole library" (the virtual "Todos" collection). */
 export const ALL = 'todos';
+/** Virtual collections: filled by the person's marks, never stored. */
+export const FAVORITES = 'favoritos';
+export const WATCHED = 'assistidos';
+
+export const isVirtual = (scope: string | null): boolean => scope === ALL || scope === FAVORITES || scope === WATCHED;
 
 /**
  * The videos a screen or the player works over: a user collection in its own
@@ -9,6 +14,8 @@ export const ALL = 'todos';
  * stale link) falls back to the whole library instead of an error screen.
  */
 export async function videosIn(lib: Library, scope: string | null): Promise<Video[]> {
+	if (scope === FAVORITES) return (await lib.list()).filter((v) => v.favorite);
+	if (scope === WATCHED) return (await lib.list()).filter((v) => v.watched);
 	if (scope && scope !== ALL) {
 		try {
 			return await lib.listVideos(scope);

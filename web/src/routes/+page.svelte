@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { library, type Collection, type Video } from '#lib/db/index.ts';
-	import { ALL } from '#lib/db/scope.ts';
+	import { ALL, FAVORITES, WATCHED } from '#lib/db/scope.ts';
 	import { enrichPending } from '#lib/enrich.ts';
 	import { searchVideos } from '#lib/search.ts';
 	import { markSource } from '#lib/transition.ts';
@@ -34,6 +34,13 @@
 		const byId = new Map(videos.map((v) => [v.id, v]));
 		return [
 			...(videos.length > 0 ? [{ key: ALL, href: `/c/${ALL}`, name: 'Todos', items: videos }] : []),
+			// Marks the person makes, shown only once there is something in them.
+			...[
+				{ key: FAVORITES, name: 'Favoritos', items: videos.filter((v) => v.favorite) },
+				{ key: WATCHED, name: 'Assistidos', items: videos.filter((v) => v.watched) }
+			]
+				.filter((c) => c.items.length > 0)
+				.map((c) => ({ ...c, href: `/c/${c.key}` })),
 			...collections.map((c) => ({
 				key: c.id,
 				href: `/c/${c.id}`,
@@ -209,7 +216,7 @@
 		min-height: 100svh;
 		background: var(--color-bg-light);
 		color: var(--color-text-light);
-		padding: calc(var(--space-9) + env(safe-area-inset-top)) var(--space-4) var(--space-10);
+		padding: calc(var(--space-3) + env(safe-area-inset-top)) var(--space-4) var(--space-10);
 	}
 
 	header,

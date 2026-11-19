@@ -81,6 +81,12 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 - NOT RUN: real iPhone (keyboard dock via visualViewport, Safari toolbar fit in the viewer, safe-area colors, heart animation feel); CI (none yet).
 - Next: slice 2e-3 (WebGL for the Collection monitors).
 
+## QA round 2 — evidence (2026-11-19, owner iPhone QA, IDs R2.1–R2.7)
+- R2.1 menu from the button; R2.2 top margin, zoom/selection off, thinner fan border; R2.3 docked bar pinned to visualViewport; R2.4 CTA shadow fits, back-to-top visible; R2.5 illustrations redrawn; R2.6 orange DangerScreen for all removes and dead link; R2.7 edit title/link, Assistidos, Favoritos, inline rename.
+- Web: `pnpm check` 0/0, `pnpm test` 204 PASS (new specs seen red first: visualFrame, manage, edit), `pnpm build` PASS, `pnpm test:e2e` all PASS at 3 viewports after updating 3 old tests (rename inline, reserved-name message); two flaky old tests (sheet drag on desktop, viewer actions order) passed 3x repeated.
+- Honest notes: Favoritos 3D is minimal (heart badge on the monitor); "Manter e checar de novo" only resets the streak (real health check is slice 3).
+- NOT RUN: real iPhone (docked bar, viewer fit, safe areas); CI (none yet).
+
 ## Known gaps carried to slice 2+
 - Rate limit on Render: `CLIENT_IP_HEADER` unset = ONE shared bucket for all users (30/min, burst 10; proven by a 40-request burst: 10x422 + 30x429). `CF-Connecting-IP` looks per-client (forging it gives 403 at the edge; a burst got no 429) but is NOT PROVEN from a single egress IP. Prove from a phone on 4G, then set it.
 - No CI workflow yet (slice 4): tests run locally only.

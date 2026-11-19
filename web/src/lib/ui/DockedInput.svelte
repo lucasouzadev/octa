@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { keyboardInset } from '#lib/keyboard.ts';
+	import { visualFrame } from '#lib/keyboard.ts';
 	import Icon from '#lib/ui/Icon.svelte';
 
 	// A text field that, while being typed in, docks to the bottom edge right above the
@@ -41,8 +41,10 @@
 	} = $props();
 
 	let docked = $state(false);
-	let inset = $state(0);
-	let shift = $state(0);
+	// The visible window (above the keyboard) in layout coordinates.
+	let frame = $state({ top: 0, left: 0, width: 0, height: 0, bottom: 0 });
+	// `?kbdebug` on the URL prints the numbers on screen, for a bug report from a real phone.
+	const debug = typeof location !== 'undefined' && location.search.includes('kbdebug');
 	let slotHeight = $state(0);
 	let input = $state<HTMLInputElement>();
 	let wrap = $state<HTMLElement>();
@@ -50,8 +52,18 @@
 
 	function measure() {
 		const vv = window.visualViewport;
-		inset = vv ? keyboardInset(vv, window.innerHeight) : 0;
-		shift = vv ? Math.round(vv.offsetTop) : 0;
+		frame = vv
+			? visualFrame(vv)
+			: visualFrame({
+					top: 0,
+					height: window.innerHeight,
+					width: window.innerWidth,
+					offsetTop: 0,
+					offsetLeft: 0
+				} as never);
+		// iOS pans the page to reveal a focused field; our bar already follows the visible
+		// window, so put the page back where it was.
+		if (window.scrollY !== 0) window.scrollTo(0, 0);
 	}
 
 	function dock() {
@@ -95,12 +107,20 @@
 </script>
 
 <div class="slot" bind:this={wrap} style={docked ? `min-height: ${slotHeight}px` : undefined}>
-	{#if docked}<div class="dim" aria-hidden="true"></div>{/if}
+	{#if docked}
+		<div
+			class="dim"
+			aria-hidden="true"
+			style={`top:${frame.top}px;left:${frame.left}px;width:${frame.width}px;height:${frame.height}px`}
+		></div>
+	{/if}
 	<div
 		class="field"
 		class:docked
 		bind:this={field}
-		style={docked ? `bottom: ${inset}px; transform: translateY(${shift}px)` : undefined}
+		style={docked
+			? `top:${frame.bottom}px;left:${frame.left}px;width:${frame.width}px;transform:translateY(-100%)`
+			: undefined}
 		onfocusin={dock}
 		onfocusout={(e) => {
 			if (!wrap?.contains(e.relatedTarget as Node | null)) undock();
@@ -140,6 +160,9 @@
 				<Icon name="send" size={20} />
 			</button>
 		</div>
+		{#if debug && docked}
+			<p class="hint">vv top {frame.top} h {frame.height} · inner {window.innerHeight} · scrollY {window.scrollY}</p>
+		{/if}
 		{#if error}
 			<p id="{id}-error" class="error" role="alert">{error}</p>
 		{:else if hint && !docked}
@@ -155,7 +178,6 @@
 
 	.dim {
 		position: fixed;
-		inset: 0;
 		z-index: 40;
 		background: rgb(0 0 0 / 0.28);
 		pointer-events: none;
@@ -237,12 +259,7 @@
 	/* Docked: a white bar fixed right above the keyboard. */
 	.field.docked {
 		position: fixed;
-		left: 0;
-		right: 0;
 		z-index: 50;
-		width: 100%;
-		max-width: var(--layout-content-max);
-		margin-inline: auto;
 		padding: var(--space-3) var(--space-4) calc(var(--space-3) + env(safe-area-inset-bottom));
 		gap: var(--space-2);
 		background: var(--color-bg-light);

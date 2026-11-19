@@ -2,7 +2,7 @@
 	import type { Video } from '#lib/db/index.ts';
 
 	// Official players only (ADR-0002). The video itself is always 2D (ADR-0003).
-	let { video }: { video: Video } = $props();
+	let { video, onended }: { video: Video; onended?: () => void } = $props();
 	const vertical = $derived(video.embed.aspect === '9:16');
 </script>
 
@@ -18,7 +18,7 @@
 		></iframe>
 	{:else}
 		<!-- svelte-ignore a11y_media_has_caption (third-party files have no captions we can know of) -->
-		<video src={video.embed.src} controls playsinline preload="metadata" title={video.title}></video>
+		<video src={video.embed.src} controls playsinline preload="metadata" title={video.title} onended={() => onended?.()}></video>
 	{/if}
 </div>
 

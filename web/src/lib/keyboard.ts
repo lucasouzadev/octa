@@ -8,3 +8,21 @@ export interface VisualViewportLike {
 export function keyboardInset(vv: VisualViewportLike, innerHeight: number): number {
 	return Math.max(0, Math.round(innerHeight - vv.height - vv.offsetTop));
 }
+
+export interface VisualViewportFrameLike extends VisualViewportLike {
+	width: number;
+	offsetLeft: number;
+}
+
+/** The visible window in layout (position: fixed) coordinates. */
+export function visualFrame(vv: VisualViewportFrameLike) {
+	const top = Math.round(vv.offsetTop);
+	const height = Math.round(vv.height);
+	return {
+		top,
+		left: Math.round(vv.offsetLeft),
+		width: Math.round(vv.width),
+		height,
+		bottom: top + height
+	};
+}

@@ -3,7 +3,7 @@
 	import Icon from '#lib/ui/Icon.svelte';
 
 	// Floating arrow for long lists: smooth scroll to the top (instant under reduced motion).
-	let { lift = 0 }: { /** Extra px to sit above a bottom bar. */ lift?: number } = $props();
+	let { lift = 0, onDark = false }: { /** Extra px to sit above a bottom bar. */ lift?: number; onDark?: boolean } = $props();
 
 	let visible = $state(false);
 
@@ -22,6 +22,7 @@
 {#if visible}
 	<button
 		class="top"
+		class:on-dark={onDark}
 		type="button"
 		aria-label="Voltar ao topo"
 		style={`--lift: ${lift}px`}
@@ -50,7 +51,7 @@
 	}
 
 	/* On dark screens the arrow flips to a light disc so it stays visible. */
-	:global(.on-dark) .top {
+	.top.on-dark {
 		background: var(--color-text-dark);
 		color: var(--color-text-light);
 	}
