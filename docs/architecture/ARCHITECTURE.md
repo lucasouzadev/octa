@@ -66,7 +66,8 @@ docs/
   "embed": { "type": "iframe|video|hls", "src": "https://www.youtube-nocookie.com/embed/abc123", "aspect": "16:9|9:16" },
   "title": "…", "author": "…", "thumbnail": "https://i.ytimg.com/…", "durationSec": null,
   "health": "alive|dead|restricted|unknown", "checkedAt": "2026-11-19T12:00:00Z" }
-// 422 { "error": "unsupported_url" | "invalid_url" }   429 rate limited   502 upstream failed (client keeps parser result)
+// 422 { "error": "unsupported_url" | "invalid_url" }   400 bad_request   413 too_large   429 rate_limited
+// Upstream failure is NOT an error: 200 with parser fields, fallback title/thumb and "health": "unknown"
 ```
 `POST /v1/health`
 ```json
