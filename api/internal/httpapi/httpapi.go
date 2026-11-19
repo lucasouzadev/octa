@@ -9,7 +9,9 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/netip"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 
@@ -31,6 +33,12 @@ type Config struct {
 	RatePerMinute  int // sustained requests per IP; default 30
 	Burst          int // default 10
 	Logger         *slog.Logger
+	// ClientIPHeader names a request header that carries the real client IP and
+	// is set by a proxy the operator trusts (e.g. True-Client-IP on Render).
+	// Empty means "trust nothing": the limiter keys on RemoteAddr. Never point
+	// this at a header the client can write (X-Forwarded-For on Render appends
+	// to whatever the client sent, so its first entry is forgeable).
+	ClientIPHeader string
 }
 
 // Server is the API's http.Handler.
@@ -114,15 +122,10 @@ func (s *Server) cors(next http.Handler) http.Handler {
 	})
 }
 
-// limit applies a token bucket per client IP. The IP is RemoteAddr: the API
-// does not trust X-Forwarded-For until a deploy target is chosen (slice 4).
+// limit applies a token bucket per client IP (see clientIP).
 func (s *Server) limit(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ip, _, err := net.SplitHostPort(r.RemoteAddr)
-		if err != nil {
-			ip = r.RemoteAddr
-		}
-		v := s.visitor(ip)
+		v := s.visitor(s.clientIP(r))
 		if !v.lim.Allow() {
 			w.Header().Set("Retry-After", "10")
 			writeError(w, http.StatusTooManyRequests, "rate_limited")
@@ -130,6 +133,23 @@ func (s *Server) limit(next http.HandlerFunc) http.HandlerFunc {
 		}
 		next(w, r)
 	}
+}
+
+// clientIP returns the rate-limit key. It reads cfg.ClientIPHeader only when the
+// operator configured one and the value is a single valid IP; anything else
+// (missing, junk, a list) falls back to RemoteAddr so a bad header can never
+// mint a fresh bucket.
+func (s *Server) clientIP(r *http.Request) string {
+	if h := s.cfg.ClientIPHeader; h != "" {
+		if addr, err := netip.ParseAddr(strings.TrimSpace(r.Header.Get(h))); err == nil {
+			return addr.Unmap().String()
+		}
+	}
+	ip, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return ip
 }
 
 func (s *Server) visitor(ip string) *visitor {

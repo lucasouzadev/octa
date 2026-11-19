@@ -17,10 +17,10 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 
 ## Known gaps carried to slice 2+
 - Library has no skeleton while IndexedDB loads (fast, but violates ux-check "never blank").
-- Rate limit keys on RemoteAddr — must read the real client IP header once the host is chosen (slice 4).
+- Rate limit: `CLIENT_IP_HEADER` env added (branch `feat/render-api`); on Render set `True-Client-IP`. Must be verified against the live host (forged-header burst test) before trusting it.
 - No CI workflow yet (slice 4): tests run locally only.
 - Concurrent double paste of the same link can hit the unique index (rare; handle in slice 2).
 
 ## Owner decisions pending
 - App icon.
-- Hosting for API and PWA (before slice 4).
+- Hosting: PWA on Vercel (project `web`, production READY); API on Render free — image + client-IP header in review, not deployed.

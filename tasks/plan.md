@@ -37,3 +37,17 @@ First vertical slice: a user pastes a YouTube (long/Shorts) or direct `.mp4` lin
 
 ## Out of scope
 Instagram/TikTok/HLS, `/v1/health`, collections, Threlte, View Transitions, service worker, deploy, CI workflow.
+
+---
+
+# Plan: host the API on Render (free)
+
+Owner approved steps 1–2 on 2026-11-19; steps 3–5 each need a fresh "yes" (deploys always ask).
+
+1. [x] Test first + `CLIENT_IP_HEADER` (`httpapi.Config.ClientIPHeader`): single valid IP from a trusted header, else RemoteAddr; empty = ignore all headers. Do NOT use `X-Forwarded-For` on Render (it appends, so the first entry is forgeable and the last is the shared edge IP).
+2. [x] `api/Dockerfile` (golang:1.27.4-alpine -> distroless static-debian13:nonroot) + `.dockerignore`. Tags verified with `docker manifest inspect`. Image build NOT RUN (no Docker daemon in the agent sandbox); the same `go build` flags were run natively.
+3. [ ] Render free web service: Docker, root dir `api`, health check `/healthz`, env `ALLOWED_ORIGINS=https://web-chi-nine-h1xmk9enwg.vercel.app`, `CLIENT_IP_HEADER=True-Client-IP`. (needs "yes")
+4. [ ] Vercel env `VITE_API_BASE=<render url>` then redeploy. (needs "yes")
+5. [ ] Smoke: `curl <render>/healthz`; 12 requests with forged `True-Client-IP` values must hit 429 only if the header is NOT overwritten by the edge (if never 429, the header is forgeable: switch strategy); paste a real YouTube link in the app.
+
+Risks: `True-Client-IP` behaviour on Render comes from community/support posts, not official docs -> step 5 decides. Free instance cold start ~50 s+ and 750 free hours/month are shared with the existing `Hotel-Flor-de-Lima` service. Vercel preview URLs are not in the CORS allowlist (production only).
