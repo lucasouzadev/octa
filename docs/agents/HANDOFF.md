@@ -1,24 +1,23 @@
-# HANDOFF — 2026-11-19 — API live on Render, web points to it
+# HANDOFF — 2026-11-19 — slice 2a (collections, 2D) in review
 
 ## Goal
-Video library from links; API on Render free + PWA on Vercel. Plan: `tasks/plan.md` (last section).
+Slice 2 per `tasks/plan.md` (last section), order 2a → 2b → 2c → 2d; one PR per sub-slice, the owner merges. Owner decided: a video belongs to one collection only.
 
 ## State (verified)
-- main at 33532b1 (PR #4 merged: `CLIENT_IP_HEADER`, `api/Dockerfile`).
-- Render: service `octa-api` (`srv-dbv7k1qjnfac73crs94g`, virginia, free, Docker, context `api`) live at https://octa-api-os09.onrender.com. `/healthz` 200; real YouTube long and Short resolved with title/thumbnail; CORS only for https://web-chi-nine-h1xmk9enwg.vercel.app.
-- Render env now: `ALLOWED_ORIGINS` only (`CLIENT_IP_HEADER` unset) -> one shared rate-limit bucket for everyone. Health Check Path not set (tool cannot): owner sets `/healthz` in the dashboard.
-- Vercel: project `web` (`prj_aqPIj4gibbtfj9T5zK853FvpcGgf`), env `VITE_API_BASE` (production) = Render URL; production deploy READY at 33532b1 with alias web-chi-nine-h1xmk9enwg.vercel.app; the Render URL is in the built JS (route chunk). Other Vercel aliases (web-lucasouzadevs-projects..., web-git-main...) are NOT in the CORS allowlist.
-- NOT RUN: in-browser paste of a real link on the Vercel app (title/thumbnail), reload of a real `/v/<id>`, iPhone/iPad checks. No CI workflow (slice 4).
+- main at 812c0bd: slice 1 + Render/Vercel go-live. API https://octa-api-os09.onrender.com, web https://web-chi-nine-h1xmk9enwg.vercel.app; owner confirmed paste → player on iPhone.
+- Branch `feat/slice-2a`, PR open (not merged): IndexedDB v2 (`collections`, additive migration), Library with collection cards + skeleton, `/c/new`, `/c/[id]` (Todos virtual, edit mode: rename, delete, move), player follows the collection order (`?c=`), double-paste race fixed.
+- `pnpm test` 99 PASS, `pnpm check` 0 errors, `pnpm build` PASS, `pnpm test:e2e` 48 PASS twice. JS gzip 45.5 → 51.6 KB.
+- NOT RUN: physical iPhone/iPad/desktop of 2a; CI (no workflow, slice 4).
 
-## Decisions (and why)
-- Never `X-Forwarded-For` on Render (appends; first entry forgeable, last is the edge).
-- `True-Client-IP` rejected: not overwritten by the edge (forged values gave separate buckets, no 429).
-- `CF-Connecting-IP`: forged -> 403 at the edge; burst got no 429 (value varies per request from the sandbox). Per-client behaviour unproven; header unset until a phone test.
+## Decisions
+- "Todos" is virtual and always shown; user collections store ordered video ids; moving removes from the previous one (single transaction).
+- The move sheet closes only after the write commits (found by e2e: otherwise a fast navigation lost the move).
+- Collection card thumbs are flat 2D on purpose: 2d replaces them with CSS-3D, then Threlte.
 
 ## Next step (exact)
-Owner: set Health Check Path `/healthz` in Render; on iPhone (4G) paste a real YouTube link in the app. Then, if wanted: agent bursts the API from the sandbox while the phone still resolves -> proves `CF-Connecting-IP` separates clients -> set `CLIENT_IP_HEADER=CF-Connecting-IP` (owner yes, redeploys).
+Owner merges the 2a PR and tries it on the iPhone. Then plan details for 2b (search: client-side, accent-insensitive over title+author) and start it with tests first.
 
 ## Risks / owner decisions
-- Free instance sleeps after 15 min idle (~50 s cold start); web saves the link from the parser when the API fails.
-- Shared bucket: one abuser or burst can 429 everyone for a minute.
-- App icon open. Slice 2 (collections, 3D thumbnails, search, View Transitions) unplanned and not approved.
+- Render limiter: one shared bucket until `CF-Connecting-IP` is proven per client from a phone on 4G (see STATUS). Health Check Path `/healthz` still unset in the Render dashboard.
+- iPhone Safari bottom bar covers the player strip (not fixed; offer a separate small fix).
+- App icon open.

@@ -1,41 +1,5 @@
-import { expect, test, type Page } from '@playwright/test';
-
-// The Go API is mocked here; its own tests cover it. Everything off localhost is
-// blocked so runs are deterministic and never hit YouTube.
-async function mockNetwork(page: Page, opts: { apiDown?: boolean } = {}) {
-	await page.route(/^https?:\/\/(?!localhost)/, (route) => route.abort());
-	await page.route('**/api/v1/resolve', async (route) => {
-		if (opts.apiDown) return route.fulfill({ status: 502, body: '' });
-		const { url } = route.request().postDataJSON() as { url: string };
-		const short = url.includes('/shorts/');
-		const id = short ? 'aBcDeFgHiJ0' : 'dQw4w9WgXcQ';
-		await route.fulfill({
-			json: {
-				source: 'youtube',
-				kind: short ? 'short' : 'video',
-				id,
-				canonicalUrl: short ? `https://www.youtube.com/shorts/${id}` : `https://www.youtube.com/watch?v=${id}`,
-				embed: {
-					type: 'iframe',
-					src: `https://www.youtube-nocookie.com/embed/${id}?playsinline=1&rel=0`,
-					aspect: short ? '9:16' : '16:9'
-				},
-				title: short ? 'Três acordes que mudaram tudo' : 'Sessão ao vivo no terraço',
-				author: short ? 'Nota Solta' : 'Casa Aberta',
-				thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
-				durationSec: null,
-				health: 'alive',
-				checkedAt: '2026-11-19T12:00:00Z'
-			}
-		});
-	});
-}
-
-async function paste(page: Page, link: string) {
-	await page.goto('/add');
-	await page.getByLabel('Link do vídeo').fill(link);
-	await page.getByRole('button', { name: 'Gerar player' }).click();
-}
+import { expect, test } from '@playwright/test';
+import { mockNetwork, paste } from './e2e-helpers';
 
 test('smoke: paste a YouTube link, land on the player, see it in the library', async ({ page }) => {
 	await mockNetwork(page);
@@ -54,8 +18,8 @@ test('smoke: paste a YouTube link, land on the player, see it in the library', a
 	await expect(frame).toHaveAttribute('sandbox', /allow-scripts/);
 
 	await page.getByRole('link', { name: 'Fechar' }).click();
-	await expect(page.getByText('1 vídeo')).toBeVisible();
-	await expect(page.getByRole('heading', { name: 'Sessão ao vivo no terraço' })).toBeVisible();
+	await expect(page.getByRole('heading', { name: 'Todos' })).toBeVisible();
+	await expect(page.locator('a[data-collection="todos"]')).toContainText('1 vídeo');
 });
 
 test('player has at most three actions and favorite persists', async ({ page }) => {
@@ -93,7 +57,7 @@ test('pasting the same video twice opens the existing one', async ({ page }) => 
 	await paste(page, 'https://youtu.be/dQw4w9WgXcQ');
 	await expect(page).toHaveURL(first);
 	await page.goto('/');
-	await expect(page.getByText('1 vídeo')).toBeVisible();
+	await expect(page.locator('a[data-collection="todos"]')).toContainText('1 vídeo');
 });
 
 test('unsupported and invalid links explain themselves and save nothing', async ({ page }) => {
@@ -132,5 +96,9 @@ test('no horizontal overflow on any screen', async ({ page }) => {
 	await expect(page).toHaveURL(/\/v\//);
 	await noOverflow();
 	await page.goto('/add');
+	await noOverflow();
+	await page.goto('/c/todos');
+	await noOverflow();
+	await page.goto('/c/new');
 	await noOverflow();
 });

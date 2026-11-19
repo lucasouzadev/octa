@@ -1,17 +1,40 @@
 <script lang="ts">
-	import { library, type Video } from '#lib/db/index.ts';
+	import { library, type Collection, type Video } from '#lib/db/index.ts';
+	import { ALL } from '#lib/db/scope.ts';
 	import Icon from '#lib/ui/Icon.svelte';
 
 	let videos = $state<Video[] | null>(null);
+	let collections = $state<Collection[] | null>(null);
 
 	$effect(() => {
-		library()
-			.then((lib) => lib.list())
-			.then((list) => (videos = list));
+		library().then(async (lib) => {
+			[videos, collections] = await Promise.all([lib.list(), lib.listCollections()]);
+		});
 	});
 
-	const sourceLabel: Record<Video['source'], string> = { youtube: 'YouTube', direct: 'Arquivo' };
-	const kindLabel = (v: Video) => (v.kind === 'short' ? 'Shorts' : sourceLabel[v.source]);
+	interface Card {
+		key: string;
+		href: string;
+		name: string;
+		items: Video[];
+	}
+
+	// "Todos" is virtual and always first; user collections follow, oldest first.
+	const cards = $derived.by<Card[] | null>(() => {
+		if (!videos || !collections) return null;
+		const byId = new Map(videos.map((v) => [v.id, v]));
+		return [
+			{ key: ALL, href: `/c/${ALL}`, name: 'Todos', items: videos },
+			...collections.map((c) => ({
+				key: c.id,
+				href: `/c/${c.id}`,
+				name: c.name,
+				items: c.order.map((id) => byId.get(id)).filter((v): v is Video => v !== undefined)
+			}))
+		];
+	});
+
+	const count = (n: number) => (n === 1 ? '1 vídeo' : `${n} vídeos`);
 </script>
 
 <main class="library">
@@ -19,41 +42,58 @@
 		<span class="spacer" aria-hidden="true"></span>
 		<div class="heading">
 			<h1>Minha coleção</h1>
-			{#if videos}
-				<p>{videos.length === 1 ? '1 vídeo' : `${videos.length} vídeos`}</p>
-			{/if}
+			{#if videos}<p>{count(videos.length)}</p>{/if}
 		</div>
 		<a class="icon-button" href="/add" aria-label="Adicionar link"><Icon name="plus" /></a>
 	</header>
 
-	{#if videos && videos.length === 0}
+	{#if !cards}
+		<ul class="list" aria-busy="true" aria-label="Carregando coleções">
+			{#each [0, 1] as n (n)}
+				<li class="card skeleton" aria-hidden="true">
+					<div class="thumbs"><span></span><span></span><span></span></div>
+					<div class="line wide"></div>
+					<div class="line short"></div>
+				</li>
+			{/each}
+		</ul>
+	{:else if videos && videos.length === 0 && collections && collections.length === 0}
 		<section class="empty">
 			<h2>Nada aqui ainda.</h2>
 			<p>Cole o link de um vídeo do YouTube, de um Shorts ou de um arquivo .mp4.</p>
 			<a class="pill" href="/add">Colar um link</a>
 		</section>
-	{:else if videos}
+	{:else}
 		<ul class="list">
-			{#each videos as v (v.id)}
+			{#each cards as c (c.key)}
 				<li>
-					<a class="card" href={`/v/${v.id}`}>
-						<div class="thumb">
-							{#if v.thumbnail}
-								<img src={v.thumbnail} alt="" loading="lazy" referrerpolicy="no-referrer" />
-							{/if}
-							<span class="play"><Icon name="play" size={16} /></span>
+					<a class="card" href={c.href} data-collection={c.key}>
+						<div class="thumbs">
+							{#each [0, 1, 2] as i (i)}
+								<span>
+									{#if c.items[i]?.thumbnail}
+										<img
+											src={c.items[i].thumbnail}
+											alt=""
+											loading="lazy"
+											referrerpolicy="no-referrer"
+											onerror={(e) => ((e.currentTarget as HTMLElement).style.display = 'none')}
+										/>
+									{/if}
+								</span>
+							{/each}
 						</div>
-						<div class="meta">
-							<span class="label">{kindLabel(v)}</span>
-							{#if v.health === 'dead' || v.health === 'restricted'}
-								<span class="label dead">Fora do ar</span>
-							{/if}
-						</div>
-						<h2 class="title">{v.title}</h2>
-						{#if v.author}<p class="author">{v.author}</p>{/if}
+						<h2 class="title">{c.name}</h2>
+						<p class="count">{count(c.items.length)}</p>
 					</a>
 				</li>
 			{/each}
+			<li>
+				<a class="card new" href="/c/new">
+					<span class="plus"><Icon name="plus" size={22} /></span>
+					<span class="title">Nova coleção</span>
+				</a>
+			</li>
 		</ul>
 	{/if}
 </main>
@@ -152,59 +192,84 @@
 		container-type: inline-size;
 	}
 
-	.thumb {
-		position: relative;
-		aspect-ratio: 16 / 9;
-		border-radius: calc(var(--radius-card) - var(--space-4));
-		overflow: hidden;
-		background: #2b2b2b;
+	.thumbs {
+		display: grid;
+		grid-template-columns: repeat(3, minmax(0, 1fr));
+		gap: var(--space-2);
 	}
 
-	.thumb img {
+	.thumbs span {
+		aspect-ratio: 3 / 4;
+		border-radius: var(--radius-thumb);
+		overflow: hidden;
+		background: #dcdcdc;
+	}
+
+	.thumbs img {
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
-	}
-
-	.play {
-		position: absolute;
-		left: 50%;
-		top: 50%;
-		translate: -50% -50%;
-		width: 44px;
-		height: 44px;
-		border-radius: var(--radius-pill);
-		background: rgb(255 255 255 / 0.92);
-		color: var(--color-text-light);
-		display: flex;
-		align-items: center;
-		justify-content: center;
-	}
-
-	.meta {
-		display: flex;
-		justify-content: space-between;
-		padding: var(--space-4) var(--space-1) 0;
-		color: var(--color-muted-on-light);
-	}
-
-	.dead {
-		color: var(--color-status-dead);
+		display: block;
 	}
 
 	.title {
+		display: block;
 		font-family: var(--font-display);
 		font-weight: 400;
 		font-size: var(--size-h2);
 		line-height: 1.12;
 		letter-spacing: -0.01em;
-		padding: var(--space-2) var(--space-1) 0;
+		padding: var(--space-4) var(--space-1) 0;
 	}
 
-	.author {
+	.count {
 		font-size: var(--size-meta);
 		color: var(--color-muted-on-light);
 		padding: var(--space-1) var(--space-1) 0;
+	}
+
+	.card.new {
+		display: flex;
+		align-items: center;
+		gap: var(--space-4);
+		background: transparent;
+		border: 2px dashed #cfcfcf;
+	}
+
+	.card.new .title {
+		padding: 0;
+	}
+
+	.plus {
+		width: var(--layout-touch-min);
+		height: var(--layout-touch-min);
+		border-radius: var(--radius-pill);
+		background: var(--color-surface-light-button);
+		display: inline-flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	.skeleton .line {
+		height: 18px;
+		border-radius: 9px;
+		background: #e4e4e4;
+		margin: var(--space-4) var(--space-1) 0;
+	}
+
+	.skeleton .line.wide {
+		width: 55%;
+		height: 26px;
+	}
+
+	.skeleton .line.short {
+		width: 25%;
+		height: 14px;
+		margin-top: var(--space-2);
+	}
+
+	.skeleton .thumbs span {
+		background: #e4e4e4;
 	}
 
 	@container (min-width: 560px) {

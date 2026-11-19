@@ -4,6 +4,9 @@
 import { LinkError, parseLink, type Ref } from '#lib/providers/parse.ts';
 import type { Library, Video } from '#lib/db/library.ts';
 import { resolveLink, type Meta } from '#lib/api.ts';
+import { newId } from '#lib/id.ts';
+
+export { newId };
 
 const RESOLVE_TIMEOUT_MS = 4000;
 
@@ -43,7 +46,17 @@ export async function addLink(raw: string, deps: AddDeps): Promise<{ video: Vide
 		video.checkedAt = meta.checkedAt;
 		if (typeof meta.durationSec === 'number') video.durationSec = meta.durationSec;
 	}
-	return { video: await deps.library.put(video), created: true };
+	try {
+		return { video: await deps.library.put(video), created: true };
+	} catch (e) {
+		// A second paste of the same link finished first: the unique canonicalUrl
+		// index rejected ours. Hand back the winner instead of failing.
+		if ((e as { name?: string } | null)?.name === 'ConstraintError') {
+			const winner = await deps.library.findByCanonical(ref.canonicalUrl);
+			if (winner) return { video: winner, created: false };
+		}
+		throw e;
+	}
 }
 
 async function tryResolve(
@@ -60,20 +73,6 @@ async function tryResolve(
 	} finally {
 		clearTimeout(timer);
 	}
-}
-
-/**
- * UUID v4. `crypto.randomUUID` only exists in secure contexts, and the app is
- * also opened over plain http on the local network (phone testing), where
- * `crypto.getRandomValues` still works.
- */
-export function newId(): string {
-	if (typeof crypto.randomUUID === 'function') return crypto.randomUUID();
-	const b = crypto.getRandomValues(new Uint8Array(16));
-	b[6] = (b[6] & 0x0f) | 0x40;
-	b[8] = (b[8] & 0x3f) | 0x80;
-	const h = Array.from(b, (x) => x.toString(16).padStart(2, '0')).join('');
-	return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
 function fallbackTitle(ref: Ref): string {
