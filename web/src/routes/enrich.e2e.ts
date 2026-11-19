@@ -38,7 +38,8 @@ test('a video saved while the API was down gets its real title back on the Libra
 		await page.goto('/c/todos');
 		await expect(page.getByText('Sessão ao vivo no terraço')).toBeVisible({ timeout: 1500 });
 	}).toPass({ timeout: 10_000 });
-	await expect(page.getByText('Casa Aberta')).toBeVisible();
+	// The cover came back too (the prototype's screens do not print the author).
+	await expect(page.locator('.screen img')).toHaveAttribute('src', /i\.ytimg\.com\/vi\/dQw4w9WgXcQ/);
 	await expect(page.getByText('Vídeo do YouTube')).toHaveCount(0);
 });
 

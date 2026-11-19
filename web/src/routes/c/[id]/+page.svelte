@@ -3,9 +3,9 @@
 	import { page } from '$app/state';
 	import { CollectionError, COLLECTION_NAME_MAX, library, type Collection, type Video } from '#lib/db/index.ts';
 	import { ALL, videosIn } from '#lib/db/scope.ts';
-	import { markSource } from '#lib/transition.ts';
+	import { shelfSummary } from '#lib/shelf.ts';
 	import Icon from '#lib/ui/Icon.svelte';
-	import PaperStack from '#lib/ui/PaperStack.svelte';
+	import ScreenCard from '#lib/ui/ScreenCard.svelte';
 	import Sheet from '#lib/ui/Sheet.svelte';
 
 	const scope = $derived(page.params.id ?? ALL);
@@ -45,7 +45,7 @@
 	});
 
 	const title = $derived(isAll ? 'Todos' : (collection?.name ?? ''));
-	const count = $derived(videos ? (videos.length === 1 ? '1 vídeo' : `${videos.length} vídeos`) : '');
+	const count = $derived(videos ? shelfSummary(videos) : '');
 	const currentOf = (v: Video) => collections.find((c) => c.order.includes(v.id));
 
 	const messages: Record<string, string> = {
@@ -124,7 +124,6 @@
 		<section class="state" aria-busy="true" aria-label="Carregando"></section>
 	{:else}
 		<section class="head">
-			{#if videos.length > 0}<PaperStack items={videos} />{/if}
 			<h1>{title}</h1>
 			<p class="count">{count}</p>
 
@@ -177,24 +176,10 @@
 				<a class="pill" href={isAll ? '/add' : `/c/${ALL}`}>{isAll ? 'Colar um link' : 'Abrir Todos'}</a>
 			</section>
 		{:else}
-			<ul class="videos">
-				{#each videos as v (v.id)}
-					<li>
-						<a class="row" href={`/v/${v.id}?c=${scope}`} onclick={(e) => markSource(e, '.thumb')}>
-							<span class="thumb">
-								{#if v.thumbnail}<img
-										src={v.thumbnail}
-										alt=""
-										loading="lazy"
-										referrerpolicy="no-referrer"
-										onerror={(e) => ((e.currentTarget as HTMLElement).style.display = 'none')}
-									/>{/if}
-							</span>
-							<span class="text">
-								{#if v.author}<span class="author">{v.author}</span>{/if}
-								<span class="name">{v.title}</span>
-							</span>
-						</a>
+			<ul class="videos" class:editing>
+				{#each videos as v, i (v.id)}
+					<li style={`z-index: ${i + 1}`}>
+						<ScreenCard video={v} index={i} href={`/v/${v.id}?c=${scope}`} flat={editing} />
 						{#if editing}
 							<button class="chip" type="button" onclick={() => (moving = v)} aria-label={`Mover “${v.title}”`}>
 								Mover
@@ -272,9 +257,11 @@
 	}
 
 	.head {
-		padding: var(--space-8) 0 var(--space-5);
+		padding: var(--space-4) 0 var(--space-6);
 		display: flex;
 		flex-direction: column;
+		align-items: center;
+		text-align: center;
 		gap: var(--space-3);
 	}
 
@@ -296,6 +283,7 @@
 		display: flex;
 		gap: var(--space-2);
 		flex-wrap: wrap;
+		justify-content: center;
 	}
 
 	.chip {
@@ -323,6 +311,8 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-3);
+		align-self: stretch;
+		text-align: left;
 	}
 
 	.inline p {
@@ -384,70 +374,42 @@
 	}
 
 	.videos {
+		--overlap: clamp(24px, 6vw, 44px);
 		list-style: none;
-		padding: 0;
+		padding: 0 var(--space-1);
 		margin-block: 0;
-		display: flex;
-		flex-direction: column;
-		gap: var(--space-2);
 	}
 
+	/* Each screen gets its own vanishing point, so every one is foreshortened the same
+	   way however far down the pile it sits. */
 	.videos li {
+		position: relative;
+		perspective: 900px;
+		perspective-origin: 50% 30%;
+	}
+
+	.videos li + li {
+		margin-top: calc(var(--overlap) * -1);
+	}
+
+	/* Editing lays the screens flat and apart so Mover is easy to hit. */
+	.videos.editing {
 		display: flex;
-		align-items: center;
+		flex-direction: column;
 		gap: var(--space-3);
 	}
 
-	.row {
-		flex: 1;
-		min-width: 0;
+	.videos.editing li {
 		display: flex;
 		align-items: center;
-		gap: var(--space-4);
-		padding: var(--space-2);
-		border-radius: var(--radius-thumb);
-		background: var(--color-surface-dark);
-		color: inherit;
-		text-decoration: none;
+		gap: var(--space-3);
+		margin-top: 0;
+		perspective: none;
 	}
 
-	.thumb {
-		flex: none;
-		width: 56px;
-		height: 72px;
-		border-radius: var(--radius-paper);
-		overflow: hidden;
-		background: #2b2b2b;
-	}
-
-	.thumb img {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		display: block;
-	}
-
-	.text {
+	.videos.editing li :global(.screen) {
+		flex: 1;
 		min-width: 0;
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-	}
-
-	.author {
-		font-size: var(--size-meta);
-		color: var(--color-muted-on-dark);
-	}
-
-	.name {
-		font-family: var(--font-display);
-		font-size: 19px;
-		line-height: 1.15;
-		display: -webkit-box;
-		-webkit-line-clamp: 2;
-		line-clamp: 2;
-		-webkit-box-orient: vertical;
-		overflow: hidden;
 	}
 
 	footer {
