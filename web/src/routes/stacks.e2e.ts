@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { mockNetwork, paste } from './e2e-helpers';
+import { mockNetwork, paste, fillField } from './e2e-helpers';
 
 // Thumbnails are blocked by mockNetwork; serve flat color images so the 3D
 // composition can be seen in screenshots and the image path is exercised.
@@ -51,7 +51,7 @@ test('the Library header summarises collections and videos', async ({ page }) =>
 	await page.goto('/');
 	await expect(page.locator('header .heading p')).toHaveText('2 vídeos');
 	await page.goto('/c/new');
-	await page.getByLabel('Nome da coleção').fill('Música');
+	await fillField(page.getByLabel('Nome da coleção'), 'Música');
 	await page.getByRole('button', { name: 'Criar coleção' }).click();
 	await expect(page).toHaveURL(/\/c\/[0-9a-f-]{36}$/);
 	await page.goto('/');
@@ -177,7 +177,7 @@ test('editing flattens the pile so Mover is easy to hit, and Concluído puts it 
 test('an empty collection has no screens', async ({ page }) => {
 	await mockNetwork(page);
 	await page.goto('/c/new');
-	await page.getByLabel('Nome da coleção').fill('Vazia');
+	await fillField(page.getByLabel('Nome da coleção'), 'Vazia');
 	await page.getByRole('button', { name: 'Criar coleção' }).click();
 	await expect(page.getByRole('heading', { name: 'Vazia' })).toBeVisible();
 	await expect(page.locator('.screen')).toHaveCount(0);

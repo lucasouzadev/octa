@@ -6,10 +6,16 @@
 	box-sizing: border-box;
 }
 
-/* Dark screens paint the whole page, including the iOS status-bar strip. */
+/* Every screen paints the whole page, including the iOS status-bar and bottom strips,
+   so there are no white bands around a blue or black screen. */
 html:has(.on-dark),
 html:has(.on-dark) body {
 	background: var(--color-bg-dark);
+}
+
+html:has(.on-blue),
+html:has(.on-blue) body {
+	background: var(--color-action-create);
 }
 
 html,
@@ -20,6 +26,7 @@ body {
 	font-size: var(--size-body);
 	-webkit-font-smoothing: antialiased;
 	-webkit-text-size-adjust: 100%;
+	background: var(--color-bg-light);
 }
 
 h1,

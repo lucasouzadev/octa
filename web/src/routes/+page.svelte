@@ -4,8 +4,11 @@
 	import { enrichPending } from '#lib/enrich.ts';
 	import { searchVideos } from '#lib/search.ts';
 	import { markSource } from '#lib/transition.ts';
+	import BackToTop from '#lib/ui/BackToTop.svelte';
+	import CreateMenu from '#lib/ui/CreateMenu.svelte';
 	import FanStack from '#lib/ui/FanStack.svelte';
 	import Icon from '#lib/ui/Icon.svelte';
+	import Illustration from '#lib/ui/Illustration.svelte';
 
 	let videos = $state<Video[] | null>(null);
 	let collections = $state<Collection[] | null>(null);
@@ -30,7 +33,7 @@
 		if (!videos || !collections) return null;
 		const byId = new Map(videos.map((v) => [v.id, v]));
 		return [
-			{ key: ALL, href: `/c/${ALL}`, name: 'Todos', items: videos },
+			...(videos.length > 0 ? [{ key: ALL, href: `/c/${ALL}`, name: 'Todos', items: videos }] : []),
 			...collections.map((c) => ({
 				key: c.id,
 				href: `/c/${c.id}`,
@@ -107,7 +110,11 @@
 				<h1>Minha coleção</h1>
 				{#if videos}<p>{summary}</p>{/if}
 			</div>
-			<a class="icon-button" href="/add" aria-label="Adicionar link"><Icon name="plus" /></a>
+			{#if videos && videos.length > 0}
+				<CreateMenu />
+			{:else}
+				<span class="spacer" aria-hidden="true"></span>
+			{/if}
 		</header>
 	{/if}
 
@@ -121,6 +128,7 @@
 		</p>
 		{#if results.length === 0}
 			<section class="empty small">
+				<Illustration kind="search" size={132} />
 				<h2>Nada com “{query.trim()}”.</h2>
 				<p>Tente outra palavra, o nome do autor ou menos letras.</p>
 			</section>
@@ -157,32 +165,44 @@
 				</li>
 			{/each}
 		</ul>
-	{:else if videos && videos.length === 0 && collections && collections.length === 0}
+	{:else if videos && videos.length === 0}
 		<section class="empty">
+			<Illustration kind="library" />
 			<h2>Nada aqui ainda.</h2>
 			<p>Cole o link de um vídeo do YouTube, de um Shorts ou de um arquivo .mp4.</p>
-			<a class="pill" href="/add">Colar um link</a>
+			<div class="actions">
+				<a class="pill" href="/add"><Icon name="link" size={20} /> Colar um link</a>
+				<a class="pill ghost" href="/c/new"><Icon name="folder-plus" size={20} /> Nova coleção</a>
+			</div>
 		</section>
+		{#if cards.length > 0}
+			<ul class="list after-empty" aria-label="Coleções">
+				{#each cards as c (c.key)}
+					<li>
+						<a class="card bare" href={c.href} data-collection={c.key}>
+							<h2 class="title">{c.name}</h2>
+							<p class="count">{count(c.items.length)}</p>
+						</a>
+					</li>
+				{/each}
+			</ul>
+		{/if}
 	{:else}
 		<ul class="list">
 			{#each cards as c, i (c.key)}
 				<li>
-					<a class="card" href={c.href} data-collection={c.key}>
+					<a class="card" class:bare={c.items.length === 0} href={c.href} data-collection={c.key}>
 						<h2 class="title">{c.name}</h2>
-						<FanStack items={c.items} id={c.key} order={i} />
+						{#if c.items.length > 0}<FanStack items={c.items} id={c.key} order={i} />{/if}
 						<p class="count">{count(c.items.length)}</p>
 					</a>
 				</li>
 			{/each}
-			<li>
-				<a class="card new" href="/c/new">
-					<span class="plus"><Icon name="plus" size={22} /></span>
-					<span class="title">Nova coleção</span>
-				</a>
-			</li>
 		</ul>
 	{/if}
 </main>
+
+<BackToTop />
 
 <style>
 	.library {
@@ -429,26 +449,40 @@
 		padding: var(--space-3) var(--space-1) 0;
 	}
 
-	.card.new {
-		display: flex;
-		align-items: center;
-		gap: var(--space-4);
-		background: transparent;
-		border: 2px dashed #cfcfcf;
+	.card.bare {
+		padding-block: var(--space-4);
 	}
 
-	.card.new .title {
-		padding: 0;
+	.card.bare .title {
+		padding-bottom: var(--space-1);
 	}
 
-	.plus {
+	.card.bare .count {
+		padding-top: 0;
+	}
+
+	.after-empty {
+		margin-top: var(--space-8);
+	}
+
+	.spacer {
 		width: var(--layout-touch-min);
 		height: var(--layout-touch-min);
-		border-radius: var(--radius-pill);
+	}
+
+	.actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-3);
+	}
+
+	.pill {
+		gap: var(--space-2);
+	}
+
+	.pill.ghost {
 		background: var(--color-surface-light-button);
-		display: inline-flex;
-		align-items: center;
-		justify-content: center;
+		color: var(--color-text-light);
 	}
 
 	.skeleton .line {

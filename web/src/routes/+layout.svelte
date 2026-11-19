@@ -4,6 +4,8 @@
 	import '../app.css';
 	import favicon from '#lib/assets/favicon.svg';
 	import { onNavigate } from '$app/navigation';
+	import { page } from '$app/state';
+	import { themeColorFor } from '#lib/screen.ts';
 	import { currentMode } from '#lib/transition.ts';
 	import type { LayoutProps } from './$types';
 
@@ -34,6 +36,7 @@
 
 <svelte:head>
 	<link rel="icon" href={favicon} />
+	<meta name="theme-color" content={themeColorFor(page.route.id)} />
 </svelte:head>
 
 {@render children()}

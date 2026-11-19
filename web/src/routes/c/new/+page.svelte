@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { CollectionError, COLLECTION_NAME_MAX, library } from '#lib/db/index.ts';
+	import DockedInput from '#lib/ui/DockedInput.svelte';
 	import Icon from '#lib/ui/Icon.svelte';
 
 	let name = $state('');
@@ -31,8 +32,10 @@
 	}
 </script>
 
-<main class="create">
-	<a class="close" href="/" aria-label="Voltar para a coleção"><Icon name="close" /></a>
+<main class="create on-blue">
+	<header>
+		<a class="close" href="/" aria-label="Voltar para a biblioteca"><Icon name="close" /></a>
+	</header>
 
 	<div class="intro">
 		<h1>Nova coleção.<span>Como vai se chamar?</span></h1>
@@ -40,19 +43,16 @@
 	</div>
 
 	<form onsubmit={submit} novalidate>
-		<label class="label" for="name">Nome da coleção</label>
-		<input
+		<DockedInput
 			id="name"
-			name="name"
-			type="text"
-			autocomplete="off"
-			maxlength={COLLECTION_NAME_MAX + 10}
-			placeholder="Receitas, música, estudos…"
+			label="Nome da coleção"
 			bind:value={name}
-			aria-invalid={error ? 'true' : undefined}
-			aria-describedby={error ? 'name-error' : undefined}
+			placeholder="Receitas, música, estudos…"
+			maxlength={COLLECTION_NAME_MAX + 10}
+			{error}
+			{busy}
+			sendLabel="Enviar"
 		/>
-		{#if error}<p id="name-error" class="error" role="alert">{error}</p>{/if}
 		<button class="cta" type="submit" disabled={busy || !name.trim()}>
 			{busy ? 'Criando…' : 'Criar coleção'}
 			<Icon name="arrow" />
@@ -64,14 +64,24 @@
 	.create {
 		--fg: var(--color-text-dark);
 		min-height: 100svh;
+		min-height: 100dvh;
 		background: var(--color-action-create);
 		color: var(--fg);
-		padding: calc(var(--space-6) + env(safe-area-inset-top)) var(--screen-pad)
-			calc(var(--space-8) + env(safe-area-inset-bottom));
-		display: grid;
-		grid-template-rows: auto 1fr auto;
-		gap: var(--space-8);
+		padding: calc(var(--space-3) + env(safe-area-inset-top)) var(--screen-pad)
+			calc(var(--space-6) + env(safe-area-inset-bottom));
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-5);
 		max-width: 100%;
+	}
+
+	/* The close button sits on the right so the title can start higher. */
+	header {
+		display: flex;
+		justify-content: flex-end;
+		width: 100%;
+		max-width: var(--layout-content-max);
+		margin-inline: auto;
 	}
 
 	.close {
@@ -93,7 +103,6 @@
 	}
 
 	.intro {
-		align-self: center;
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-5);
@@ -119,36 +128,13 @@
 	}
 
 	form {
+		margin-top: auto;
 		display: flex;
 		flex-direction: column;
 		gap: var(--space-3);
 	}
 
-	input {
-		background: transparent;
-		border: none;
-		border-bottom: 2px solid rgb(255 255 255 / 0.5);
-		border-radius: 0;
-		padding: var(--space-3) 0 var(--space-4);
-		font-size: 22px;
-		color: var(--fg);
-		outline: none;
-	}
 
-	input::placeholder {
-		color: rgb(255 255 255 / 0.72);
-	}
-
-	input:focus-visible {
-		border-bottom-color: var(--fg);
-	}
-
-	.error {
-		font-size: var(--size-meta);
-		line-height: 1.4;
-		color: var(--fg);
-		font-weight: 600;
-	}
 
 	.cta {
 		margin-top: var(--space-6);

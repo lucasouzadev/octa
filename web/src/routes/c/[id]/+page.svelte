@@ -4,9 +4,11 @@
 	import { CollectionError, COLLECTION_NAME_MAX, library, type Collection, type Video } from '#lib/db/index.ts';
 	import { ALL, videosIn } from '#lib/db/scope.ts';
 	import { shelfSummary } from '#lib/shelf.ts';
+	import BackToTop from '#lib/ui/BackToTop.svelte';
 	import Icon from '#lib/ui/Icon.svelte';
+	import Illustration from '#lib/ui/Illustration.svelte';
 	import ScreenCard from '#lib/ui/ScreenCard.svelte';
-	import Sheet from '#lib/ui/Sheet.svelte';
+	import MoveSheet from '#lib/ui/MoveSheet.svelte';
 
 	const scope = $derived(page.params.id ?? ALL);
 	const isAll = $derived(scope === ALL);
@@ -46,7 +48,6 @@
 
 	const title = $derived(isAll ? 'Todos' : (collection?.name ?? ''));
 	const count = $derived(videos ? shelfSummary(videos) : '');
-	const currentOf = (v: Video) => collections.find((c) => c.order.includes(v.id));
 
 	const messages: Record<string, string> = {
 		empty_name: 'Dê um nome à coleção.',
@@ -85,24 +86,6 @@
 		}
 	}
 
-	let moveBusy = false;
-
-	// The sheet stays open until the write is committed: closing first let a quick
-	// navigation abort the IndexedDB transaction and lose the move.
-	async function moveTo(target: string | null) {
-		if (!moving || moveBusy) return;
-		moveBusy = true;
-		try {
-			await (await library()).moveVideo(moving.id, target);
-			error = '';
-		} catch (e) {
-			error = explain(e);
-		} finally {
-			moveBusy = false;
-			moving = null;
-		}
-		await load();
-	}
 </script>
 
 <main class="collection on-dark">
@@ -165,6 +148,7 @@
 
 		{#if videos.length === 0}
 			<section class="state">
+				<Illustration kind="collection" />
 				<h2>Nada aqui ainda.</h2>
 				<p>
 					{#if isAll}
@@ -173,7 +157,10 @@
 						Abra Todos, toque em Editar e mova vídeos para esta coleção.
 					{/if}
 				</p>
-				<a class="pill" href={isAll ? '/add' : `/c/${ALL}`}>{isAll ? 'Colar um link' : 'Abrir Todos'}</a>
+				<div class="actions">
+					<a class="pill" href={isAll ? '/add' : `/c/${ALL}`}>{isAll ? 'Colar um link' : 'Abrir Todos'}</a>
+					{#if isAll}<a class="pill ghost" href="/c/new">Nova coleção</a>{/if}
+				</div>
 			</section>
 		{:else}
 			<ul class="videos" class:editing>
@@ -192,7 +179,7 @@
 			{#if !editing}
 				<footer>
 					<a class="cta" href={`/v/${videos[0].id}?c=${scope}`}>
-						<Icon name="play" size={18} />
+						<span class="icon"><Icon name="play" size={16} /></span>
 						Assistir em sequência
 					</a>
 				</footer>
@@ -201,23 +188,9 @@
 	{/if}
 </main>
 
-<Sheet open={moving !== null} title="Mover para" onclose={() => (moving = null)}>
-	{#if moving}
-		{@const here = currentOf(moving)}
-		{#each collections as c (c.id)}
-			<button class="option" type="button" disabled={here?.id === c.id} onclick={() => moveTo(c.id)}>
-				{c.name}{here?.id === c.id ? ' · está aqui' : ''}
-			</button>
-		{/each}
-		{#if here}
-			<button class="option" type="button" onclick={() => moveTo(null)}>Tirar da coleção</button>
-		{/if}
-		{#if collections.length === 0}
-			<p class="sheet-empty">Você ainda não tem coleções.</p>
-			<a class="option" href="/c/new">Criar coleção</a>
-		{/if}
-	{/if}
-</Sheet>
+<BackToTop lift={editing || !videos?.length ? 0 : 72} />
+
+<MoveSheet video={moving} onclose={() => (moving = null)} onmoved={() => load()} />
 
 <style>
 	.collection {
@@ -373,6 +346,17 @@
 		text-decoration: none;
 	}
 
+	.actions {
+		display: flex;
+		flex-wrap: wrap;
+		gap: var(--space-3);
+	}
+
+	.pill.ghost {
+		background: var(--color-surface-dark-raised);
+		color: var(--color-text-dark);
+	}
+
 	.videos {
 		--overlap: clamp(24px, 6vw, 44px);
 		list-style: none;
@@ -418,10 +402,11 @@
 		position: sticky;
 		bottom: 0;
 		z-index: 100;
-		padding-top: var(--space-8);
+		padding-top: var(--space-6);
 		padding-bottom: calc(var(--space-4) + env(safe-area-inset-bottom));
-		/* Rows fade out under the button instead of running into it. */
-		background: linear-gradient(to top, var(--color-bg-dark) 62%, transparent);
+		/* No band or gradient: the button floats, and its own shadow keeps it readable. */
+		background: none;
+		pointer-events: none;
 	}
 
 	.cta {
@@ -436,36 +421,25 @@
 		font-size: var(--size-body);
 		font-weight: 600;
 		text-decoration: none;
+		pointer-events: auto;
+		box-shadow:
+			0 2px 6px rgb(0 0 0 / 0.35),
+			0 10px 28px rgb(0 0 0 / 0.45);
 		transition: transform var(--motion-press);
+	}
+
+	.cta .icon {
+		display: inline-grid;
+		place-items: center;
+		width: 34px;
+		height: 34px;
+		border-radius: 50%;
+		background: var(--color-bg-dark);
+		color: var(--color-text-dark);
 	}
 
 	.cta:active {
 		transform: scale(0.97);
 	}
 
-	.option {
-		display: block;
-		width: 100%;
-		text-align: left;
-		min-height: 56px;
-		padding: 0 var(--space-5);
-		border: none;
-		border-radius: var(--radius-pill);
-		background: #232323;
-		color: var(--color-text-dark);
-		font-size: var(--size-body);
-		font-weight: 600;
-		text-decoration: none;
-		display: flex;
-		align-items: center;
-	}
-
-	.option:disabled {
-		opacity: 0.5;
-	}
-
-	.sheet-empty {
-		color: var(--color-muted-on-dark);
-		padding: 0 var(--space-2);
-	}
 </style>

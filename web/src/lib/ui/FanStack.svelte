@@ -67,7 +67,6 @@
 		<span
 			class="tile"
 			class:vertical={c.vertical}
-			class:empty={!c.item}
 			style={`--x: ${c.x}; --r: ${c.rotZ}deg; --d: ${c.drop}; --ry: ${-c.rotZ * 1.2}deg; z-index: ${c.z}`}
 		>
 			{#if c.item?.thumbnail}
@@ -116,10 +115,6 @@
 	.tile.vertical {
 		width: 22%;
 		aspect-ratio: 9 / 13;
-	}
-
-	.tile.empty {
-		background: #e2e2e2;
 	}
 
 	.tag {

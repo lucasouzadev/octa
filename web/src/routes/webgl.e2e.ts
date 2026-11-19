@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { mockNetwork, paste } from './e2e-helpers';
+import { mockNetwork, paste, fillField } from './e2e-helpers';
 
 // Headless Chromium reports 2 cores, so the capability gate says "CSS-3D". Tests
 // that want WebGL pretend to be a strong device.
@@ -44,11 +44,11 @@ test('a capable device gets one WebGL canvas and the CSS fan steps aside', async
 	await strongDevice(page);
 	await seed(page);
 	await page.goto('/c/new');
-	await page.getByLabel('Nome da coleção').fill('Música');
+	await fillField(page.getByLabel('Nome da coleção'), 'Música');
 	await page.getByRole('button', { name: 'Criar coleção' }).click();
 	await expect(page).toHaveURL(/\/c\/[0-9a-f-]{36}$/);
 	await page.goto('/');
-	await expect(page.locator('a.card')).toHaveCount(3); // Todos, Música, Nova coleção
+	await expect(page.locator('a.card')).toHaveCount(2); // Todos, Música
 	const todos = page.locator('a.card[data-collection="todos"]');
 	await expect(todos.locator('canvas')).toHaveCount(1);
 	await expect(todos.locator('.fan.gl')).toHaveCount(1);

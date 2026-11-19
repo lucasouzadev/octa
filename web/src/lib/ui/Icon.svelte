@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Inline stroke icons (DESIGN §8). Decorative: the button carries the label.
-	type Name = 'search' | 'plus' | 'back' | 'close' | 'play' | 'next' | 'heart' | 'share' | 'link' | 'arrow';
+	type Name = 'search' | 'plus' | 'back' | 'close' | 'play' | 'next' | 'heart' | 'share' | 'link' | 'arrow' | 'move' | 'minus' | 'up' | 'paste' | 'folder-plus' | 'send';
 	let { name, size = 20, filled = false }: { name: Name; size?: number; filled?: boolean } = $props();
 </script>
 
@@ -40,5 +40,17 @@
 		/>
 	{:else if name === 'arrow'}
 		<path d="M4 11h14M12 5l6 6-6 6" />
+	{:else if name === 'move'}
+		<path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2h6.5A1.5 1.5 0 0 1 19 8.5v7a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 3 15.5z" />
+	{:else if name === 'folder-plus'}
+		<path d="M3 6.5A1.5 1.5 0 0 1 4.5 5H9l2 2h6.5A1.5 1.5 0 0 1 19 8.5v7a1.5 1.5 0 0 1-1.5 1.5h-13A1.5 1.5 0 0 1 3 15.5z" /><path d="M11 9.5v5M8.5 12h5" />
+	{:else if name === 'minus'}
+		<path d="M4 11h14" />
+	{:else if name === 'up'}
+		<path d="M11 18V4M5 10l6-6 6 6" />
+	{:else if name === 'send'}
+		<path d="M11 17V5M5.5 10.5L11 5l5.5 5.5" />
+	{:else if name === 'paste'}
+		<rect x="5" y="4.5" width="12" height="14" rx="2.5" /><path d="M8.5 4.5V4a1 1 0 0 1 1-1h3a1 1 0 0 1 1 1v.5" /><path d="M8.5 10h5M8.5 13.5h3" />
 	{/if}
 </svg>

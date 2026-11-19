@@ -84,10 +84,8 @@ describe('fanCards', () => {
 		expect(fanCards(many)).toHaveLength(MAX_FAN);
 	});
 
-	it('shows three empty placeholders for an empty collection', () => {
-		const cards = fanCards([]);
-		expect(cards).toHaveLength(3);
-		expect(cards.every((c) => c.item === null)).toBe(true);
+	it('draws no placeholder cards for an empty collection', () => {
+		expect(fanCards([])).toEqual([]);
 	});
 
 	it('marks 9:16 videos as vertical cards and the rest as landscape', () => {
