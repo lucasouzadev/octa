@@ -6,7 +6,7 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 |---|---|---|
 | 0 | Docs, agent-kit, ADRs, design system | DONE 2026-11-19 |
 | 1 | Paste → resolve → card → player (YouTube long/Shorts, direct .mp4); `/v1/resolve`; URL parser + shared vectors; minimal library list | DONE 2026-11-19 — merged (PR #1, #3); API live on Render, PWA on Vercel; owner confirmed on iPhone |
-| 2 | Library + collections, Threlte fan/stack + CSS fallback, search, View Transitions (plan: `tasks/plan.md`) | 2a collections (2D) DONE (PR #6 merged, owner tested 2026-11-19); 2b search DONE (PR #7 merged, owner approved); 2c View Transitions IN REVIEW — branch `feat/slice-2c`; 2d 3D NOT STARTED |
+| 2 | Library + collections, Threlte fan/stack + CSS fallback, search, View Transitions (plan: `tasks/plan.md`) | 2a collections (2D) DONE (PR #6 merged, owner tested 2026-11-19); 2b search DONE (PR #7 merged, owner approved); 2c View Transitions DONE (PR #8 merged, owner tested); 2d-i CSS-3D fan and stack IN REVIEW — branch `feat/slice-2d-css3d`; 2d-ii Threlte NOT STARTED |
 | 3 | Instagram, TikTok, HLS; `/v1/health`; health states; Dead link screen; resume | — |
 | 4 | PWA install, share target, export/import, offline shell, E2E 3 viewports, deploy (owner picks host) | — |
 
@@ -32,6 +32,14 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 - JS gzip, all chunks, same method: 2b 52.8 KB → 2c 53.4 KB (+0.6 KB).
 - Behavior: screen colors cross-fade 320 ms; a tapped list row's thumbnail morphs into the player frame (380 ms); reduced motion = 100 ms fade, no morph; no View Transitions = plain navigation. Library cards go to a Collection screen, so they only cross-fade (no shared element there).
 - NOT RUN: seeing the animation (Playwright records the mode and the shared name at the call, not the pixels); iPhone Safari support and feel; CI.
+
+## Slice 2d-i — evidence (2026-11-19)
+- Scope: the CSS-3D floor only (ADR-0003 fallback). `FanStack` on Library cards, `PaperStack` on the Collection screen, `capability.ts` (gates for the later WebGL renderer). No `three` or Threlte yet.
+- Web: `pnpm test` 126 PASS (9 new `capability.spec.ts`, seen red first), `pnpm check` 0 errors 0 warnings, `pnpm build` PASS, `pnpm test:e2e` 91 PASS + 2 skipped (hover test runs on desktop only), 31 flows x 3 viewports.
+- JS gzip, all chunks: 2c 53.4 KB → 2d-i 54.3 KB (+0.9 KB). CSS grew with the two components.
+- Screenshots read at 390 (Library fan, Collection stack): composition matches DESIGN §6. Not read at 834 and 1440.
+- Reduced motion: pose kept, no transition, no hover fan-out. No pointer/drag tilt exists yet (the plan's spring tilt belongs to the Threlte renderer).
+- NOT RUN: iPhone/iPad/desktop physical checks; frame time while scrolling (T14); CI.
 
 ## Known gaps carried to slice 2+
 - Rate limit on Render: `CLIENT_IP_HEADER` unset = ONE shared bucket for all users (30/min, burst 10; proven by a 40-request burst: 10x422 + 30x429). `CF-Connecting-IP` looks per-client (forging it gives 403 at the edge; a burst got no 429) but is NOT PROVEN from a single egress IP. Prove from a phone on 4G, then set it.
