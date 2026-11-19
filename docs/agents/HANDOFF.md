@@ -1,24 +1,30 @@
-# HANDOFF — 2026-11-19 — project setup (slice 0)
+# HANDOFF — 2026-11-19 — slice 1 (paste → resolve → card → player)
 
 ## Goal
-Video library built only from links (no media storage) — approved 2026-11-19 by owner: stack Go API + Svelte 5 PWA, local-first, spot 3D, the 6-screen visual prototype, and this documentation set.
+First vertical slice — approved 2026-11-19 by owner ("pode dar início ao projeto"): YouTube long/Shorts + direct .mp4, Go `/v1/resolve`, PWA paste/library/player. Plan: `tasks/plan.md`.
 
 ## State (verified, with evidence)
-- Implementation: docs only; no app code yet. agent-kit 1.12.0 installed (profile `standard`, pr-quality `local`).
-- Merge: setup pushed to `main` of `lucasouzadev/octa` (direct push, owner-provided empty repo, 2026-11-19).
-- Production: none.
-- QA: N/A — no code.
+- Implementation: done on branch `feat/slice-1` (commits 97f1d69, f3f14d0, 651f6ce + docs commit).
+- Merge: PR open against `main`, **not merged** (owner reviews).
+- Production: none — no deploy target chosen.
+- QA automated: API `go test -race ./...` PASS, `go vet` PASS, govulncheck clean; web `pnpm test` 73 PASS, `pnpm check` 0 errors, `pnpm build` PASS, `pnpm test:e2e` 24 PASS (390/834/1440). CI: N/A — no workflow until slice 4.
+- QA physical: pending — owner on iPhone Safari, iPad, desktop (see PR test list).
 
 ## Decisions (and why)
-- See `docs/agents/OWNER_DECISIONS.md` and `docs/adr/` (0001–0003).
+- Client parser owns identity (canonical URL, embed src); API only adds title/author/thumb/health → a bad API response cannot redirect the player.
+- Upstream failure returns 200 + `health: unknown` (doc updated) so links still save offline/API-down.
+- SSRF guard checks the dialed IP (covers redirects/DNS rebinding); no HTTP proxy in the fetch client.
+- SvelteKit 3 + TypeScript 6 (scaffold default); `#lib/*.ts` subpath imports.
 
 ## Files touched
-- `AGENTS.md` — project section, invariants, map, do-not-reopen.
-- `docs/product/SPEC.md`, `docs/architecture/ARCHITECTURE.md`, `docs/architecture/PROVIDERS.md`, `docs/design/*`, `docs/adr/*`, `docs/STATUS.md`, `docs/agents/OWNER_DECISIONS.md`.
+- `api/**` — Go module (provider, fetch, cache, resolve, httpapi, cmd/api).
+- `web/**` — SvelteKit app, routes `/`, `/add`, `/v/[id]`, tests.
+- `testdata/urls.json` — shared parser vectors.
+- `docs/architecture/ARCHITECTURE.md`, `docs/STATUS.md`, `tasks/plan.md`.
 
 ## Next step (exact, first action)
-Boot, then present the slice 1 plan from `docs/STATUS.md` (files, tests first, risks; verify current Go/Svelte/SvelteKit versions) and ask the owner for "yes" with AskUserQuestion.
+Boot; check the PR state with GitHub tools; if merged, plan slice 2 (collections, Threlte fan/stack + CSS fallback, search, View Transitions) and ask for "yes".
 
 ## Risks / blocked / owner decisions needed
-- Instagram metadata may be blocked for anonymous fetches (PROVIDERS.md) — fallback card is planned.
+- Gaps listed in `docs/STATUS.md` (skeleton, client IP behind proxy, no CI, double-paste race).
 - Owner: app icon; hosting before slice 4.

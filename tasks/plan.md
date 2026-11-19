@@ -14,19 +14,19 @@ First vertical slice: a user pastes a YouTube (long/Shorts) or direct `.mp4` lin
 
 ## Task list
 ### Phase 1 — API
-- [ ] T1 Shared vectors `testdata/urls.json` (YouTube watch/short/youtu.be/live/embed/m./start, direct mp4/webm, unsupported, invalid)
-- [ ] T2 `internal/provider`: Parse for YouTube + direct, table tests over vectors
-- [ ] T3 `internal/fetch`: safe client (scheme, IP ranges on dial, ≤3 redirects, 5 s, 1 MB) + tests
-- [ ] T4 Resolve: YouTube oEmbed + thumbnail fallback; direct HEAD content-type; TTL cache
-- [ ] T5 `internal/httpapi`: `POST /v1/resolve`, `GET /healthz`, CORS from env, per-IP rate limit, body cap; `cmd/api/main.go`
+- [x] T1 Shared vectors `testdata/urls.json` (YouTube watch/short/youtu.be/live/embed/m./start, direct mp4/webm, unsupported, invalid)
+- [x] T2 `internal/provider`: Parse for YouTube + direct, table tests over vectors
+- [x] T3 `internal/fetch`: safe client (scheme, IP ranges on dial, ≤3 redirects, 5 s, 1 MB) + tests
+- [x] T4 Resolve: YouTube oEmbed + thumbnail fallback; direct HEAD content-type; TTL cache
+- [x] T5 `internal/httpapi`: `POST /v1/resolve`, `GET /healthz`, CORS from env, per-IP rate limit, body cap; `cmd/api/main.go`
 ### Checkpoint A: `go test ./... && go vet ./...` PASS
 ### Phase 2 — Web
-- [ ] T6 Scaffold SvelteKit 3 + adapter-static + Vitest + Playwright (pnpm); `tokens.css` from `docs/design/tokens.json`
-- [ ] T7 Client parser over the same vectors; IndexedDB repo (`idb`, tested with `fake-indexeddb`)
-- [ ] T8 Routes: `/add` (blue Paste screen), `/` (minimal library list), `/v/[id]` (player: YouTube nocookie iframe / native video, 3 pill actions)
-- [ ] T9 Playwright smoke at 390/834/1440 with the API mocked by route interception
+- [x] T6 Scaffold SvelteKit 3 + adapter-static + Vitest + Playwright (pnpm); `tokens.css` from `docs/design/tokens.json`
+- [x] T7 Client parser over the same vectors; IndexedDB repo (`idb`, tested with `fake-indexeddb`)
+- [x] T8 Routes: `/add` (blue Paste screen), `/` (minimal library list), `/v/[id]` (player: YouTube nocookie iframe / native video, 3 pill actions)
+- [x] T9 Playwright smoke at 390/834/1440 with the API mocked by route interception
 ### Checkpoint B: `pnpm check && pnpm test && pnpm build && pnpm test:e2e` PASS
-- [ ] T10 Review, PR, handoff
+- [x] T10 Review, PR, handoff
 
 ## Risks
 | Risk | Impact | Mitigation |
