@@ -5,20 +5,21 @@
 	// are drawn. Decorative; the card carries the name and count.
 	import { onMount, type Component } from 'svelte';
 	import { canUseWebGL3D, readEnv } from '#lib/capability.ts';
+	import { cardLabel, fanCards, type FanItem } from '#lib/fan.ts';
 	import { isActive, setVisible } from './active3d.svelte.ts';
 
 	let {
 		items,
 		id,
 		order = 0
-	}: { items: { thumbnail?: string }[]; id: string; order?: number } = $props();
+	}: { items: FanItem[]; id: string; order?: number } = $props();
 
 	let host = $state<HTMLElement>();
 	let capable = $state(false);
 	let failed = $state(false);
 	let ready = $state(false);
 	let Scene = $state<Component<{
-		items: { thumbnail?: string }[];
+		items: FanItem[];
 		onready: () => void;
 		onfail: () => void;
 	}> | null>(null);
@@ -58,23 +59,27 @@
 		if (!active) ready = false;
 	});
 
-	// Back-left, back-right, front: the newest video sits in front.
-	const slots = $derived([items[1], items[2], items[0]]);
-	const names = ['left', 'right', 'front'];
+	const cards = $derived(fanCards(items));
 </script>
 
 <div class="fan" class:gl={ready} bind:this={host} aria-hidden="true">
-	{#each slots as item, i (i)}
-		<span class={`paper ${names[i]}`}>
-			{#if item?.thumbnail}
+	{#each cards as c, i (i)}
+		<span
+			class="tile"
+			class:vertical={c.vertical}
+			class:empty={!c.item}
+			style={`--x: ${c.x}; --r: ${c.rotZ}deg; --d: ${c.drop}; --ry: ${-c.rotZ * 1.2}deg; z-index: ${c.z}`}
+		>
+			{#if c.item?.thumbnail}
 				<img
-					src={item.thumbnail}
+					src={c.item.thumbnail}
 					alt=""
 					loading="lazy"
 					referrerpolicy="no-referrer"
 					onerror={(e) => ((e.currentTarget as HTMLElement).style.display = 'none')}
 				/>
 			{/if}
+			{#if c.item}<span class="tag">{cardLabel(c.item)}</span>{/if}
 		</span>
 	{/each}
 	{#if active && Scene}
@@ -85,61 +90,72 @@
 </div>
 
 <style>
+	/* Prototype page 2: bordered cards in a fan, name above, count below. */
 	.fan {
-		--tilt: 16deg;
 		position: relative;
-		aspect-ratio: 16 / 10;
-		perspective: 700px;
+		aspect-ratio: 16 / 8.5;
+		perspective: 900px;
 		perspective-origin: 50% 40%;
-		transform-style: preserve-3d;
 	}
 
-	.paper {
+	.tile {
 		position: absolute;
-		inset-block: 4% 4%;
-		inset-inline-start: 50%;
-		width: 34%;
-		border-radius: var(--radius-thumb);
+		inset-inline-start: calc(50% + var(--x) * 1%);
+		top: calc(50% + var(--d) * 1%);
+		width: 30%;
+		aspect-ratio: 4 / 3;
+		border: 3px solid #fff;
+		border-radius: 14px;
 		overflow: hidden;
-		background: #dcdcdc;
-		box-shadow: 0 10px 22px rgb(0 0 0 / 0.18);
+		background: #cfcfcf;
+		box-shadow: 8px -6px 16px rgb(0 0 0 / 0.16);
+		transform: translate(-50%, -50%) rotate(var(--r)) rotateY(var(--ry));
 		transition: transform var(--motion-press);
-		transform-origin: 50% 90%;
 	}
 
-	.left {
-		transform: translateX(-118%) rotateZ(-7deg) rotateY(var(--tilt));
+	.tile.vertical {
+		width: 22%;
+		aspect-ratio: 9 / 13;
 	}
 
-	.right {
-		transform: translateX(18%) rotateZ(7deg) rotateY(calc(var(--tilt) * -1));
+	.tile.empty {
+		background: #e2e2e2;
 	}
 
-	.front {
-		transform: translateX(-50%) translateZ(24px);
+	.tag {
+		position: absolute;
+		inset: auto 0 0 0;
+		padding: 18px 8px 6px;
+		background: linear-gradient(to top, rgb(0 0 0 / 0.5), transparent);
+		color: #fff;
+		font-size: 10px;
+		font-weight: 600;
+		letter-spacing: 0.08em;
+		text-transform: uppercase;
 	}
 
-	/* A little life on hover/focus; not with reduced motion. */
 	@media (prefers-reduced-motion: no-preference) {
-		:global(a.card:hover) .left,
-		:global(a.card:focus-visible) .left {
-			transform: translateX(-128%) rotateZ(-9deg) rotateY(var(--tilt));
-		}
-
-		:global(a.card:hover) .right,
-		:global(a.card:focus-visible) .right {
-			transform: translateX(28%) rotateZ(9deg) rotateY(calc(var(--tilt) * -1));
+		:global(a.card:hover) .tile,
+		:global(a.card:focus-visible) .tile {
+			transform: translate(-50%, -50%) rotate(calc(var(--r) * 1.3)) rotateY(var(--ry));
 		}
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.paper {
+		.tile {
 			transition: none;
 		}
 	}
 
+	img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		display: block;
+	}
+
 	/* Once WebGL has drawn the same fan, hide the CSS one underneath. */
-	.fan.gl .paper {
+	.fan.gl .tile {
 		opacity: 0;
 	}
 
@@ -159,12 +175,5 @@
 		.gl-layer {
 			transition: none;
 		}
-	}
-
-	img {
-		width: 100%;
-		height: 100%;
-		object-fit: cover;
-		display: block;
 	}
 </style>

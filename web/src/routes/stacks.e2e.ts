@@ -22,17 +22,40 @@ async function seed(page: Page) {
 	await expect(page).toHaveURL(/\/v\//);
 }
 
-test('Library cards show a CSS-3D fan of three papers', async ({ page }) => {
+test('Library cards show a CSS-3D fan of bordered cards with the source on each', async ({ page }) => {
 	await seed(page);
 	await page.goto('/');
 	const fan = page.locator('a.card[data-collection="todos"] .fan');
-	await expect(fan.locator('.paper')).toHaveCount(3);
+	await expect(fan.locator('.tile')).toHaveCount(2); // as many cards as videos (up to 5)
 	expect(await fan.evaluate((el) => getComputedStyle(el).perspective)).not.toBe('none');
-	const left = await fan.locator('.left').evaluate((el) => getComputedStyle(el).transform);
-	expect(left).not.toBe('none');
+	const first = await fan.locator('.tile').first().evaluate((el) => getComputedStyle(el).transform);
+	expect(first).not.toBe('none');
+	// Newest first: the Short stands up and says SHORTS, the other lies down and says YOUTUBE.
+	await expect(fan.locator('.tag')).toHaveText(['Shorts', 'YouTube']);
+	await expect(fan.locator('.tile.vertical')).toHaveCount(1);
+	expect(await fan.locator('.tag').first().evaluate((el) => getComputedStyle(el).textTransform)).toBe('uppercase');
 	// The fan is decoration: nothing for a screen reader to read, and the card keeps its name.
 	await expect(fan).toHaveAttribute('aria-hidden', 'true');
 	await expect(page.getByRole('heading', { name: 'Todos', exact: true })).toBeVisible();
+	// Name on top, fan, count below (prototype page 2).
+	const card = page.locator('a.card[data-collection="todos"]');
+	const title = (await card.getByRole('heading').boundingBox())!;
+	const fanBox = (await fan.boundingBox())!;
+	const count = (await card.locator('.count').boundingBox())!;
+	expect(title.y).toBeLessThan(fanBox.y);
+	expect(count.y).toBeGreaterThan(fanBox.y);
+});
+
+test('the Library header summarises collections and videos', async ({ page }) => {
+	await seed(page);
+	await page.goto('/');
+	await expect(page.locator('header .heading p')).toHaveText('2 vídeos');
+	await page.goto('/c/new');
+	await page.getByLabel('Nome da coleção').fill('Música');
+	await page.getByRole('button', { name: 'Criar coleção' }).click();
+	await expect(page).toHaveURL(/\/c\/[0-9a-f-]{36}$/);
+	await page.goto('/');
+	await expect(page.locator('header .heading p')).toHaveText('1 coleção · 2 vídeos');
 });
 
 test('the Collection screen shows a tipped paper stack', async ({ page }, testInfo) => {
@@ -63,7 +86,7 @@ test('reduced motion: the fan keeps its pose but nothing animates', async ({ pag
 	await page.emulateMedia({ reducedMotion: 'reduce' });
 	await seed(page);
 	await page.goto('/');
-	const paper = page.locator('a.card[data-collection="todos"] .fan .left');
+	const paper = page.locator('a.card[data-collection="todos"] .fan .tile').first();
 	// A global reduced-motion rule may set 1e-5s instead of 0s; both mean "instant".
 	const seconds = await paper.evaluate((el) => parseFloat(getComputedStyle(el).transitionDuration));
 	expect(seconds).toBeLessThan(0.001);
@@ -76,7 +99,7 @@ test('without reduced motion, hovering a card fans the papers wider', async ({ p
 	test.skip(testInfo.project.name !== 'desktop', 'hover needs a pointer');
 	await seed(page);
 	await page.goto('/');
-	const paper = page.locator('a.card[data-collection="todos"] .fan .left');
+	const paper = page.locator('a.card[data-collection="todos"] .fan .tile').first();
 	const before = await paper.evaluate((el) => getComputedStyle(el).transform);
 	await page.locator('a.card[data-collection="todos"]').hover();
 	await expect

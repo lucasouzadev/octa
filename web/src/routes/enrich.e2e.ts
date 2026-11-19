@@ -30,10 +30,14 @@ test('a video saved while the API was down gets its real title back on the Libra
 	await expect(page.getByText('Vídeo do YouTube')).toBeVisible();
 
 	apiUp = true;
+	const resolved = page.waitForResponse('**/api/v1/resolve');
 	await page.goto('/');
-	await expect(page.getByRole('heading', { name: 'Todos', exact: true })).toBeVisible();
-	await page.goto('/c/todos');
-	await expect(page.getByText('Sessão ao vivo no terraço')).toBeVisible();
+	await resolved; // the Library asked again once the API was up
+	// The write to IndexedDB lands a moment after the response; retry the read.
+	await expect(async () => {
+		await page.goto('/c/todos');
+		await expect(page.getByText('Sessão ao vivo no terraço')).toBeVisible({ timeout: 1500 });
+	}).toPass({ timeout: 10_000 });
 	await expect(page.getByText('Casa Aberta')).toBeVisible();
 	await expect(page.getByText('Vídeo do YouTube')).toHaveCount(0);
 });

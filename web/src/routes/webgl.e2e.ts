@@ -58,15 +58,22 @@ test('a capable device gets one WebGL canvas and the CSS fan steps aside', async
 	const shot = await todos.screenshot({ path: `test-results/slice2d2/${testInfo.project.name}-webgl-card.png` });
 	// Regression guard: the papers must show the thumbnail, not a flat grey (a material
 	// that was never recompiled for its texture drew grey while every DOM check passed).
-	const frontColor = await page.evaluate(async (b64) => {
+	const strongest = await page.evaluate(async (b64) => {
 		const img = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob());
 		const c = new OffscreenCanvas(img.width, img.height);
 		const g = c.getContext('2d')!;
 		g.drawImage(img, 0, 0);
-		const [r, , b] = g.getImageData(Math.round(img.width / 2), Math.round(img.height * 0.12), 1, 1).data;
-		return { r, b };
+		// Scan the fan area: some pixel must be clearly orange or blue, never only grey.
+		let best = 0;
+		for (let y = Math.round(img.height * 0.1); y < img.height * 0.65; y += 6) {
+			for (let x = Math.round(img.width * 0.1); x < img.width * 0.9; x += 6) {
+				const [r, , bl] = g.getImageData(x, y, 1, 1).data;
+				best = Math.max(best, Math.abs(r - bl));
+			}
+		}
+		return best;
 	}, shot.toString('base64'));
-	expect(Math.abs(frontColor.r - frontColor.b)).toBeGreaterThan(60); // orange or blue, never grey
+	expect(strongest).toBeGreaterThan(60);
 });
 
 test('an idle WebGL card draws nothing; tilting draws only while it moves', async ({ page }, testInfo) => {
@@ -120,7 +127,7 @@ test('a device that cannot or should not use WebGL never downloads the 3D chunk'
 	const big = trackBigScripts(page);
 	await seed(page); // default headless: 2 cores
 	await page.goto('/');
-	await expect(page.locator('a.card[data-collection="todos"] .fan .paper')).toHaveCount(3);
+	await expect(page.locator('a.card[data-collection="todos"] .fan .tile')).toHaveCount(2);
 	await page.waitForLoadState('networkidle');
 	expect(await page.locator('canvas').count()).toBe(0);
 	expect(big).toEqual([]);
@@ -140,7 +147,7 @@ test('reduced motion and Save-Data keep the CSS fan even on a strong device', as
 		const big = trackBigScripts(p);
 		await seed(p);
 		await p.goto('/');
-		await expect(p.locator('a.card[data-collection="todos"] .fan .paper')).toHaveCount(3);
+		await expect(p.locator('a.card[data-collection="todos"] .fan .tile')).toHaveCount(2);
 		await p.waitForLoadState('networkidle');
 		expect(await p.locator('canvas').count(), mode).toBe(0);
 		expect(big, mode).toEqual([]);
@@ -162,7 +169,7 @@ test('a lost WebGL context hands the fan back to CSS', async ({ page }) => {
 	});
 	await expect(todos.locator('canvas')).toHaveCount(0);
 	await expect(todos.locator('.fan.gl')).toHaveCount(0);
-	await expect(todos.locator('.fan .paper')).toHaveCount(3);
+	await expect(todos.locator('.fan .tile')).toHaveCount(2);
 });
 
 test('going back and forth does not pile up canvases', async ({ page }) => {
