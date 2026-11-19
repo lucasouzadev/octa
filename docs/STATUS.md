@@ -7,7 +7,7 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 | 0 | Docs, agent-kit, ADRs, design system | DONE 2026-11-19 |
 | 1 | Paste → resolve → card → player (YouTube long/Shorts, direct .mp4); `/v1/resolve`; URL parser + shared vectors; minimal library list | DONE 2026-11-19 — merged (PR #1, #3); API live on Render, PWA on Vercel; owner confirmed on iPhone |
 | 2 | Library + collections, Threlte fan/stack + CSS fallback, search, View Transitions (plan: `tasks/plan.md`) | 2a collections (2D) DONE (PR #6 merged, owner tested 2026-11-19); 2b search DONE (PR #7 merged, owner approved); 2c View Transitions DONE (PR #8 merged, owner tested); 2d-i CSS-3D fan and stack DONE (PR #9 merged, owner approved on iPhone); iOS findings fix DONE (PR #10 merged); 2d-ii WebGL fan DONE (PR #11 merged, owner approved); 2e-1 Library cards per the prototype DONE (PR #12 merged, owner approved); 2e-2 Collection screen as tilted 3D screens IN REVIEW — branch `feat/slice-2e2-collection-screens`; 2e-3 WebGL monitors IN REVIEW (branch `feat/slice-2e3-webgl-monitors`) |
-| 3 | Instagram, TikTok, HLS; `/v1/health`; health states; Dead link screen; resume | 3a sources (Instagram, TikTok, HLS) IN REVIEW — branch `feat/slice-3a-sources`; 3c cinema player IN REVIEW — branch `feat/slice-3c-cinema` (owner moved it before 3b); 3b `/v1/health` + real dead-link check + Continuar assistindo NOT STARTED |
+| 3 | Instagram, TikTok, HLS; `/v1/health`; health states; Dead link screen; resume | 3a sources DONE (PR #18/#20 merged); 3c cinema player DONE (PR #21 merged); 3b `/v1/health` + real dead-link check + resume IN REVIEW — branch `feat/slice-3b-health` (home card "Continuar assistindo" pending owner decision) |
 | 4 | PWA install, share target, export/import, offline shell, E2E 3 viewports, deploy (owner picks host) | — |
 
 ## Slice 1 — evidence (2026-11-19)
@@ -117,3 +117,9 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 ## Owner decisions pending
 - App icon.
 - Hosting decided and live: PWA on Vercel (`web`), API on Render free (`octa-api`, virginia). Health Check Path `/healthz` still to be set by the owner in the Render dashboard (the tool cannot set it).
+
+## Slice 3b — evidence (2026-11-19)
+- API: `POST /v1/health` (<= 50 items, <= 16 outbound at once, body cap 160 KB, optional `fresh` skips the 1-6 h cache, bad/unsupported item = `unknown` not an error, results carry the caller's id only, same rate limit as resolve). `Resolver.Check(ctx, raw, fresh)`; `cache.Delete`.
+- Web: `health.ts` (sweep on Library open for links not checked in 24 h, in batches of 50; check before playing; real "Manter e checar de novo" = fresh check + streak restart; `unknown` and non-newer answers never overwrite what we know; dead streak counts only answers >= 12 h apart). Resume: position saved every 5 s, on pause and on leaving; read once on open (< 10 s or within 10 s of the end = from the start); YouTube `start`, TikTok `seekTo`, native `currentTime`; finished clears it.
+- Tests: Go `go test -race ./...` PASS (new: batch order/ids, no URL echo, 51 items -> 413, concurrency bound, rate limit, fresh bypasses cache); web unit 257 PASS (16 + 3 `health.spec`, 5 `core.spec`); e2e `health.e2e.ts` 7 and `resume.e2e.ts` 4 flows x 3 viewports.
+- NOT RUN: live YouTube/TikTok/Instagram health mappings (no route from sandbox; PROVIDERS.md says confirm on a real network), real iPhone, CI.

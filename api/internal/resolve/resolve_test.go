@@ -134,3 +134,31 @@ func TestUnsupportedPassesParserError(t *testing.T) {
 		t.Fatalf("err = %v, want ErrUnsupported", err)
 	}
 }
+
+func TestCheckFreshBypassesCache(t *testing.T) {
+	r, hits, _ := newResolver(t, func(w http.ResponseWriter, req *http.Request) { w.Write([]byte(`{"title":"x"}`)) })
+	ctx := context.Background()
+	const u = "https://youtu.be/dQw4w9WgXcQ"
+	if _, err := r.Check(ctx, u, false); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := r.Check(ctx, u, false); err != nil {
+		t.Fatal(err)
+	}
+	if hits.Load() != 1 {
+		t.Fatalf("cached check hit upstream %d times, want 1", hits.Load())
+	}
+	if _, err := r.Check(ctx, u, true); err != nil {
+		t.Fatal(err)
+	}
+	if hits.Load() != 2 {
+		t.Fatalf("fresh check hit upstream %d times in total, want 2", hits.Load())
+	}
+}
+
+func TestCheckReportsParserErrors(t *testing.T) {
+	r, _, _ := newResolver(t, func(w http.ResponseWriter, req *http.Request) {})
+	if _, err := r.Check(context.Background(), "ftp://x", false); !errors.Is(err, provider.ErrInvalid) && !errors.Is(err, provider.ErrUnsupported) {
+		t.Fatalf("err = %v, want invalid or unsupported", err)
+	}
+}

@@ -37,3 +37,19 @@ export async function resolveLink(
 	if (!res.ok) throw new ApiError(res.status);
 	return (await res.json()) as Meta;
 }
+
+export async function checkHealth(
+	items: { id: string; url: string }[],
+	opts: { fetch?: typeof fetch; base?: string; signal?: AbortSignal; fresh?: boolean } = {}
+): Promise<{ id: string; health: Health; checkedAt: string }[]> {
+	const f = opts.fetch ?? fetch;
+	const res = await f(`${opts.base ?? API_BASE}/v1/health`, {
+		method: 'POST',
+		headers: { 'Content-Type': 'application/json' },
+		body: JSON.stringify({ items, fresh: opts.fresh === true }),
+		signal: opts.signal
+	});
+	if (!res.ok) throw new ApiError(res.status);
+	const body = (await res.json()) as { results?: { id: string; health: Health; checkedAt: string }[] };
+	return body.results ?? [];
+}

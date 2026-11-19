@@ -66,3 +66,10 @@ func (c *TTL[K, V]) evictLocked() {
 		return
 	}
 }
+
+// Delete drops a key; a missing key is a no-op.
+func (c *TTL[K, V]) Delete(k K) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	delete(c.m, k)
+}

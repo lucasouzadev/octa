@@ -71,7 +71,7 @@ docs/
 ```
 `POST /v1/health`
 ```json
-{ "items": [ { "id": "local-uuid", "url": "https://…" } ] }          // ≤ 50 items
+{ "items": [ { "id": "local-uuid", "url": "https://…" } ], "fresh": false }   // ≤ 50 items; fresh=true skips the API cache (413 too_large above 50)
 { "results": [ { "id": "local-uuid", "health": "dead", "checkedAt": "…" } ] }
 ```
 `GET /healthz` → `200 ok` (liveness only).

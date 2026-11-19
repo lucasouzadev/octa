@@ -5,7 +5,9 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -21,6 +23,10 @@ func (fakeResolver) Resolve(_ context.Context, raw string) (resolve.Meta, error)
 		return resolve.Meta{}, err
 	}
 	return resolve.Meta{Ref: ref, Health: resolve.HealthAlive}, nil
+}
+
+func (f fakeResolver) Check(ctx context.Context, raw string, _ bool) (resolve.Meta, error) {
+	return f.Resolve(ctx, raw)
 }
 
 func newHandler(t *testing.T, burst int) http.Handler {
@@ -208,5 +214,126 @@ func TestSweepDropsIdleLimiters(t *testing.T) {
 	s.Sweep(-time.Second) // everything counts as idle
 	if code := post(s, `{"url":"https://youtu.be/dQw4w9WgXcQ"}`, nil).Code; code != http.StatusOK {
 		t.Fatalf("after sweep status = %d, want 200", code)
+	}
+}
+
+// --- POST /v1/health ---
+
+type healthOut struct {
+	Results []struct {
+		ID        string `json:"id"`
+		Health    string `json:"health"`
+		CheckedAt string `json:"checkedAt"`
+	} `json:"results"`
+}
+
+func postHealth(h http.Handler, body string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(http.MethodPost, "/v1/health", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	return rec
+}
+
+func TestHealthBatchKeepsOrderAndIDs(t *testing.T) {
+	h := newHandler(t, 10)
+	rec := postHealth(h, `{"items":[{"id":"b","url":"https://youtu.be/dQw4w9WgXcQ"},{"id":"a","url":"https://youtu.be/aaaaaaaaaaa"}]}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d body=%s", rec.Code, rec.Body)
+	}
+	var out healthOut
+	if err := json.Unmarshal(rec.Body.Bytes(), &out); err != nil {
+		t.Fatal(err)
+	}
+	if len(out.Results) != 2 || out.Results[0].ID != "b" || out.Results[1].ID != "a" || out.Results[0].Health != "alive" {
+		t.Fatalf("got %+v", out.Results)
+	}
+	if strings.Contains(rec.Body.String(), "youtu") {
+		t.Fatal("response must not echo the URLs")
+	}
+}
+
+func TestHealthBadItemIsUnknownNotAnError(t *testing.T) {
+	h := newHandler(t, 10)
+	rec := postHealth(h, `{"items":[{"id":"x","url":"not a url"},{"id":"y","url":"https://youtu.be/dQw4w9WgXcQ"}]}`)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	var out healthOut
+	json.Unmarshal(rec.Body.Bytes(), &out)
+	if out.Results[0].Health != "unknown" || out.Results[1].Health != "alive" {
+		t.Fatalf("got %+v", out.Results)
+	}
+}
+
+func TestHealthRejectsEmptyAndOversizedBatches(t *testing.T) {
+	h := newHandler(t, 10)
+	if rec := postHealth(h, `{"items":[]}`); rec.Code != http.StatusBadRequest {
+		t.Fatalf("empty: status = %d, want 400", rec.Code)
+	}
+	if rec := postHealth(h, `nope`); rec.Code != http.StatusBadRequest {
+		t.Fatalf("bad json: status = %d, want 400", rec.Code)
+	}
+	var b strings.Builder
+	b.WriteString(`{"items":[`)
+	for i := 0; i < 51; i++ {
+		if i > 0 {
+			b.WriteString(",")
+		}
+		b.WriteString(`{"id":"i","url":"https://youtu.be/dQw4w9WgXcQ"}`)
+	}
+	b.WriteString(`]}`)
+	rec := postHealth(h, b.String())
+	if rec.Code != http.StatusRequestEntityTooLarge || errorCode(t, rec) != "too_large" {
+		t.Fatalf("51 items: status = %d body=%s, want 413 too_large", rec.Code, rec.Body)
+	}
+}
+
+type slowResolver struct {
+	fakeResolver
+	cur, max atomic.Int32
+}
+
+func (s *slowResolver) Check(ctx context.Context, raw string, fresh bool) (resolve.Meta, error) {
+	n := s.cur.Add(1)
+	defer s.cur.Add(-1)
+	for {
+		m := s.max.Load()
+		if n <= m || s.max.CompareAndSwap(m, n) {
+			break
+		}
+	}
+	time.Sleep(15 * time.Millisecond)
+	return s.fakeResolver.Resolve(ctx, raw)
+}
+
+func TestHealthBoundsOutboundConcurrency(t *testing.T) {
+	res := &slowResolver{}
+	h := New(Config{Resolver: res, AllowedOrigins: []string{"https://octa.app"}, Burst: 10})
+	var b strings.Builder
+	b.WriteString(`{"items":[`)
+	for i := 0; i < 50; i++ {
+		if i > 0 {
+			b.WriteString(",")
+		}
+		b.WriteString(`{"id":"i` + strconv.Itoa(i) + `","url":"https://youtu.be/dQw4w9WgXcQ"}`)
+	}
+	b.WriteString(`]}`)
+	if rec := postHealth(h, b.String()); rec.Code != http.StatusOK {
+		t.Fatalf("status = %d", rec.Code)
+	}
+	if got := res.max.Load(); got > 16 || got < 2 {
+		t.Fatalf("max concurrent checks = %d, want 2..16", got)
+	}
+}
+
+func TestHealthIsRateLimitedLikeResolve(t *testing.T) {
+	h := newHandler(t, 1)
+	body := `{"items":[{"id":"a","url":"https://youtu.be/dQw4w9WgXcQ"}]}`
+	if postHealth(h, body).Code != http.StatusOK {
+		t.Fatal("first call should pass")
+	}
+	if postHealth(h, body).Code != http.StatusTooManyRequests {
+		t.Fatal("second call should be limited")
 	}
 }

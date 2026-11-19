@@ -23,6 +23,21 @@ export function startOf(src: string): number {
 	}
 }
 
+/** Below this a resume is not worth it; within it of the end the video counts as finished. */
+const RESUME_MIN = 10;
+
+/** Where to start a video the person left earlier: 0 = from the beginning. */
+export function resumeAt(position?: number, duration?: number): number {
+	if (position === undefined || !Number.isFinite(position) || position < RESUME_MIN) return 0;
+	if (duration && Number.isFinite(duration) && position >= duration - RESUME_MIN) return 0;
+	return Math.floor(position);
+}
+
+/** Progress is written at most every 5 s (IndexedDB writes are cheap, not free). */
+export function shouldSave(lastSaved: number, time: number): boolean {
+	return Number.isFinite(time) && Math.abs(time - lastSaved) >= 5;
+}
+
 /** YouTube IFrame API states: -1 unstarted, 0 ended, 1 playing, 2 paused, 3 buffering, 5 cued. */
 export function ytPhase(state: number): Phase {
 	switch (state) {

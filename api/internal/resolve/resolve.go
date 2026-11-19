@@ -67,6 +67,12 @@ func New(f *fetch.Client, now func() time.Time) *Resolver {
 // Resolve returns provider.ErrInvalid / ErrUnsupported for bad input; every
 // other outcome is a Meta (possibly with health "unknown").
 func (r *Resolver) Resolve(ctx context.Context, raw string) (Meta, error) {
+	return r.Check(ctx, raw, false)
+}
+
+// Check is Resolve with an option to skip the cache: fresh=true asks the
+// platform again (used when the person re-checks a link that looked dead).
+func (r *Resolver) Check(ctx context.Context, raw string, fresh bool) (Meta, error) {
 	if short, ok := provider.ShortTikTokURL(raw); ok {
 		exp, ok := r.expand(ctx, short)
 		if !ok {
@@ -78,7 +84,9 @@ func (r *Resolver) Resolve(ctx context.Context, raw string) (Meta, error) {
 	if err != nil {
 		return Meta{}, err
 	}
-	if m, ok := r.cache.Get(ref.CanonicalURL); ok {
+	if fresh {
+		r.cache.Delete(ref.CanonicalURL)
+	} else if m, ok := r.cache.Get(ref.CanonicalURL); ok {
 		return m, nil
 	}
 	m := Meta{Ref: ref, Health: HealthUnknown, CheckedAt: r.now()}
