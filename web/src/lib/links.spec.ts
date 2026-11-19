@@ -100,3 +100,20 @@ describe('addLink', () => {
 		expect(video.embed.type).toBe('video');
 	});
 });
+
+describe('newId', () => {
+	it('works where crypto.randomUUID is missing (http on the local network, e.g. iPhone testing)', async () => {
+		const { newId } = await import('#lib/links.ts');
+		const original = crypto.randomUUID;
+		// @ts-expect-error simulate an insecure context
+		crypto.randomUUID = undefined;
+		try {
+			const a = newId();
+			const b = newId();
+			expect(a).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+			expect(a).not.toBe(b);
+		} finally {
+			crypto.randomUUID = original;
+		}
+	});
+});

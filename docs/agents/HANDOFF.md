@@ -7,7 +7,7 @@ First vertical slice — approved 2026-11-19 by owner ("pode dar início ao proj
 - Implementation: done on branch `feat/slice-1` (commits 97f1d69, f3f14d0, 651f6ce + docs commit).
 - Merge: PR open against `main`, **not merged** (owner reviews).
 - Production: none — no deploy target chosen.
-- QA automated: API `go test -race ./...` PASS, `go vet` PASS, govulncheck clean; web `pnpm test` 73 PASS, `pnpm check` 0 errors, `pnpm build` PASS, `pnpm test:e2e` 24 PASS (390/834/1440). CI: N/A — no workflow until slice 4.
+- QA automated: API `go test -race ./...` PASS, `go vet` PASS, govulncheck clean; web `pnpm test` 74 PASS, `pnpm check` 0 errors, `pnpm build` PASS, `pnpm test:e2e` 24 PASS (390/834/1440). CI: N/A — no workflow until slice 4.
 - QA physical: pending — owner on iPhone Safari, iPad, desktop (see PR test list).
 
 ## Decisions (and why)
