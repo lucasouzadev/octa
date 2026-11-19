@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { mockNetwork, paste, fillField } from './e2e-helpers';
+import { fakeYouTube, mockNetwork, paste, fillField } from './e2e-helpers';
 
 test('smoke: paste a YouTube link, land on the player, see it in the library', async ({ page }) => {
 	await mockNetwork(page);
@@ -13,9 +13,9 @@ test('smoke: paste a YouTube link, land on the player, see it in the library', a
 
 	await expect(page).toHaveURL(/\/v\/[0-9a-f-]{36}$/);
 	await expect(page.getByRole('heading', { name: 'Sessão ao vivo no terraço' })).toBeVisible();
-	const frame = page.locator('iframe[title="Sessão ao vivo no terraço"]');
-	await expect(frame).toHaveAttribute('src', 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?playsinline=1&rel=0');
-	await expect(frame).toHaveAttribute('sandbox', /allow-scripts/);
+	// The cinema opens with the cover; YouTube's player loads only on the first tap.
+	await expect(page.locator('iframe')).toHaveCount(0);
+	await expect(page.getByRole('button', { name: 'Assistir “Sessão ao vivo no terraço”' })).toBeVisible();
 
 	await page.getByRole('link', { name: 'Fechar' }).click();
 	await expect(page.getByRole('heading', { name: 'Todos' })).toBeVisible();
@@ -73,10 +73,12 @@ test('unsupported and invalid links explain themselves and save nothing', async 
 
 test('API down: the link is still saved and playable from the client parser', async ({ page }) => {
 	await mockNetwork(page, { apiDown: true });
+	await fakeYouTube(page);
 	await paste(page, 'https://www.youtube.com/shorts/aBcDeFgHiJ0');
 	await expect(page).toHaveURL(/\/v\//);
 	await expect(page.getByRole('heading', { name: 'Vídeo do YouTube' })).toBeVisible();
-	await expect(page.locator('iframe')).toHaveAttribute('src', /embed\/aBcDeFgHiJ0/);
+	await page.getByRole('button', { name: /^Assistir/ }).click();
+	await expect(page.locator('.player iframe')).toHaveAttribute('src', /embed\/aBcDeFgHiJ0/);
 });
 
 test('direct .mp4 plays in the native player', async ({ page }) => {

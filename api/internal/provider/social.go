@@ -59,6 +59,10 @@ func isTikTokHost(host string) bool {
 	return false
 }
 
+// tiktokPlayerParams hides TikTok's own chrome: octa draws one control bar for every
+// source (slice 3c). Documented at developers.tiktok.com/doc/embed-player (read 2026-11-19).
+const tiktokPlayerParams = "?controls=0&progress_bar=0&play_button=0&volume_control=0&fullscreen_button=0&timestamp=0&music_info=0&description=0&rel=0&native_context_menu=0"
+
 // parseTikTok matches https://www.tiktok.com/@user/video/ID (also on m.tiktok.com).
 func parseTikTok(u *url.URL) (Ref, bool) {
 	host := strings.TrimPrefix(u.Hostname(), "www.")
@@ -73,7 +77,7 @@ func parseTikTok(u *url.URL) (Ref, bool) {
 	return Ref{
 		Source: "tiktok", Kind: "short", ID: id,
 		CanonicalURL: "https://www.tiktok.com/" + segs[0] + "/video/" + id,
-		Embed:        Embed{Type: "iframe", Src: "https://www.tiktok.com/embed/v2/" + id, Aspect: "9:16"},
+		Embed:        Embed{Type: "iframe", Src: "https://www.tiktok.com/player/v1/" + id + tiktokPlayerParams, Aspect: "9:16"},
 	}, true
 }
 

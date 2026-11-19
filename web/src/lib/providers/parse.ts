@@ -43,6 +43,10 @@ const DIRECT_EXTS = new Set(['.mp4', '.m4v', '.webm', '.mov']);
 const IG_CODE_RE = /^[A-Za-z0-9_-]+$/;
 const TT_ID_RE = /^[0-9]{5,25}$/;
 const TT_USER_RE = /^@[A-Za-z0-9._-]{1,64}$/;
+// Hides TikTok's own chrome: octa draws one control bar for every source (slice 3c).
+// developers.tiktok.com/doc/embed-player, read 2026-11-19.
+const TT_PLAYER_PARAMS =
+	'?controls=0&progress_bar=0&play_button=0&volume_control=0&fullscreen_button=0&timestamp=0&music_info=0&description=0&rel=0&native_context_menu=0';
 const TT_HOSTS = new Set(['tiktok.com', 'm.tiktok.com', 'vm.tiktok.com', 'vt.tiktok.com']);
 
 export function parseLink(raw: string): Ref {
@@ -98,7 +102,7 @@ function parseTikTok(u: URL, host: string): Ref | null {
 		kind: 'short',
 		id,
 		canonicalUrl: `https://www.tiktok.com/${segs[0]}/video/${id}`,
-		embed: { type: 'iframe', src: `https://www.tiktok.com/embed/v2/${id}`, aspect: '9:16' }
+		embed: { type: 'iframe', src: `https://www.tiktok.com/player/v1/${id}${TT_PLAYER_PARAMS}`, aspect: '9:16' }
 	};
 }
 
