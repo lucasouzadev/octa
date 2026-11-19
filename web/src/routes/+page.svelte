@@ -41,6 +41,12 @@
 	});
 
 	const count = (n: number) => (n === 1 ? '1 vídeo' : `${n} vídeos`);
+	// "3 coleções · 52 vídeos" (prototype page 2); "Todos" is virtual, so it is not counted.
+	const summary = $derived.by(() => {
+		if (!videos || !collections) return '';
+		const n = collections.length;
+		return n === 0 ? count(videos.length) : `${n === 1 ? '1 coleção' : `${n} coleções`} · ${count(videos.length)}`;
+	});
 
 	// Search runs over the whole library, not just one collection.
 	let searching = $state(false);
@@ -99,7 +105,7 @@
 			</button>
 			<div class="heading">
 				<h1>Minha coleção</h1>
-				{#if videos}<p>{count(videos.length)}</p>{/if}
+				{#if videos}<p>{summary}</p>{/if}
 			</div>
 			<a class="icon-button" href="/add" aria-label="Adicionar link"><Icon name="plus" /></a>
 		</header>
@@ -162,8 +168,8 @@
 			{#each cards as c, i (c.key)}
 				<li>
 					<a class="card" href={c.href} data-collection={c.key}>
-						<FanStack items={c.items} id={c.key} order={i} />
 						<h2 class="title">{c.name}</h2>
+						<FanStack items={c.items} id={c.key} order={i} />
 						<p class="count">{count(c.items.length)}</p>
 					</a>
 				</li>
@@ -384,7 +390,7 @@
 
 	.card {
 		display: block;
-		padding: var(--space-4) var(--space-4) var(--space-5);
+		padding: var(--space-5) var(--space-4) var(--space-5);
 		border-radius: var(--radius-card);
 		background: var(--color-surface-light);
 		color: inherit;
@@ -412,13 +418,15 @@
 		font-size: var(--size-h2);
 		line-height: 1.12;
 		letter-spacing: -0.01em;
-		padding: var(--space-4) var(--space-1) 0;
+		text-align: center;
+		padding: var(--space-2) var(--space-1) var(--space-3);
 	}
 
 	.count {
 		font-size: var(--size-meta);
 		color: var(--color-muted-on-light);
-		padding: var(--space-1) var(--space-1) 0;
+		text-align: center;
+		padding: var(--space-3) var(--space-1) 0;
 	}
 
 	.card.new {

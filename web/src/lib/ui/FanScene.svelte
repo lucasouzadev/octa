@@ -1,123 +1,148 @@
 <script lang="ts">
 	import { T, useTask, useThrelte } from '@threlte/core';
-	import {
-		CanvasTexture,
-		type MeshBasicMaterial,
-		SRGBColorSpace,
-		TextureLoader,
-		type Texture
-	} from 'three';
+	import { CanvasTexture, SRGBColorSpace } from 'three';
 	import { onDestroy, onMount } from 'svelte';
+	import { cardLabel, fanCards, type FanItem } from '#lib/fan.ts';
 
 	let {
 		items,
 		onready,
 		onfail
-	}: { items: { thumbnail?: string }[]; onready: () => void; onfail: () => void } = $props();
+	}: { items: FanItem[]; onready: () => void; onfail: () => void } = $props();
 
 	const { invalidate, renderer } = useThrelte();
 
-	// Scene units: the canvas is 16 wide and 10 tall; a paper is 34% x 92% of it,
-	// so it lines up with the CSS fan underneath.
+	// Scene units: the canvas is 16 wide and 8.5 tall, the same 16:8.5 box as the CSS
+	// fan, so every card lines up with the composition it replaces (prototype page 2).
 	const W = 16;
-	const H = 10;
-	const PW = W * 0.34;
-	const PH = H * 0.92;
+	const H = 8.5;
 	const rad = (d: number) => (d * Math.PI) / 180;
-	const TILT = 16;
+	const PAD = 0.24; // extra room around a card for its drop shadow
+	const PX = 130; // canvas pixels per scene unit
 
-	// [left, right, front] like the CSS fan: the newest video is in front.
-	const sources = $derived([items[1], items[2], items[0]]);
-	const slots = [
-		{ x: -3.7, rotY: rad(TILT), rotZ: rad(7), z: 0 },
-		{ x: 3.7, rotY: rad(-TILT), rotZ: rad(-7), z: 0 },
-		{ x: 0, rotY: 0, rotZ: 0, z: 0.6 }
-	];
+	// Card sizes in scene units (including the white border), as in the CSS tiles.
+	const sizeOf = (vertical: boolean) => {
+		const w = vertical ? 0.22 * W : 0.3 * W;
+		return { w, h: vertical ? (w * 13) / 9 : (w * 3) / 4 };
+	};
 
-	const owned: Texture[] = [];
-	const own = (t: Texture) => (owned.push(t), t);
+	const cards = $derived(fanCards(items));
 
-	function roundedAlpha(): Texture {
-		const c = document.createElement('canvas');
-		c.width = 512;
-		c.height = Math.round(512 / (PW / PH));
-		const g = c.getContext('2d')!;
-		const r = 512 * (12 / 130); // radius-thumb 12px on a ~130px wide card
-		g.fillStyle = '#fff';
+	interface Face {
+		canvas: HTMLCanvasElement;
+		texture: CanvasTexture;
+		w: number;
+		h: number;
+	}
+
+	let faces = $state<Face[]>([]);
+	let fontsReady = false;
+
+	function roundRect(g: CanvasRenderingContext2D, x: number, y: number, w: number, h: number, r: number) {
 		g.beginPath();
-		g.roundRect(0, 0, c.width, c.height, r);
+		g.roundRect(x, y, w, h, r);
+	}
+
+	// One 2D canvas per card: shadow, white border, thumbnail (object-fit: cover),
+	// bottom band and the uppercase source label. It becomes the card's texture, so
+	// the material never changes and three never has to recompile it.
+	function paint(face: Face, item: FanItem | null, image: HTMLImageElement | null) {
+		const { canvas, w, h } = face;
+		const g = canvas.getContext('2d')!;
+		const cw = w * PX;
+		const ch = h * PX;
+		const ox = (canvas.width - cw) / 2;
+		const oy = (canvas.height - ch) / 2;
+		const radius = cw * 0.157;
+		const border = cw * 0.034;
+		g.clearRect(0, 0, canvas.width, canvas.height);
+
+		g.save();
+		g.shadowColor = 'rgba(0,0,0,0.16)';
+		g.shadowBlur = cw * 0.18;
+		g.shadowOffsetX = cw * 0.09;
+		g.shadowOffsetY = -cw * 0.07;
+		g.fillStyle = '#fff';
+		roundRect(g, ox, oy, cw, ch, radius);
 		g.fill();
-		return own(new CanvasTexture(c));
-	}
+		g.restore();
 
-	function softShadow(): Texture {
-		const c = document.createElement('canvas');
-		c.width = 256;
-		c.height = 64;
-		const g = c.getContext('2d')!;
-		const grad = g.createRadialGradient(128, 32, 4, 128, 32, 120);
-		grad.addColorStop(0, 'rgba(0,0,0,0.28)');
-		grad.addColorStop(1, 'rgba(0,0,0,0)');
-		g.fillStyle = grad;
-		g.fillRect(0, 0, 256, 64);
-		return own(new CanvasTexture(c));
-	}
-
-	const alpha = roundedAlpha();
-	const shadow = softShadow();
-	let maps = $state<(Texture | null)[]>([null, null, null]);
-	let materials = $state<(MeshBasicMaterial | undefined)[]>([undefined, undefined, undefined]);
-
-	// three compiles a different shader once a map exists: flag the material, then draw.
-	$effect(() => {
-		maps.forEach((map, i) => {
-			if (map && materials[i]) materials[i]!.needsUpdate = true;
-		});
-		invalidate();
-	});
-
-	const loader = new TextureLoader();
-	loader.setCrossOrigin('anonymous'); // i.ytimg.com sends access-control-allow-origin: *
-
-	function cover(tex: Texture) {
-		// object-fit: cover for a portrait paper over a landscape (or any) image.
-		const img = tex.image as { width: number; height: number };
-		const paper = PW / PH;
-		const pic = img.width / img.height;
-		if (pic > paper) {
-			tex.repeat.set(paper / pic, 1);
-			tex.offset.set((1 - paper / pic) / 2, 0);
-		} else {
-			tex.repeat.set(1, pic / paper);
-			tex.offset.set(0, (1 - pic / paper) / 2);
+		const ix = ox + border;
+		const iy = oy + border;
+		const iw = cw - border * 2;
+		const ih = ch - border * 2;
+		g.save();
+		roundRect(g, ix, iy, iw, ih, radius - border);
+		g.clip();
+		g.fillStyle = item ? '#cfcfcf' : '#e2e2e2';
+		g.fillRect(ix, iy, iw, ih);
+		if (image && image.naturalWidth > 0) {
+			const scale = Math.max(iw / image.naturalWidth, ih / image.naturalHeight);
+			const dw = image.naturalWidth * scale;
+			const dh = image.naturalHeight * scale;
+			g.drawImage(image, ix + (iw - dw) / 2, iy + (ih - dh) / 2, dw, dh);
 		}
+		if (item) {
+			const band = g.createLinearGradient(0, iy + ih, 0, iy + ih - cw * 0.3);
+			band.addColorStop(0, 'rgba(0,0,0,0.5)');
+			band.addColorStop(1, 'rgba(0,0,0,0)');
+			g.fillStyle = band;
+			g.fillRect(ix, iy + ih - cw * 0.3, iw, cw * 0.3);
+			g.fillStyle = '#fff';
+			g.font = `600 ${cw * 0.112}px "Inter Variable", Inter, system-ui, sans-serif`;
+			g.textBaseline = 'alphabetic';
+			(g as unknown as { letterSpacing: string }).letterSpacing = `${cw * 0.009}px`;
+			g.fillText(cardLabel(item).toUpperCase(), ix + cw * 0.09, iy + ih - cw * 0.07);
+		}
+		g.restore();
+		face.texture.needsUpdate = true;
 	}
 
 	let destroyed = false;
+
+	function load(url: string): Promise<HTMLImageElement | null> {
+		return new Promise((resolve) => {
+			const img = new Image();
+			img.crossOrigin = 'anonymous'; // i.ytimg.com sends access-control-allow-origin: *
+			img.onload = () => resolve(img);
+			img.onerror = () => resolve(null); // a failed cover stays a grey card
+			img.src = url;
+		});
+	}
+
 	onMount(async () => {
-		const settled = sources.map(
-			(item, i) =>
-				new Promise<void>((resolve) => {
-					if (!item?.thumbnail) return resolve();
-					loader.load(
-						item.thumbnail,
-						(tex) => {
-							if (destroyed) return tex.dispose();
-							tex.colorSpace = SRGBColorSpace;
-							cover(own(tex));
-							maps[i] = tex;
-							invalidate();
-							resolve();
-						},
-						undefined,
-						() => resolve() // a failed cover stays a grey paper
-					);
-				})
+		try {
+			await document.fonts.load('600 12px "Inter Variable"');
+		} catch {
+			// the label falls back to the system font
+		}
+		fontsReady = true;
+		if (destroyed) return;
+
+		faces = cards.map((c) => {
+			const { w, h } = sizeOf(c.vertical);
+			const canvas = document.createElement('canvas');
+			canvas.width = Math.round(w * (1 + PAD * 2) * PX);
+			canvas.height = Math.round(h * (1 + PAD * 2) * PX);
+			const texture = new CanvasTexture(canvas);
+			texture.colorSpace = SRGBColorSpace;
+			return { canvas, texture, w, h };
+		});
+		faces.forEach((f, i) => paint(f, cards[i].item, null));
+		invalidate();
+
+		await Promise.all(
+			cards.map(async (c, i) => {
+				if (!c.item?.thumbnail) return;
+				const image = await load(c.item.thumbnail);
+				if (destroyed || !image) return;
+				paint(faces[i], c.item, image);
+				invalidate();
+			})
 		);
-		await Promise.all(settled);
 		if (destroyed) return;
 		invalidate();
-		// Wait for the frame that draws the textures, then hand over from CSS.
+		// Wait for the frame that draws the cards, then hand over from CSS.
 		requestAnimationFrame(() => requestAnimationFrame(() => !destroyed && onready()));
 	});
 
@@ -194,34 +219,29 @@
 
 	onDestroy(() => {
 		destroyed = true;
-		for (const t of owned) t.dispose();
+		for (const f of faces) f.texture.dispose();
 	});
+
+	void fontsReady;
 </script>
 
 <T.PerspectiveCamera
 	makeDefault
 	fov={30}
-	position={[0, 0, 5 / Math.tan(rad(15))]}
+	position={[0, 0, H / 2 / Math.tan(rad(15))]}
 	oncreate={(ref) => ref.lookAt(0, 0, 0)}
 />
 
-<T.Group rotation.x={pos.y * -0.18} rotation.y={pos.x * 0.28}>
-	<T.Mesh position={[0, -H * 0.4, -1]}>
-		<T.PlaneGeometry args={[W * 0.72, H * 0.22]} />
-		<T.MeshBasicMaterial map={shadow} transparent depthWrite={false} toneMapped={false} />
-	</T.Mesh>
-
-	{#each slots as s, i (i)}
-		<T.Mesh position={[s.x, 0, s.z]} rotation={[0, s.rotY, s.rotZ]}>
-			<T.PlaneGeometry args={[PW, PH]} />
-			<T.MeshBasicMaterial
-				bind:ref={materials[i]}
-				map={maps[i]}
-				color={maps[i] ? '#ffffff' : '#dcdcdc'}
-				alphaMap={alpha}
-				transparent
-				toneMapped={false}
-			/>
-		</T.Mesh>
+<T.Group rotation.x={pos.y * -0.12} rotation.y={pos.x * 0.2}>
+	{#each cards as c, i (i)}
+		{#if faces[i]}
+			<T.Mesh
+				position={[(c.x / 100) * W, -(c.drop / 100) * H, (c.z - 90) * 0.03]}
+				rotation={[0, rad(-c.rotZ * 1.2), rad(-c.rotZ)]}
+			>
+				<T.PlaneGeometry args={[faces[i].w * (1 + PAD * 2), faces[i].h * (1 + PAD * 2)]} />
+				<T.MeshBasicMaterial map={faces[i].texture} transparent toneMapped={false} />
+			</T.Mesh>
+		{/if}
 	{/each}
 </T.Group>
