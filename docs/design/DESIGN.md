@@ -106,4 +106,4 @@ Gradient washes, glassmorphism on content, colored chrome on B&W screens, more t
 - Never: downloading, extracting or proxying a platform's stream (ADR-0002, platform terms).
 - **One play.** The big button exists only before the video starts; a half-watched video says where it stopped ("Continuar · 4:20"). After the first play all control is in the bar (its play button stays hidden until then).
 - **No play mark on thumbnails** in the Library, Collection or search screens: a play button belongs to the player only.
-- **Vertical video** takes ~68% of the screen height (`.screen.tall`); title, actions and the strip scroll under it.
+- **Vertical video** fits the normal viewer smaller, with every action in view, and opens our full screen on play (slice 3e). Horizontal video enters full screen with the Tela cheia button. Full screen: black, safe areas, picture as big as it gets, our bar below it, exit button top-left.

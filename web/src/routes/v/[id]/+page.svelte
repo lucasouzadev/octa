@@ -304,8 +304,7 @@
 	.missing {
 		flex: 1;
 		min-height: 0;
-		overflow-y: auto;
-		scrollbar-width: none;
+
 		width: 100%;
 		max-width: var(--layout-content-max);
 		margin: 0 auto;

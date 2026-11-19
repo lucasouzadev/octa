@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clock, resumeAt, resumeLabel, shouldSave, startOf, tiktokEvent, tiktokCommand, ytPhase } from './core.ts';
+import { clock, resumeAt, resumeLabel, staleEvent, shouldSave, startOf, tiktokEvent, tiktokCommand, ytPhase } from './core.ts';
 
 describe('clock', () => {
 	it('prints m:ss and h:mm:ss, 0:00 for nothing', () => {
@@ -92,5 +92,25 @@ describe('resumeLabel', () => {
 	it('says where a half-watched video was left', () => {
 		expect(resumeLabel(260)).toBe('Continuar · 4:20');
 		expect(resumeLabel(3723)).toBe('Continuar · 1:02:03');
+	});
+});
+
+describe('staleEvent', () => {
+	it('a late "playing" right after the person asked to pause is old news', () => {
+		expect(staleEvent('paused', 'playing')).toBe(true);
+		expect(staleEvent('paused', 'buffering')).toBe(true);
+		expect(staleEvent('paused', 'paused')).toBe(false);
+		expect(staleEvent('paused', 'ended')).toBe(false);
+	});
+
+	it('a late "paused" right after the person asked to play is old news', () => {
+		expect(staleEvent('playing', 'paused')).toBe(true);
+		expect(staleEvent('playing', 'playing')).toBe(false);
+		expect(staleEvent('playing', 'buffering')).toBe(false);
+	});
+
+	it('with no request pending nothing is stale', () => {
+		expect(staleEvent(null, 'playing')).toBe(false);
+		expect(staleEvent(null, 'paused')).toBe(false);
 	});
 });

@@ -8,11 +8,11 @@
 	// lives in the bar BELOW the picture, never over it (YouTube RMF: no overlays on the
 	// embedded player). Instagram has no control API: its own player is the only one, no
 	// cover and no bar. MP4/HLS are fully ours.
-	import { onDestroy, untrack } from 'svelte';
+	import { onDestroy, tick, untrack } from 'svelte';
 	import type { Video } from '#lib/db/index.ts';
 	import { cardLabel } from '#lib/fan.ts';
 	import { attachHls } from '#lib/hls.ts';
-	import { clock, resumeAt, resumeLabel, shouldSave, startOf, type Phase } from '#lib/player/core.ts';
+	import { clock, resumeAt, resumeLabel, shouldSave, staleEvent, startOf, type Phase } from '#lib/player/core.ts';
 	import { nativeRemote, tiktokRemote, youtubeRemote, type MediaState, type Remote } from '#lib/player/adapters.ts';
 	import Icon from '#lib/ui/Icon.svelte';
 
@@ -44,6 +44,17 @@
 	let tapped = $state(false);
 	let revealed = $state(false);
 	let blockTimer = 0;
+	// The platform refused to start the video: its own play must stay tappable.
+	let blocked = $state(false);
+	// A play/pause we already showed, until the platform answers.
+	let wanted: Phase | null = null;
+	let wantedUntil = 0;
+	let wantedTimer = 0;
+	// While it plays, touches stay on our side: a tap on the picture never reaches the
+	// platform, so its title bar and buttons do not pop up on touch.
+	const ownTaps = $derived(controllable && revealed && !blocked);
+	// Our own full screen (iPhone Safari cannot put an iframe in the system's).
+	let immersive = $state(false);
 	const covered = $derived(controllable && !revealed);
 	let phase = $state<Phase>('idle');
 	let time = $state(untrack(() => resume));
@@ -51,11 +62,19 @@
 	let failed = $state(false);
 	let remote: Remote | null = null;
 	let frameEl = $state<HTMLElement | null>(null);
+	let cinemaEl = $state<HTMLElement | null>(null);
+	let fsEntered = false;
 
 	function emit(s: MediaState) {
+		if (s.phase && wanted && performance.now() < wantedUntil && staleEvent(wanted, s.phase)) {
+			s = { ...s, phase: undefined };
+		}
 		if (s.phase) {
 			phase = s.phase;
-			if (s.phase === 'playing') reveal();
+			if (s.phase === 'playing') {
+				blocked = false;
+				reveal();
+			}
 			if (s.phase === 'ended') {
 				onended?.();
 				onprogress?.(null, duration);
@@ -82,6 +101,7 @@
 		blockTimer = window.setTimeout(() => {
 			if (revealed) return;
 			revealed = true;
+			blocked = true;
 			phase = 'paused';
 		}, ms);
 	}
@@ -127,12 +147,34 @@
 		phase = 'buffering';
 		remote?.play(); // inside the tap, which is what iOS asks for
 		armBlockTimer(remote ? 2500 : 4000);
+		if (vertical && controllable) enterFullscreen(); // vertical videos are watched full screen
 	}
 
+	// A tap on the picture toggles like a native player; the cover's own tap (which starts it) never does.
+	function tapPicture(e: MouseEvent) {
+		if (!ownTaps || native) return;
+		if ((e.target as Element).closest('.cover')) return;
+		toggle();
+	}
+
+	// Our interface answers at once; the platform follows a moment later.
 	function toggle() {
 		if (!tapped) return start();
-		if (phase === 'playing' || phase === 'buffering') remote?.pause();
-		else remote?.play();
+		clearTimeout(wantedTimer);
+		wantedUntil = performance.now() + 900;
+		if (phase === 'playing' || phase === 'buffering') {
+			wanted = 'paused';
+			phase = 'paused';
+			remote?.pause();
+		} else {
+			wanted = 'playing';
+			phase = 'buffering';
+			remote?.play();
+			// If it never starts (the platform wants its own tap), give the control back.
+			wantedTimer = window.setTimeout(() => {
+				if (phase === 'buffering') phase = 'paused';
+			}, 2500);
+		}
 	}
 
 	function seek(e: Event) {
@@ -141,15 +183,38 @@
 		remote?.seek(v);
 	}
 
+	async function enterFullscreen() {
+		immersive = true;
+		await tick(); // the box exists once it is no longer `display: contents`
+		// Where the browser allows it (desktop, iPad, Android) also hide its own bars.
+		// The whole cinema goes, so our bar comes along; iPhone Safari refuses and keeps ours.
+		cinemaEl?.requestFullscreen?.().catch(() => {});
+	}
+
+	function exitFullscreen() {
+		immersive = false;
+		if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+	}
+
 	function fullscreen() {
-		const el = frameEl;
-		const v = el?.querySelector('video') as (HTMLVideoElement & { webkitEnterFullscreen?: () => void }) | null;
-		if (el?.requestFullscreen) el.requestFullscreen().catch(() => v?.webkitEnterFullscreen?.());
-		else v?.webkitEnterFullscreen?.(); // iPhone Safari: only a <video> can go fullscreen
+		if (immersive) return exitFullscreen();
+		enterFullscreen();
+	}
+
+	function onFullscreenChange() {
+		// Escape (or the system gesture) left the browser's full screen: leave ours too.
+		if (immersive && !document.fullscreenElement && fsEntered) immersive = false;
+		fsEntered = !!document.fullscreenElement;
+	}
+
+	function onKey(e: KeyboardEvent) {
+		if (e.key === 'Escape' && immersive) exitFullscreen();
 	}
 
 	onDestroy(() => {
 		clearTimeout(blockTimer);
+		clearTimeout(wantedTimer);
+		if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
 		save(); // leaving the screen is a stop too
 		remote?.destroy();
 	});
@@ -157,8 +222,24 @@
 	const playing = $derived(phase === 'playing' || phase === 'buffering');
 </script>
 
-<div class="screen" class:tall={vertical}>
-	<div class="frame" class:vertical bind:this={frameEl} data-phase={phase}>
+<svelte:document onfullscreenchange={onFullscreenChange} onkeydown={onKey} />
+
+<div class="cinema" class:full={immersive} bind:this={cinemaEl}>
+{#if immersive}
+	<button type="button" class="leave" aria-label="Sair da tela cheia" onclick={exitFullscreen}>
+		<Icon name="close" size={18} />
+	</button>
+{/if}
+<div class="screen">
+	<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions (the bar below is the keyboard path) -->
+	<div
+		class="frame"
+		class:vertical
+		class:own-taps={ownTaps}
+		bind:this={frameEl}
+		data-phase={phase}
+		onclick={tapPicture}
+	>
 		{#if native}
 			<!-- svelte-ignore a11y_media_has_caption (third-party files have no captions we can know of) -->
 			<video
@@ -245,8 +326,51 @@
 	<span class="provider">{provider}</span>
 	<span class="link">{shortLink}</span>
 </a>
+</div>
 
 <style>
+	/* Normally the cinema adds no box of its own: its parts sit in the page's column. */
+	.cinema {
+		display: contents;
+	}
+
+	/* Our full screen: the whole viewport, black, picture as big as it gets, bar below it. */
+	.cinema.full {
+		position: fixed;
+		inset: 0;
+		z-index: 100;
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-3);
+		background: #000;
+		padding: calc(var(--space-4) + env(safe-area-inset-top)) var(--space-4)
+			calc(var(--space-3) + env(safe-area-inset-bottom));
+	}
+
+	.cinema.full .origin {
+		display: none;
+	}
+
+	.leave {
+		flex: none;
+		align-self: flex-start;
+		display: grid;
+		place-items: center;
+		width: 44px;
+		height: 44px;
+		border: 0;
+		border-radius: 50%;
+		background: var(--color-surface-dark-raised);
+		color: var(--color-text-dark);
+		cursor: pointer;
+	}
+
+	/* While it plays the platform never sees a touch (see ownTaps). */
+	.frame.own-taps iframe,
+	.frame.own-taps .yt :global(iframe) {
+		pointer-events: none;
+	}
+
 	.screen {
 		flex: 1 1 0;
 		min-height: 0;
@@ -254,13 +378,6 @@
 		display: grid;
 		/* The picture rests on the control bar; spare height goes above it. */
 		place-items: end center;
-	}
-
-	/* A vertical video takes most of the screen; what is under it scrolls. */
-	.screen.tall {
-		flex: none;
-		height: clamp(300px, 68dvh, 820px);
-		place-items: center;
 	}
 
 	/* Sized from the box the page gives it (a size container), so it always fits. */

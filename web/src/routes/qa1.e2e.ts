@@ -173,7 +173,7 @@ test.describe('R1.4 viewer', () => {
 		{ width: 834, height: 1000 },
 		{ width: 1440, height: 800 }
 	]) {
-		test(`fits ${size.width}x${size.height}: video fully on screen; Short takes most of it`, async ({ page }) => {
+		test(`fits ${size.width}x${size.height} without scrolling or cutting anything, video and Short`, async ({ page }) => {
 			await page.setViewportSize(size);
 			await seedBoth(page);
 			for (const label of ['short', 'video']) {
@@ -204,13 +204,6 @@ test.describe('R1.4 viewer', () => {
 				expect(m.frameLeft).toBeGreaterThanOrEqual(0);
 				expect(m.frameRight).toBeLessThanOrEqual(m.width);
 				expect(m.frameBottom, `${label}: frame under the actions`).toBeLessThanOrEqual(m.actionsTop);
-				if (label === 'short') {
-					// Slice 3d (owner, 2026-11-19: vertical was "minúsculo"): a vertical video takes most of the
-					// screen; the title, actions and strip under it may scroll. The picture itself is never cut.
-					expect(m.frameBottom, 'short: picture cut at the bottom').toBeLessThanOrEqual(m.height);
-					expect(m.frameBottom - m.frameTop, 'short: picture too small').toBeGreaterThanOrEqual(m.height * 0.5);
-					continue;
-				}
 				expect(m.actionsBottom, `${label}: actions cut at bottom`).toBeLessThanOrEqual(m.height);
 				// The video keeps a usable size: at least 140px tall even on the smallest screen.
 				expect(m.frameBottom - m.frameTop).toBeGreaterThanOrEqual(140);

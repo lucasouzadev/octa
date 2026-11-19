@@ -86,7 +86,8 @@ window.YT = { Player: function (el, o) {
 	this.getIframe = function () { return f; };
 	// window.__ytBlock = true imitates iOS refusing to start a video that was not tapped.
 	this.playVideo = function () { window.__yt.calls.push('play'); if (window.__ytBlock) return; o.events.onStateChange({ data: 1 }); };
-	this.pauseVideo = function () { window.__yt.calls.push('pause'); o.events.onStateChange({ data: 2 }); };
+	// window.__ytLag = ms imitates the platform answering late after a pause.
+	this.pauseVideo = function () { window.__yt.calls.push('pause'); setTimeout(function () { o.events.onStateChange({ data: 2 }); }, window.__ytLag || 0); };
 	this.seekTo = function (s) { window.__yt.calls.push('seek:' + Math.round(s)); t = s; };
 	this.getCurrentTime = function () { return t; };
 	this.getDuration = function () { return d; };
