@@ -1,5 +1,10 @@
 <script lang="ts">
 	import type { Video } from '#lib/db/index.ts';
+	import { attachHls } from '#lib/hls.ts';
+
+	function hls(el: HTMLVideoElement, src: string) {
+		return { destroy: attachHls(el, src) };
+	}
 
 	// Official players only (ADR-0002). The video itself is always 2D (ADR-0003).
 	let { video, onended }: { video: Video; onended?: () => void } = $props();
@@ -16,6 +21,9 @@
 			referrerpolicy="strict-origin-when-cross-origin"
 			sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
 		></iframe>
+	{:else if video.embed.type === 'hls'}
+		<!-- svelte-ignore a11y_media_has_caption (third-party streams have no captions we can know of) -->
+		<video use:hls={video.embed.src} controls playsinline preload="metadata" title={video.title} onended={() => onended?.()}></video>
 	{:else}
 		<!-- svelte-ignore a11y_media_has_caption (third-party files have no captions we can know of) -->
 		<video src={video.embed.src} controls playsinline preload="metadata" title={video.title} onended={() => onended?.()}></video>

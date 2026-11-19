@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { cardLabel, fanCards, fanLayout, MAX_FAN } from './fan.ts';
+import type { Kind, Source } from './providers/parse.ts';
 
 describe('fanLayout', () => {
 	it('is empty for no cards and never more than MAX_FAN', () => {
@@ -55,12 +56,16 @@ describe('fanLayout', () => {
 });
 
 describe('cardLabel', () => {
-	const v = (source: 'youtube' | 'direct', kind: 'video' | 'short' | 'direct') => ({ source, kind });
+	const v = (source: Source, kind: Kind) => ({ source, kind });
 
 	it('names the source like the prototype (uppercase is the renderer\'s job)', () => {
 		expect(cardLabel(v('youtube', 'video'))).toBe('YouTube');
 		expect(cardLabel(v('youtube', 'short'))).toBe('Shorts');
 		expect(cardLabel(v('direct', 'direct'))).toBe('MP4');
+		expect(cardLabel(v('direct', 'hls'))).toBe('HLS');
+		expect(cardLabel(v('instagram', 'reel'))).toBe('Reels');
+		expect(cardLabel(v('instagram', 'video'))).toBe('Instagram');
+		expect(cardLabel(v('tiktok', 'short'))).toBe('TikTok');
 	});
 });
 

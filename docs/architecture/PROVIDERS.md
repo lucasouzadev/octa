@@ -23,6 +23,8 @@ type Provider interface {
 - Metadata: oEmbed `https://www.youtube.com/oembed?format=json&url=<canonical>` → title, author_name, thumbnail_url. Thumbnail fallback: `https://i.ytimg.com/vi/ID/hqdefault.jpg`.
 - Health: oEmbed status — 200 `alive`; 401/403 `restricted` (private or embedding disabled); 404 `dead`; other/timeout `unknown`.
 
+> **Slice 3a status (2026-11-19):** parsers, vectors, embeds, resolver mappings and HLS playback are built and tested against mocks. The live upstream behaviour of Instagram (OG tags, login wall) and TikTok (oEmbed status codes, thumbnail hosts) is **NOT confirmed**: this sandbox has no route to those platforms. Confirm on a real network before trusting `health` for them. TikTok short links (`vm.`/`vt.`) are expanded by the API (`internal/fetch`, redirects checked per hop); the client re-parses the returned canonical URL and accepts only a TikTok video. HLS: Safari native, others `hls.js` 1.7.4 loaded on demand; the stream host must allow CORS for hls.js. Content-Type sniffing for extension-less links is not built (such links are unsupported).
+
 ## Instagram (Reels, posts)
 - Hosts: `instagram.com`, `www.`. Paths `/reel/CODE`, `/reels/CODE`, `/p/CODE`, `/tv/CODE`. CODE = `[A-Za-z0-9_-]+`. Drop query (`igsh` etc.).
 - Kind: `reel` (9:16); `/p/` → `video` if it turns out to be a video, else unsupported (photos are out of scope).

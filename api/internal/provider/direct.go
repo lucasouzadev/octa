@@ -8,11 +8,12 @@ import (
 
 var directExts = map[string]bool{".mp4": true, ".m4v": true, ".webm": true, ".mov": true}
 
-// parseDirect matches links to video files by extension. HLS (.m3u8) and
-// Content-Type sniffing arrive in slice 3.
+// parseDirect matches links to video files by extension, and HLS playlists (.m3u8).
+// Content-Type sniffing for extension-less links is not done: such links are unsupported.
 func parseDirect(u *url.URL) (Ref, bool) {
 	ext := strings.ToLower(path.Ext(u.Path))
-	if !directExts[ext] {
+	hls := ext == ".m3u8"
+	if !directExts[ext] && !hls {
 		return Ref{}, false
 	}
 	c := *u
@@ -23,9 +24,13 @@ func parseDirect(u *url.URL) (Ref, bool) {
 	if dec, err := url.PathUnescape(title); err == nil {
 		title = dec
 	}
+	kind, embedType := "direct", "video"
+	if hls {
+		kind, embedType = "hls", "hls"
+	}
 	return Ref{
-		Source: "direct", Kind: "direct", ID: canonical, CanonicalURL: canonical,
-		Embed: Embed{Type: "video", Src: canonical, Aspect: "16:9"},
+		Source: "direct", Kind: kind, ID: canonical, CanonicalURL: canonical,
+		Embed: Embed{Type: embedType, Src: canonical, Aspect: "16:9"},
 		Title: title,
 	}, true
 }
