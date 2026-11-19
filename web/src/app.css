@@ -13,6 +13,11 @@ html:has(.on-dark) body {
 	background: var(--color-bg-dark);
 }
 
+html:has(.on-alert),
+html:has(.on-alert) body {
+	background: var(--color-action-alert);
+}
+
 html:has(.on-blue),
 html:has(.on-blue) body {
 	background: var(--color-action-create);
@@ -34,6 +39,24 @@ h2,
 h3,
 p {
 	margin: 0;
+}
+
+/* App feel on a phone: no text selection, no callout, no double-tap zoom, no grey tap flash.
+   Fields stay editable and keep text selection. */
+html {
+	-webkit-user-select: none;
+	user-select: none;
+	-webkit-touch-callout: none;
+	-webkit-tap-highlight-color: transparent;
+	touch-action: manipulation;
+}
+
+input,
+textarea {
+	-webkit-user-select: text;
+	user-select: text;
+	/* iOS zooms into any field under 16px when it gets focus. */
+	font-size: max(16px, 1em);
 }
 
 button,

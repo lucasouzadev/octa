@@ -17,7 +17,11 @@
 
 <svelte:window {onpointerdown} {onkeydown} />
 
-<div class="create" bind:this={root}>
+<div class="create" class:open bind:this={root}>
+	{#if open}
+		<!-- The panel grows out of the button: the button sits inside it, filled white. -->
+		<div class="panel" aria-hidden="true"></div>
+	{/if}
 	<button
 		class="icon-button toggle"
 		type="button"
@@ -46,23 +50,46 @@
 <style>
 	.create {
 		position: relative;
+		z-index: 60;
+	}
+
+	/* White fill on the button while open, so it reads as part of the black panel. */
+	.toggle {
+		position: relative;
+		z-index: 2;
+		transition: background 160ms ease-out, color 160ms ease-out;
+	}
+
+	.open .toggle {
+		background: var(--color-text-dark);
+		color: var(--color-text-light);
+	}
+
+	.panel {
+		position: absolute;
+		z-index: 1;
+		top: -6px;
+		right: -6px;
+		width: 224px;
+		height: calc(var(--layout-touch-min) + 12px + 2 * var(--layout-touch-min) + var(--space-3));
+		border-radius: 28px;
+		background: var(--color-text-light);
+		box-shadow: 0 4px 12px rgb(0 0 0 / 0.25), 0 16px 40px rgb(0 0 0 / 0.28);
+		transform-origin: top right;
+		animation: grow 220ms cubic-bezier(0.2, 0.9, 0.3, 1);
 	}
 
 	.menu {
 		position: absolute;
-		z-index: 60;
-		top: calc(100% + var(--space-2));
-		right: 0;
-		min-width: 212px;
+		z-index: 2;
+		top: calc(var(--layout-touch-min) + 6px);
+		right: -6px;
+		width: 224px;
 		display: flex;
 		flex-direction: column;
-		padding: var(--space-2);
-		border-radius: 20px;
-		background: var(--color-text-light);
+		padding: 0 var(--space-2) var(--space-2);
 		color: var(--color-text-dark);
-		box-shadow: 0 4px 12px rgb(0 0 0 / 0.25), 0 16px 40px rgb(0 0 0 / 0.28);
-		transform-origin: top right;
-		animation: pop-in 180ms cubic-bezier(0.2, 0.9, 0.3, 1.1);
+		animation: items-in 220ms ease-out;
 	}
 
 	.menu a {
@@ -71,7 +98,7 @@
 		gap: var(--space-3);
 		min-height: var(--layout-touch-min);
 		padding: 0 var(--space-4);
-		border-radius: 14px;
+		border-radius: 16px;
 		color: inherit;
 		font-weight: 600;
 		text-decoration: none;
@@ -83,16 +110,26 @@
 		outline: none;
 	}
 
-	@keyframes pop-in {
+	@keyframes grow {
+		from {
+			opacity: 0.4;
+			transform: scale(0.3);
+		}
+	}
+
+	@keyframes items-in {
 		from {
 			opacity: 0;
-			transform: scale(0.6);
 		}
 	}
 
 	@media (prefers-reduced-motion: reduce) {
+		.panel,
 		.menu {
 			animation: none;
+		}
+		.toggle {
+			transition: none;
 		}
 	}
 </style>

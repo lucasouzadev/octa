@@ -20,6 +20,8 @@ export interface Video {
 	checkedAt?: string;
 	deadStreak: number;
 	favorite: boolean;
+	/** Marked as watched by the person (or when a native video ends). */
+	watched?: boolean;
 	positionSec?: number;
 	lastOpenedAt?: string;
 	createdAt: string;
@@ -49,11 +51,14 @@ export const COLLECTION_NAME_MAX = 60;
 
 const fold = (s: string) => s.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase();
 
+// Names the virtual collections use: "Todos", "Assistidos" and "Favoritos".
+const RESERVED = new Set(['todos', 'assistidos', 'favoritos']);
+
 function cleanName(raw: string): string {
 	const name = raw.replace(/[\u0000-\u001f\u007f]/g, ' ').replace(/\s+/g, ' ').trim();
 	if (!name) throw new CollectionError('empty_name');
 	if (name.length > COLLECTION_NAME_MAX) throw new CollectionError('name_too_long');
-	if (fold(name) === 'todos') throw new CollectionError('reserved_name');
+	if (RESERVED.has(fold(name))) throw new CollectionError('reserved_name');
 	return name;
 }
 
@@ -127,6 +132,18 @@ export class Library {
 		await tx.store.put(next);
 		await tx.done;
 		return next;
+	}
+
+	/** Removes the video for good and takes it out of its collection. */
+	async deleteVideo(id: string): Promise<void> {
+		const tx = this.db.transaction(['videos', 'collections'], 'readwrite');
+		if (!(await tx.objectStore('videos').get(id))) throw new CollectionError('not_found');
+		await tx.objectStore('videos').delete(id);
+		const collections = tx.objectStore('collections');
+		for (const c of await collections.getAll()) {
+			if (c.order.includes(id)) await collections.put({ ...c, order: c.order.filter((x) => x !== id), updatedAt: stamp() });
+		}
+		await tx.done;
 	}
 
 	listCollections(): Promise<Collection[]> {

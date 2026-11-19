@@ -103,7 +103,7 @@
 		top: calc(50% + var(--d) * 1%);
 		width: 30%;
 		aspect-ratio: 4 / 3;
-		border: 3px solid #fff;
+		border: 1.5px solid #fff;
 		border-radius: 14px;
 		overflow: hidden;
 		background: #cfcfcf;

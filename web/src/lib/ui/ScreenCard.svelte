@@ -13,8 +13,9 @@
 		video,
 		index,
 		href,
-		flat = false
-	}: { video: Video; index: number; href: string; flat?: boolean } = $props();
+		flat = false,
+		heart = false
+	}: { video: Video; index: number; href: string; flat?: boolean; heart?: boolean } = $props();
 
 	const tilt = $derived(screenTilt(index));
 	const duration = $derived(formatDuration(video.durationSec));
@@ -24,6 +25,7 @@
 <a
 	class="row screen"
 	class:flat
+	class:has-heart={heart}
 	class:dead={status?.tone === 'dead'}
 	{href}
 	style={`--rz: ${tilt.rotZ}deg; --ry: ${tilt.rotY}deg; --sx: ${tilt.shiftX}%`}
@@ -33,6 +35,7 @@
 	<span class="meta">
 		<span class="src">{cardLabel(video)}</span>{#if duration}<span class="dur">· {duration}</span>{/if}
 		{#if status}<span class="status" class:dead={status.tone === 'dead'}>{status.label}</span>{/if}
+		{#if video.watched}<span class="status seen">Assistido</span>{/if}
 	</span>
 	<span class="thumb">
 		{#if video.thumbnail}<img
@@ -44,6 +47,7 @@
 			/>{/if}
 		<span class="play" aria-hidden="true"><Icon name="play" size={18} /></span>
 	</span>
+	{#if heart}<span class="heart" aria-hidden="true"><Icon name="heart" size={22} filled /></span>{/if}
 </a>
 
 <style>
@@ -160,5 +164,30 @@
 		line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
+	}
+
+	/* Favoritos: a heart that stands off the monitor's corner in 3D. */
+	.screen.has-heart {
+		transform-style: preserve-3d;
+	}
+
+	.heart {
+		position: absolute;
+		top: -10px;
+		right: -6px;
+		display: grid;
+		place-items: center;
+		width: 40px;
+		height: 40px;
+		border-radius: 50%;
+		background: var(--color-action-alert);
+		color: var(--color-text-light);
+		box-shadow: 0 6px 14px rgb(0 0 0 / 0.45);
+		transform: translateZ(36px) rotate(12deg);
+		pointer-events: none;
+	}
+
+	.flat .heart {
+		transform: none;
 	}
 </style>

@@ -18,25 +18,32 @@
 	focusable="false"
 	data-kind={kind}
 >
+	<!-- One system: a 16:9 screen with a play mark. Each scene keeps every shape apart,
+	     nothing crosses nothing, and a single idea carries the meaning. -->
 	{#if kind === 'library'}
-		<!-- three tilted screens fanned out, the front one with a play triangle -->
-		<rect x="22" y="46" width="76" height="54" rx="9" transform="rotate(-12 60 73)" />
-		<rect x="102" y="46" width="76" height="54" rx="9" transform="rotate(12 140 73)" />
-		<rect x="62" y="34" width="76" height="58" rx="9" />
-		<path d="M92 52 L92 74 L110 63 Z" />
-		<path d="M70 108 H130" />
+		<!-- A screen on a stand, waiting; a link floats beside it. -->
+		<rect x="14" y="22" width="118" height="74" rx="10" />
+		<path d="M62 44 V74 L88 59 Z" />
+		<path d="M73 96 V112 M52 114 H94" />
+		<!-- link: two capsules at an angle, joined -->
+		<g transform="translate(166 58) rotate(-45)">
+			<rect x="-22" y="-8" width="26" height="16" rx="8" />
+			<rect x="-4" y="-8" width="26" height="16" rx="8" />
+		</g>
+		<path d="M166 22 V32 M186 30 L179 37 M146 30 L153 37" />
 	{:else if kind === 'collection'}
-		<!-- an open folder holding a screen -->
-		<path d="M30 40 H78 L90 54 H170 V108 H30 Z" />
-		<rect x="58" y="30" width="84" height="56" rx="8" />
-		<path d="M93 45 L93 66 L111 55.5 Z" />
-		<path d="M30 74 H170" />
+		<!-- A folder, empty, with a dashed screen about to go in. -->
+		<rect x="58" y="12" width="84" height="48" rx="8" stroke-dasharray="3 7" />
+		<path d="M92 26 V46 L108 36 Z" stroke-dasharray="3 5" />
+		<path d="M100 66 V74 M95 70 L100 75 L105 70" />
+		<path d="M24 86 a8 8 0 0 1 8 -8 H70 l10 11 H168 a8 8 0 0 1 8 8 V120 a8 8 0 0 1 -8 8 H32 a8 8 0 0 1 -8 -8 Z" />
 	{:else}
-		<!-- a magnifier over a screen -->
-		<rect x="36" y="36" width="92" height="64" rx="9" />
-		<path d="M72 58 L72 78 L89 68 Z" />
-		<circle cx="134" cy="84" r="22" />
-		<path d="M150 100 L168 118" />
+		<!-- A magnifying glass, a screen it did not find. -->
+		<rect x="116" y="24" width="68" height="44" rx="8" />
+		<path d="M142 36 V56 L158 46 Z" />
+		<circle cx="62" cy="62" r="30" />
+		<path d="M84 84 L112 112" />
+		<path d="M52 62 H72" />
 	{/if}
 </svg>
 

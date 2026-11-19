@@ -54,7 +54,7 @@
 		const ox = (canvas.width - cw) / 2;
 		const oy = (canvas.height - ch) / 2;
 		const radius = cw * 0.157;
-		const border = cw * 0.034;
+		const border = cw * 0.015;
 		g.clearRect(0, 0, canvas.width, canvas.height);
 
 		g.save();

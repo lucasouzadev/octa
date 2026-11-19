@@ -11,7 +11,7 @@
 	const messages = {
 		empty_name: 'Dê um nome à coleção.',
 		name_too_long: `Use até ${COLLECTION_NAME_MAX} caracteres.`,
-		reserved_name: '"Todos" já existe. Escolha outro nome.',
+		reserved_name: 'Esse nome é reservado (Todos, Favoritos, Assistidos). Escolha outro.',
 		not_found: 'Não deu para criar agora. Tente de novo.',
 		bad_order: 'Não deu para criar agora. Tente de novo.'
 	};

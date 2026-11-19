@@ -82,3 +82,16 @@ Gradient washes, glassmorphism on content, colored chrome on B&W screens, more t
 - **One color edge to edge:** html/body and the browser theme color follow the screen (`lib/screen.ts`): blue on /add and /c/new, white on the Library, black elsewhere.
 - **Viewer fits the screen** without scroll or cut: `100svh` layout, the player is sized from its own container (`cqw/cqh`).
 - **Surfaces:** dark cards use `surface.darkRaised`; light buttons `surface.lightButton`; contrast thresholds are tests (`contrast.spec.ts`).
+
+## QA round 2 rules (owner, 2026-11-19)
+
+- **Create menu:** the panel grows out of the "+" button; the button sits inside the panel, filled white, and becomes "−" (`ui/CreateMenu.svelte`).
+- **Every remove/delete uses the orange screen** (`ui/DangerScreen.svelte`, `action.alert` #FF6A2B, browser color follows): collection delete, video delete, and a dead link (after 2 failed checks in a row; one failed check only marks the card). Destructive button is black, cancel is a quiet pill. Esc cancels.
+- **Virtual collections:** Todos, Favoritos (liked, heart badge in 3D on the monitor) and Assistidos (watched). They are computed, never stored, cannot be renamed or deleted, and their names are reserved. Library cards for Favoritos/Assistidos appear only when non-empty.
+- **Watched:** manual (viewer "Mais" sheet) plus automatic when a native `<video>` ends.
+- **Edit:** a video's title and link can be changed (bad link and duplicates rejected); "Mais" in the viewer holds watched, edit, delete.
+- **Rename a collection happens in the title itself** (one input, Enter saves, Esc cancels). No second input below.
+- **App feel on mobile:** zoom and text selection are off (`user-scalable=no`, `user-select:none`), except inside fields; fields are >= 16px so iOS does not zoom. Accessibility tradeoff chosen by the owner.
+- **Docked bar** is pinned to the visual viewport frame (`visualFrame` in `lib/keyboard.ts`), the page is locked while it is open; `?kbdebug` prints the measures on a real device.
+- **Illustrations** are redrawn: one idea per scene, no overlaps, one stroke weight.
+- NOT RUN: real iPhone/iPad.

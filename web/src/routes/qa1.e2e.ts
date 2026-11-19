@@ -162,6 +162,7 @@ test.describe('R1.4 viewer', () => {
 
 	test('actions are Compartilhar, Mover, Curtir, Próximo, in that order', async ({ page }) => {
 		await seedBoth(page);
+		await expect(page.locator('.actions button')).toHaveCount(4);
 		const names = await page.locator('.actions button').evaluateAll((els) => els.map((el) => el.getAttribute('aria-label')));
 		expect(names).toEqual(['Compartilhar', 'Mover', 'Curtir', 'Próximo vídeo']);
 	});
@@ -270,6 +271,23 @@ test.describe('R1.1 / R1.2 create screens', () => {
 		}
 	});
 
+	test('the bar and the dim sit on the visible window when iOS pans it above the keyboard', async ({ page }, testInfo) => {
+		test.skip(testInfo.project.name === 'desktop', 'the keyboard bar is for touch devices');
+		await mockNetwork(page);
+		await page.goto('/c/new');
+		// What iOS reports with the keyboard open and the page panned 120px down.
+		await page.evaluate(() => {
+			const fake = { height: 500, width: window.innerWidth, offsetTop: 120, offsetLeft: 0, addEventListener() {}, removeEventListener() {} };
+			Object.defineProperty(window, 'visualViewport', { value: fake, configurable: true });
+		});
+		await page.getByLabel('Nome da coleção').click();
+		const bar = await page.locator('.field').boundingBox();
+		expect(Math.abs(bar!.y + bar!.height - 620)).toBeLessThan(2); // offsetTop + height: top of the keyboard
+		const dim = await page.locator('.dim').boundingBox();
+		expect(Math.abs(dim!.y - 120)).toBeLessThan(2);
+		expect(Math.abs(dim!.height - 500)).toBeLessThan(2);
+	});
+
 	test('with a mouse the field stays in the page and nothing docks', async ({ page }, testInfo) => {
 		test.skip(testInfo.project.name !== 'desktop', 'desktop only');
 		await mockNetwork(page);
@@ -341,7 +359,7 @@ test.describe('R1.1 / R1.2 create screens', () => {
 		await page.getByLabel('Nome da coleção').fill('todos');
 		await page.getByRole('button', { name: 'Enviar' }).click();
 		const error = page.getByRole('alert');
-		await expect(error).toContainText('já existe');
+		await expect(error).toContainText('reservado');
 		const f = (await field(page).boundingBox())!;
 		const e = (await error.boundingBox())!;
 		expect(e.y).toBeGreaterThanOrEqual(f.y);
@@ -409,9 +427,19 @@ test.describe('R1.6 create menu, empty states, back to top', () => {
 		await expect(menu).toBeVisible();
 		await expect(menu.getByRole('menuitem')).toHaveText([/Colar link/, /Nova coleção/]);
 		await expect(menu.locator('svg')).toHaveCount(2); // one icon per option
-		const [b, m] = await Promise.all([close.boundingBox(), menu.boundingBox()]);
-		expect(m!.y).toBeGreaterThanOrEqual(b!.y + b!.height); // grows from under the button
-		expect(Math.abs(m!.x + m!.width - (b!.x + b!.width))).toBeLessThan(2); // aligned to its right edge
+		// The panel grows out of the button: the button sits inside it, filled white.
+		const panel = page.locator('.create .panel');
+		const [b, p] = await Promise.all([close.boundingBox(), panel.boundingBox()]);
+		expect(b!.x).toBeGreaterThanOrEqual(p!.x);
+		expect(b!.y).toBeGreaterThanOrEqual(p!.y);
+		expect(b!.x + b!.width).toBeLessThanOrEqual(p!.x + p!.width);
+		expect(b!.y + b!.height).toBeLessThan(p!.y + p!.height);
+		expect(Math.abs(p!.x + p!.width - (b!.x + b!.width))).toBeLessThan(10); // same right edge
+		const m = await menu.boundingBox();
+		expect(m!.y).toBeGreaterThanOrEqual(b!.y + b!.height - 1); // options hang under the button
+		await expect
+			.poll(() => close.evaluate((el) => getComputedStyle(el).backgroundColor))
+			.toBe('rgb(255, 255, 255)');
 	});
 
 	test('the popover closes on Escape, on an outside tap, and when an option is chosen', async ({ page }) => {
@@ -462,8 +490,10 @@ test.describe('R1.6 create menu, empty states, back to top', () => {
 		await page.addStyleTag({ content: 'main.library { min-height: 4000px !important; }' });
 		const up = page.getByRole('button', { name: 'Voltar ao topo' });
 		await expect(up).toHaveCount(0);
-		await page.evaluate(() => window.scrollTo(0, 3000));
-		await expect(up).toBeVisible();
+		await expect(async () => {
+			await page.evaluate(() => window.scrollTo(0, 3000));
+			await expect(up).toBeVisible({ timeout: 500 });
+		}).toPass();
 		await up.click();
 		await expect.poll(() => page.evaluate(() => window.scrollY)).toBe(0);
 		await expect(up).toHaveCount(0);
@@ -473,9 +503,11 @@ test.describe('R1.6 create menu, empty states, back to top', () => {
 		await seed(page);
 		await page.goto('/c/todos');
 		await page.addStyleTag({ content: 'main.collection { min-height: 4000px !important; }' });
-		await page.evaluate(() => window.scrollTo(0, 3000));
 		const up = page.getByRole('button', { name: 'Voltar ao topo' });
-		await expect(up).toBeVisible();
+		await expect(async () => {
+			await page.evaluate(() => window.scrollTo(0, 3000));
+			await expect(up).toBeVisible({ timeout: 500 });
+		}).toPass();
 		const [u, c] = await Promise.all([up.boundingBox(), page.locator('a.cta').boundingBox()]);
 		const overlap = !(u!.x + u!.width <= c!.x || c!.x + c!.width <= u!.x || u!.y + u!.height <= c!.y || c!.y + c!.height <= u!.y);
 		expect(overlap).toBe(false);
