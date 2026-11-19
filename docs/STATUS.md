@@ -17,10 +17,10 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 
 ## Known gaps carried to slice 2+
 - Library has no skeleton while IndexedDB loads (fast, but violates ux-check "never blank").
-- Rate limit: `CLIENT_IP_HEADER` env added (branch `feat/render-api`); on Render set `True-Client-IP`. Must be verified against the live host (forged-header burst test) before trusting it.
+- Rate limit on Render: `CLIENT_IP_HEADER` unset = ONE shared bucket for all users (30/min, burst 10; proven by a 40-request burst: 10x422 + 30x429). `CF-Connecting-IP` looks per-client (forging it gives 403 at the edge; a burst got no 429) but is NOT PROVEN from a single egress IP. Prove from a phone on 4G, then set it.
 - No CI workflow yet (slice 4): tests run locally only.
 - Concurrent double paste of the same link can hit the unique index (rare; handle in slice 2).
 
 ## Owner decisions pending
 - App icon.
-- Hosting: PWA on Vercel (project `web`, production READY); API on Render free — image + client-IP header in review, not deployed.
+- Hosting decided and live: PWA on Vercel (`web`), API on Render free (`octa-api`, virginia). Health Check Path `/healthz` still to be set by the owner in the Render dashboard (the tool cannot set it).
