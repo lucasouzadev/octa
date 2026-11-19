@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "cases": [
+    { "name": "youtube watch", "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "source": "youtube", "kind": "video", "id": "dQw4w9WgXcQ", "canonicalUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "embedSrc": "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?playsinline=1&rel=0", "aspect": "16:9" },
+    { "name": "youtube watch with tracking params", "url": "https://youtube.com/watch?v=dQw4w9WgXcQ&si=abc&feature=share", "source": "youtube", "kind": "video", "id": "dQw4w9WgXcQ", "canonicalUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "embedSrc": "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?playsinline=1&rel=0", "aspect": "16:9" },
+    { "name": "youtube watch with start time", "url": "https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=42s", "source": "youtube", "kind": "video", "id": "dQw4w9WgXcQ", "canonicalUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "embedSrc": "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?playsinline=1&rel=0&start=42", "aspect": "16:9" },
+    { "name": "youtube mobile", "url": "https://m.youtube.com/watch?v=dQw4w9WgXcQ", "source": "youtube", "kind": "video", "id": "dQw4w9WgXcQ", "canonicalUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "embedSrc": "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?playsinline=1&rel=0", "aspect": "16:9" },
+    { "name": "youtu.be short link", "url": "https://youtu.be/dQw4w9WgXcQ?si=xyz", "source": "youtube", "kind": "video", "id": "dQw4w9WgXcQ", "canonicalUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "embedSrc": "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?playsinline=1&rel=0", "aspect": "16:9" },
+    { "name": "youtube shorts", "url": "https://www.youtube.com/shorts/aBcDeFgHiJ0", "source": "youtube", "kind": "short", "id": "aBcDeFgHiJ0", "canonicalUrl": "https://www.youtube.com/shorts/aBcDeFgHiJ0", "embedSrc": "https://www.youtube-nocookie.com/embed/aBcDeFgHiJ0?playsinline=1&rel=0", "aspect": "9:16" },
+    { "name": "youtube live", "url": "https://www.youtube.com/live/aBcDeFgHiJ0?feature=shared", "source": "youtube", "kind": "video", "id": "aBcDeFgHiJ0", "canonicalUrl": "https://www.youtube.com/watch?v=aBcDeFgHiJ0", "embedSrc": "https://www.youtube-nocookie.com/embed/aBcDeFgHiJ0?playsinline=1&rel=0", "aspect": "16:9" },
+    { "name": "youtube embed url", "url": "https://www.youtube-nocookie.com/embed/aBcDeFgHiJ0", "source": "youtube", "kind": "video", "id": "aBcDeFgHiJ0", "canonicalUrl": "https://www.youtube.com/watch?v=aBcDeFgHiJ0", "embedSrc": "https://www.youtube-nocookie.com/embed/aBcDeFgHiJ0?playsinline=1&rel=0", "aspect": "16:9" },
+    { "name": "youtube without scheme", "url": "youtube.com/watch?v=dQw4w9WgXcQ", "source": "youtube", "kind": "video", "id": "dQw4w9WgXcQ", "canonicalUrl": "https://www.youtube.com/watch?v=dQw4w9WgXcQ", "embedSrc": "https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?playsinline=1&rel=0", "aspect": "16:9" },
+    { "name": "youtube bad id length", "url": "https://www.youtube.com/watch?v=short", "error": "unsupported_url" },
+    { "name": "youtube channel page", "url": "https://www.youtube.com/@somechannel", "error": "unsupported_url" },
+    { "name": "direct mp4", "url": "https://cdn.example.com/media/Ensaio%20aberto.mp4", "source": "direct", "kind": "direct", "id": "https://cdn.example.com/media/Ensaio%20aberto.mp4", "canonicalUrl": "https://cdn.example.com/media/Ensaio%20aberto.mp4", "embedSrc": "https://cdn.example.com/media/Ensaio%20aberto.mp4", "aspect": "16:9", "title": "Ensaio aberto" },
+    { "name": "direct webm with fragment", "url": "https://example.org/clip.webm#t=3", "source": "direct", "kind": "direct", "id": "https://example.org/clip.webm", "canonicalUrl": "https://example.org/clip.webm", "embedSrc": "https://example.org/clip.webm", "aspect": "16:9", "title": "clip" },
+    { "name": "unknown site", "url": "https://example.com/page", "error": "unsupported_url" },
+    { "name": "instagram not in slice 1", "url": "https://www.instagram.com/reel/Cxyz123/", "error": "unsupported_url" },
+    { "name": "ftp scheme", "url": "ftp://example.com/a.mp4", "error": "invalid_url" },
+    { "name": "javascript scheme", "url": "javascript:alert(1)", "error": "invalid_url" },
+    { "name": "empty", "url": "   ", "error": "invalid_url" },
+    { "name": "garbage", "url": "not a url at all", "error": "invalid_url" }
+  ]
+}

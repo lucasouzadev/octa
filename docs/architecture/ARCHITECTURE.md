@@ -42,9 +42,9 @@ docs/
 ## 3. Stack (verify versions at setup — AGENTS.md §1.11)
 | Layer | Choice | Why |
 |---|---|---|
-| API | Go (latest stable), stdlib `net/http` + `http.ServeMux` patterns | single binary, goroutines for health checks, no framework needed |
+| API | Go (1.27.x, verified 2026-11-19), stdlib `net/http` + `http.ServeMux` patterns | single binary, goroutines for health checks, no framework needed |
 | API deps | as few as possible: `golang.org/x/net/html` (OG parsing), `golang.org/x/time/rate` | supply-chain surface small |
-| Web | Svelte 5 (runes) + SvelteKit 2, `adapter-static`, TypeScript | small bundle, fine-grained reactivity, owner wants to learn it |
+| Web | Svelte 5 (runes) + SvelteKit 3, `adapter-static`, TypeScript (verified 2026-11-19: svelte 5.58, kit 3.4, vite 8, TS 7) | small bundle, fine-grained reactivity, owner wants to learn it |
 | 3D | Threlte (Three.js), lazy-loaded per route | declarative 3D in Svelte; only on Library and Collection |
 | Motion | View Transitions API (SvelteKit `onNavigate`), Svelte `spring`/`tweened` | card → player morph without a router hack |
 | Layout | container queries, `clamp()` fluid type, logical properties | same layout on every screen size |
