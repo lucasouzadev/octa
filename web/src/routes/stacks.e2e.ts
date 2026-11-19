@@ -58,20 +58,20 @@ test('the Library header summarises collections and videos', async ({ page }) =>
 	await expect(page.locator('header .heading p')).toHaveText('1 coleção · 2 vídeos');
 });
 
-test('Collection screen shows tilted 3D screens: bezel, play, source, status, serif title', async ({ page }, testInfo) => {
+test('Collection screen shows tilted 3D screens: bezel, source, status, serif title (no play mark)', async ({ page }, testInfo) => {
 	await seed(page);
 	await page.goto('/c/todos');
 	const list = page.locator('ul.videos');
 	const screens = list.locator('.screen');
 	await expect(screens).toHaveCount(2);
 	expect(await list.locator('li').first().evaluate((el) => getComputedStyle(el).perspective)).not.toBe('none');
-	// Each screen is posed in 3D, has thickness (stacked edge shadows) and a play button.
+	// Each screen is posed in 3D and has thickness (stacked edge shadows). No play mark: that is for the player only.
 	for (const i of [0, 1]) {
 		const screen = screens.nth(i);
 		expect(await screen.evaluate((el) => getComputedStyle(el).transform)).not.toBe('none');
 		const shadow = await screen.evaluate((el) => getComputedStyle(el).boxShadow);
 		expect((shadow.match(/rgb/g) ?? []).length).toBeGreaterThanOrEqual(4);
-		await expect(screen.locator('.play')).toBeVisible();
+		await expect(screen.locator('.play')).toHaveCount(0);
 	}
 	// Newest first: Shorts, then YouTube. Known links say ATIVO.
 	await expect(screens.locator('.src')).toHaveText(['Shorts', 'YouTube']);

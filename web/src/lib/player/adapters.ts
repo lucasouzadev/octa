@@ -84,7 +84,7 @@ export function youtubeRemote(host: HTMLElement, id: string, start: number, titl
 	let player: YTPlayer | null = null;
 	let gone = false;
 	let poll = 0;
-	let wantPlay = true; // the person tapped play on the poster
+	let wantPlay = false; // set by the person's tap on the cover
 
 	const tick = () => {
 		if (player) emit({ time: player.getCurrentTime(), duration: player.getDuration() });
@@ -155,7 +155,7 @@ const TIKTOK_ORIGIN = 'https://www.tiktok.com';
 
 export function tiktokRemote(frame: HTMLIFrameElement, emit: Emit, start = 0): Remote {
 	let ready = false;
-	let wantPlay = true;
+	let wantPlay = false;
 	const send = (type: Parameters<typeof tiktokCommand>[0], value?: number) =>
 		frame.contentWindow?.postMessage(tiktokCommand(type, value), TIKTOK_ORIGIN);
 

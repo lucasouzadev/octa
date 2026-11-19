@@ -1,15 +1,18 @@
 <script lang="ts">
-	// The personal cinema (slice 3c): one player look for every source. The screen opens
-	// at once with the cover; the platform's own player loads only on the first tap, with
-	// its chrome turned off where the platform allows it (YouTube controls=0, TikTok
-	// player v1 params). Our one control bar sits BELOW the picture, never over it
-	// (YouTube RMF: no overlays on the embedded player). Instagram has no control API,
-	// so it keeps its own player and gets no bar. MP4/HLS are fully ours.
+	// The personal cinema (slices 3c and 3d): one play, one look for every source.
+	// The platform's own player is loaded UNDER the cover as soon as the screen opens, so
+	// the first tap lands on our big button and starts the video in the same gesture (iOS
+	// only lets a video start from a tap) with no loading wait. The cover goes away once
+	// the video plays; if the platform refuses to start (iOS), it goes away after a short
+	// wait and the platform's own play button is the one to tap. After that, all control
+	// lives in the bar BELOW the picture, never over it (YouTube RMF: no overlays on the
+	// embedded player). Instagram has no control API: its own player is the only one, no
+	// cover and no bar. MP4/HLS are fully ours.
 	import { onDestroy, untrack } from 'svelte';
 	import type { Video } from '#lib/db/index.ts';
 	import { cardLabel } from '#lib/fan.ts';
 	import { attachHls } from '#lib/hls.ts';
-	import { clock, resumeAt, shouldSave, startOf, type Phase } from '#lib/player/core.ts';
+	import { clock, resumeAt, resumeLabel, shouldSave, startOf, type Phase } from '#lib/player/core.ts';
 	import { nativeRemote, tiktokRemote, youtubeRemote, type MediaState, type Remote } from '#lib/player/adapters.ts';
 	import Icon from '#lib/ui/Icon.svelte';
 
@@ -34,7 +37,14 @@
 	const provider = $derived(video.source === 'direct' ? 'Arquivo' : cardLabel(video));
 	const shortLink = $derived(video.canonicalUrl.replace(/^https?:\/\/(www\.)?/, ''));
 
-	let started = $state(false); // iframes load on the first tap
+	const coverLabel = resumeLabel(resume);
+
+	// The person tapped the cover. `revealed`: the cover is gone, either because the video
+	// is playing or because the platform did not start it and its own play must be shown.
+	let tapped = $state(false);
+	let revealed = $state(false);
+	let blockTimer = 0;
+	const covered = $derived(controllable && !revealed);
 	let phase = $state<Phase>('idle');
 	let time = $state(untrack(() => resume));
 	let duration = $state(0);
@@ -45,6 +55,7 @@
 	function emit(s: MediaState) {
 		if (s.phase) {
 			phase = s.phase;
+			if (s.phase === 'playing') reveal();
 			if (s.phase === 'ended') {
 				onended?.();
 				onprogress?.(null, duration);
@@ -56,6 +67,23 @@
 		}
 		if (s.duration !== undefined && Number.isFinite(s.duration) && s.duration > 0) duration = s.duration;
 		if (s.failed) failed = true;
+		// The platform finished loading after the tap: give it a moment to start.
+		if (s.ready && tapped && !revealed) armBlockTimer(1800);
+	}
+
+	function reveal() {
+		clearTimeout(blockTimer);
+		revealed = true;
+	}
+
+	// Playing after the tap did not happen: the platform wants its own tap. Show its player.
+	function armBlockTimer(ms: number) {
+		clearTimeout(blockTimer);
+		blockTimer = window.setTimeout(() => {
+			if (revealed) return;
+			revealed = true;
+			phase = 'paused';
+		}, ms);
 	}
 
 	function save() {
@@ -94,12 +122,15 @@
 	}
 
 	function start() {
-		started = true;
+		if (tapped) return;
+		tapped = true;
 		phase = 'buffering';
+		remote?.play(); // inside the tap, which is what iOS asks for
+		armBlockTimer(remote ? 2500 : 4000);
 	}
 
 	function toggle() {
-		if (!native && !started) return start();
+		if (!tapped) return start();
 		if (phase === 'playing' || phase === 'buffering') remote?.pause();
 		else remote?.play();
 	}
@@ -118,6 +149,7 @@
 	}
 
 	onDestroy(() => {
+		clearTimeout(blockTimer);
 		save(); // leaving the screen is a stop too
 		remote?.destroy();
 	});
@@ -125,7 +157,7 @@
 	const playing = $derived(phase === 'playing' || phase === 'buffering');
 </script>
 
-<div class="screen">
+<div class="screen" class:tall={vertical}>
 	<div class="frame" class:vertical bind:this={frameEl} data-phase={phase}>
 		{#if native}
 			<!-- svelte-ignore a11y_media_has_caption (third-party files have no captions we can know of) -->
@@ -137,16 +169,6 @@
 				title={video.title}
 				onclick={toggle}
 			></video>
-		{:else if !started}
-			<button class="poster" type="button" aria-label={`Assistir “${video.title}”`} onclick={start}>
-				{#if video.thumbnail}<img
-						src={video.thumbnail}
-						alt=""
-						referrerpolicy="no-referrer"
-						onerror={(e) => ((e.currentTarget as HTMLElement).style.display = 'none')}
-					/>{/if}
-				<span class="big-play" aria-hidden="true"><Icon name="play" size={28} /></span>
-			</button>
 		{:else if video.source === 'youtube'}
 			<div class="yt" use:useYouTube></div>
 		{:else if video.source === 'tiktok'}
@@ -168,6 +190,27 @@
 				sandbox="allow-scripts allow-same-origin allow-presentation allow-popups"
 			></iframe>
 		{/if}
+		{#if covered}
+			<button
+				class="cover"
+				class:over-video={native}
+				type="button"
+				disabled={tapped}
+				aria-label={coverLabel ? `${coverLabel.replace(' · ', ' de ')}: “${video.title}”` : `Assistir “${video.title}”`}
+				onclick={start}
+			>
+				{#if video.thumbnail && !native}<img
+						src={video.thumbnail}
+						alt=""
+						referrerpolicy="no-referrer"
+						onerror={(e) => ((e.currentTarget as HTMLElement).style.display = 'none')}
+					/>{/if}
+				<span class="big-play" class:wait={tapped} aria-hidden="true">
+					{#if tapped}<span class="spin"></span>{:else}<Icon name="play" size={28} />{/if}
+				</span>
+				{#if coverLabel && !tapped}<span class="resume" aria-hidden="true">{coverLabel}</span>{/if}
+			</button>
+		{/if}
 		{#if failed}
 			<p class="failed" role="status">Não deu para tocar aqui. Abra no original.</p>
 		{/if}
@@ -176,7 +219,7 @@
 
 {#if controllable}
 	<div class="bar" aria-label="Controles do vídeo" role="group">
-		<button type="button" class="pp" aria-label={playing ? 'Pausar' : 'Reproduzir'} onclick={toggle}>
+		<button type="button" class="pp" class:unstarted={!revealed} aria-hidden={!revealed} tabindex={revealed ? 0 : -1} aria-label={playing ? 'Pausar' : 'Reproduzir'} onclick={toggle}>
 			<Icon name={playing ? 'pause' : 'play'} size={18} />
 		</button>
 		<span class="t">{clock(time)}</span>
@@ -213,6 +256,13 @@
 		place-items: end center;
 	}
 
+	/* A vertical video takes most of the screen; what is under it scrolls. */
+	.screen.tall {
+		flex: none;
+		height: clamp(300px, 68dvh, 820px);
+		place-items: center;
+	}
+
 	/* Sized from the box the page gives it (a size container), so it always fits. */
 	.frame {
 		position: relative;
@@ -233,7 +283,7 @@
 	video,
 	.yt,
 	.yt :global(iframe),
-	.poster {
+	.cover {
 		position: absolute;
 		inset: 0;
 		width: 100%;
@@ -246,20 +296,64 @@
 		object-fit: contain;
 	}
 
-	.poster {
+	.cover {
 		padding: 0;
-		background: transparent;
+		background: #0a0a0a; /* opaque: hides the platform player loading underneath */
 		display: grid;
 		place-items: center;
 		cursor: pointer;
 	}
 
-	.poster img {
+	.cover img {
 		position: absolute;
 		inset: 0;
 		width: 100%;
 		height: 100%;
 		object-fit: cover;
+	}
+
+	/* Over a file we play ourselves the video's own first frame stays visible. */
+	.cover.over-video {
+		background: transparent;
+	}
+
+	.cover:disabled {
+		cursor: default;
+	}
+
+	.resume {
+		position: absolute;
+		bottom: var(--space-4);
+		left: 50%;
+		translate: -50% 0;
+		padding: 6px 14px;
+		border-radius: 999px;
+		background: rgb(0 0 0 / 0.62);
+		color: #fff;
+		font-size: 13px;
+		font-variant-numeric: tabular-nums;
+		white-space: nowrap;
+	}
+
+	.spin {
+		width: 26px;
+		height: 26px;
+		border-radius: 50%;
+		border: 3px solid rgb(10 10 10 / 0.18);
+		border-top-color: #0a0a0a;
+		animation: spin 0.9s linear infinite;
+	}
+
+	@keyframes spin {
+		to {
+			rotate: 360deg;
+		}
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.spin {
+			animation-duration: 3s;
+		}
 	}
 
 	.big-play {
@@ -308,6 +402,11 @@
 	.bar .pp {
 		background: var(--color-text-dark);
 		color: #0a0a0a;
+	}
+
+	/* The big button on the cover is the only play until the video has started. */
+	.bar .pp.unstarted {
+		visibility: hidden;
 	}
 
 	.t {
