@@ -38,6 +38,16 @@ export function resumeLabel(resume: number): string {
 	return resume > 0 ? `Continuar · ${clock(resume)}` : '';
 }
 
+/**
+ * The person just asked to play or pause and the UI already switched; the platform answers
+ * a moment later, and an answer that says the opposite is the old state, not news.
+ */
+export function staleEvent(wanted: Phase | null, event: Phase): boolean {
+	if (wanted === 'paused') return event === 'playing' || event === 'buffering';
+	if (wanted === 'playing') return event === 'paused';
+	return false;
+}
+
 /** Progress is written at most every 5 s (IndexedDB writes are cheap, not free). */
 export function shouldSave(lastSaved: number, time: number): boolean {
 	return Number.isFinite(time) && Math.abs(time - lastSaved) >= 5;

@@ -145,14 +145,77 @@ test('a half-watched video shows where it stopped on the big button', async ({ p
 	await expect(page.getByRole('button', { name: /^Continuar de 1:23/ })).toBeVisible();
 });
 
-test('a vertical video takes most of the screen on a phone', async ({ page }, testInfo) => {
+test('vertical: the normal screen keeps every action in view; play opens our full screen', async ({ page }, testInfo) => {
 	test.skip(testInfo.project.name !== 'phone', 'phone layout');
 	await mockNetwork(page);
+	await fakeYouTube(page);
 	await paste(page, 'https://www.youtube.com/shorts/aBcDeFgHiJ0');
 	await expect(page.locator('.player .frame.vertical')).toBeVisible();
-	const frame = (await page.locator('.player .frame').boundingBox())!;
 	const vh = page.viewportSize()!.height;
-	expect(frame.height).toBeGreaterThan(vh * 0.5);
+	const actions = (await page.locator('.actions').boundingBox())!;
+	expect(actions.y + actions.height).toBeLessThanOrEqual(vh); // nothing hidden below the fold
+
+	await page.getByRole('button', { name: /^Assistir/ }).click();
+	const full = page.locator('.cinema.full');
+	await expect(full).toBeVisible();
+	const box = (await full.boundingBox())!;
+	expect(box.height).toBeGreaterThanOrEqual(vh - 1); // it takes the whole screen
+	const frame = (await page.locator('.player .frame').boundingBox())!;
+	expect(frame.height).toBeGreaterThan(vh * 0.6); // and the picture is big in it
+	await expect(page.getByRole('group', { name: 'Controles do vídeo' })).toBeVisible(); // our bar stays, below the picture
+
+	await page.getByRole('button', { name: 'Sair da tela cheia' }).click();
+	await expect(page.locator('.cinema.full')).toHaveCount(0);
+	await expect(page.locator('.actions')).toBeVisible();
+});
+
+test('horizontal: play stays in the normal screen; the Tela cheia button opens and closes ours', async ({ page }) => {
+	await mockNetwork(page);
+	await fakeYouTube(page);
+	await paste(page, 'https://youtu.be/dQw4w9WgXcQ');
+	await page.getByRole('button', { name: /^Assistir/ }).click();
+	await expect(page.getByRole('button', { name: 'Pausar' })).toBeVisible();
+	await expect(page.locator('.cinema.full')).toHaveCount(0);
+	await page.getByRole('button', { name: 'Tela cheia' }).click();
+	await expect(page.locator('.cinema.full')).toBeVisible();
+	await page.getByRole('button', { name: 'Sair da tela cheia' }).click();
+	await expect(page.locator('.cinema.full')).toHaveCount(0);
+});
+
+test('while it plays, touches stay on our side so the platform HUD does not pop up', async ({ page }) => {
+	await mockNetwork(page);
+	await fakeYouTube(page);
+	await paste(page, 'https://youtu.be/dQw4w9WgXcQ');
+	await page.getByRole('button', { name: /^Assistir/ }).click();
+	await expect(page.getByRole('button', { name: 'Pausar' })).toBeVisible();
+	await expect(page.locator('.player iframe')).toHaveCSS('pointer-events', 'none');
+	const calls = () => page.evaluate(() => (window as unknown as { __yt: { calls: string[] } }).__yt.calls);
+	await page.locator('.player .frame').click(); // a tap on the picture pauses, like a native player
+	await expect.poll(calls).toContain('pause');
+	await expect(page.getByRole('button', { name: 'Reproduzir' })).toBeVisible();
+});
+
+test('when the platform refuses to start, its own play stays tappable', async ({ page }) => {
+	await mockNetwork(page);
+	await fakeYouTube(page);
+	await page.addInitScript(() => ((window as unknown as { __ytBlock: boolean }).__ytBlock = true));
+	await paste(page, 'https://youtu.be/dQw4w9WgXcQ');
+	await page.getByRole('button', { name: /^Assistir/ }).click();
+	await expect(page.locator('.cover')).toHaveCount(0, { timeout: 6000 });
+	await expect(page.locator('.player iframe')).toHaveCSS('pointer-events', 'auto');
+});
+
+test('pause answers at once on our side even when the platform is slow', async ({ page }) => {
+	await mockNetwork(page);
+	await fakeYouTube(page);
+	await page.addInitScript(() => ((window as unknown as { __ytLag: number }).__ytLag = 1500));
+	await paste(page, 'https://youtu.be/dQw4w9WgXcQ');
+	await page.getByRole('button', { name: /^Assistir/ }).click();
+	await expect(page.getByRole('button', { name: 'Pausar' })).toBeVisible();
+	await page.getByRole('button', { name: 'Pausar' }).click();
+	await expect(page.getByRole('button', { name: 'Reproduzir' })).toBeVisible({ timeout: 300 }); // before the 1.5 s answer
+	await page.waitForTimeout(1800);
+	await expect(page.getByRole('button', { name: 'Reproduzir' })).toBeVisible(); // and it stays paused after it
 });
 
 test('no play mark over the thumbnails of the other screens', async ({ page }) => {
