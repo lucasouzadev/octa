@@ -6,7 +6,7 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 |---|---|---|
 | 0 | Docs, agent-kit, ADRs, design system | DONE 2026-11-19 |
 | 1 | Paste → resolve → card → player (YouTube long/Shorts, direct .mp4); `/v1/resolve`; URL parser + shared vectors; minimal library list | DONE 2026-11-19 — merged (PR #1, #3); API live on Render, PWA on Vercel; owner confirmed on iPhone |
-| 2 | Library + collections, Threlte fan/stack + CSS fallback, search, View Transitions (plan: `tasks/plan.md`) | 2a collections (2D) IN REVIEW — branch `feat/slice-2a`; 2b search, 2c View Transitions, 2d 3D NOT STARTED |
+| 2 | Library + collections, Threlte fan/stack + CSS fallback, search, View Transitions (plan: `tasks/plan.md`) | 2a collections (2D) DONE (PR #6 merged, owner tested 2026-11-19); 2b search IN REVIEW — branch `feat/slice-2b`; 2c View Transitions, 2d 3D NOT STARTED |
 | 3 | Instagram, TikTok, HLS; `/v1/health`; health states; Dead link screen; resume | — |
 | 4 | PWA install, share target, export/import, offline shell, E2E 3 viewports, deploy (owner picks host) | — |
 
@@ -20,6 +20,12 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 - JS gzip, all chunks, same method: main 45.5 KB → 2a 51.6 KB (+6 KB: two routes, DB v2).
 - Race found and fixed by an e2e run: the move sheet closed before the IndexedDB write committed, so a quick navigation could lose the move.
 - NOT RUN: iPhone/iPad/desktop physical checks of 2a; skeleton while loading is in the markup but not asserted (IndexedDB cannot be slowed from Playwright).
+
+## Slice 2b — evidence (2026-11-19)
+- Web: `pnpm test` 113 PASS (14 new in `search.spec.ts`: accents, case, author, every-word AND, ranking, stable order, regex characters literal, no mutation), `pnpm check` 0 errors, `pnpm build` PASS, `pnpm test:e2e` 66 PASS (22 flows × 3 viewports; 6 new search flows).
+- JS gzip, all chunks, same method: 2a 51.6 KB → 2b 52.8 KB (+1.2 KB).
+- Search is client-side over title + author of the whole library (not just one collection), results link to `/v/<id>?c=todos`.
+- NOT RUN: iPhone/iPad/desktop physical checks of 2b (iOS keyboard, focus, zoom); CI (no workflow, slice 4).
 
 ## Known gaps carried to slice 2+
 - Rate limit on Render: `CLIENT_IP_HEADER` unset = ONE shared bucket for all users (30/min, burst 10; proven by a 40-request burst: 10x422 + 30x429). `CF-Connecting-IP` looks per-client (forging it gives 403 at the edge; a burst got no 429) but is NOT PROVEN from a single egress IP. Prove from a phone on 4G, then set it.

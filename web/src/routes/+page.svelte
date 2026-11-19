@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { library, type Collection, type Video } from '#lib/db/index.ts';
 	import { ALL } from '#lib/db/scope.ts';
+	import { searchVideos } from '#lib/search.ts';
 	import Icon from '#lib/ui/Icon.svelte';
 
 	let videos = $state<Video[] | null>(null);
@@ -35,19 +36,107 @@
 	});
 
 	const count = (n: number) => (n === 1 ? '1 vídeo' : `${n} vídeos`);
+
+	// Search runs over the whole library, not just one collection.
+	let searching = $state(false);
+	let query = $state('');
+	let input = $state<HTMLInputElement>();
+	const typed = $derived(query.trim().length > 0);
+	const results = $derived(videos && typed ? searchVideos(videos, query) : []);
+
+	function openSearch() {
+		searching = true;
+		// The input only exists once the header re-renders.
+		queueMicrotask(() => input?.focus());
+	}
+
+	function closeSearch() {
+		searching = false;
+		query = '';
+	}
+
+	function onkeydown(e: KeyboardEvent) {
+		if (searching && e.key === 'Escape') closeSearch();
+	}
 </script>
 
-<main class="library">
-	<header>
-		<span class="spacer" aria-hidden="true"></span>
-		<div class="heading">
-			<h1>Minha coleção</h1>
-			{#if videos}<p>{count(videos.length)}</p>{/if}
-		</div>
-		<a class="icon-button" href="/add" aria-label="Adicionar link"><Icon name="plus" /></a>
-	</header>
+<svelte:window {onkeydown} />
 
-	{#if !cards}
+<main class="library">
+	{#if searching}
+		<header class="searchbar">
+			<form role="search" onsubmit={(e) => e.preventDefault()}>
+				<span class="glass"><Icon name="search" size={20} /></span>
+				<input
+					bind:this={input}
+					bind:value={query}
+					type="search"
+					enterkeyhint="search"
+					autocomplete="off"
+					autocapitalize="off"
+					spellcheck="false"
+					placeholder="Buscar por título ou autor"
+					aria-label="Buscar vídeos"
+				/>
+			</form>
+			<button class="text-button" type="button" onclick={closeSearch}>Cancelar</button>
+		</header>
+	{:else}
+		<header>
+			<button
+				class="icon-button"
+				type="button"
+				onclick={openSearch}
+				aria-label="Buscar vídeos"
+				disabled={!videos || videos.length === 0}
+			>
+				<Icon name="search" />
+			</button>
+			<div class="heading">
+				<h1>Minha coleção</h1>
+				{#if videos}<p>{count(videos.length)}</p>{/if}
+			</div>
+			<a class="icon-button" href="/add" aria-label="Adicionar link"><Icon name="plus" /></a>
+		</header>
+	{/if}
+
+	{#if searching && typed}
+		<p class="status" role="status">
+			{results.length === 0
+				? 'Nenhum vídeo encontrado.'
+				: results.length === 1
+					? '1 resultado'
+					: `${results.length} resultados`}
+		</p>
+		{#if results.length === 0}
+			<section class="empty small">
+				<h2>Nada com “{query.trim()}”.</h2>
+				<p>Tente outra palavra, o nome do autor ou menos letras.</p>
+			</section>
+		{:else}
+			<ul class="results" aria-label="Resultados da busca">
+				{#each results as v (v.id)}
+					<li>
+						<a class="row" href={`/v/${v.id}?c=${ALL}`}>
+							<span class="thumb">
+								{#if v.thumbnail}<img
+										src={v.thumbnail}
+										alt=""
+										loading="lazy"
+										referrerpolicy="no-referrer"
+										onerror={(e) => ((e.currentTarget as HTMLElement).style.display = 'none')}
+									/>{/if}
+							</span>
+							<span class="text">
+								{#if v.author}<span class="author">{v.author}</span>{/if}
+								<span class="name">{v.title}</span>
+							</span>
+						</a>
+					</li>
+				{/each}
+			</ul>
+		{/if}
+	{:else if !cards}
 		<ul class="list" aria-busy="true" aria-label="Carregando coleções">
 			{#each [0, 1] as n (n)}
 				<li class="card skeleton" aria-hidden="true">
@@ -108,6 +197,8 @@
 
 	header,
 	.list,
+	.results,
+	.status,
 	.empty {
 		max-width: var(--layout-content-max);
 		margin-inline: auto;
@@ -120,8 +211,126 @@
 		padding: 0 var(--space-1) var(--space-6);
 	}
 
-	.spacer {
-		width: var(--layout-touch-min);
+	header.searchbar {
+		gap: var(--space-3);
+	}
+
+	.searchbar form {
+		flex: 1;
+		min-width: 0;
+		position: relative;
+	}
+
+	.glass {
+		position: absolute;
+		inset-block: 0;
+		inset-inline-start: var(--space-4);
+		display: flex;
+		align-items: center;
+		color: var(--color-muted-on-light);
+		pointer-events: none;
+	}
+
+	.searchbar input {
+		width: 100%;
+		height: var(--layout-touch-min);
+		padding-inline: calc(var(--space-4) + 28px) var(--space-4);
+		border: 0;
+		border-radius: var(--radius-pill);
+		background: var(--color-surface-light);
+		color: inherit;
+		font: inherit;
+		font-size: 16px; /* 16px stops iOS Safari from zooming on focus */
+	}
+
+	.searchbar input:focus-visible {
+		outline: 2px solid var(--color-text-light);
+		outline-offset: 2px;
+	}
+
+	.text-button {
+		flex: none;
+		min-height: var(--layout-touch-min);
+		padding-inline: var(--space-2);
+		border: 0;
+		background: none;
+		color: inherit;
+		font: inherit;
+		font-weight: 600;
+	}
+
+	.status {
+		font-size: var(--size-meta);
+		color: var(--color-muted-on-light);
+		padding: 0 var(--space-1) var(--space-3);
+	}
+
+	.empty.small {
+		padding-top: var(--space-6);
+	}
+
+	.empty.small h2 {
+		font-size: var(--size-h2);
+		line-height: 1.12;
+	}
+
+	.results {
+		list-style: none;
+		padding: 0;
+		margin-block: 0;
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-3);
+	}
+
+	.row {
+		display: flex;
+		align-items: center;
+		gap: var(--space-4);
+		padding: var(--space-2);
+		border-radius: var(--radius-thumb);
+		background: var(--color-surface-light);
+		color: inherit;
+		text-decoration: none;
+	}
+
+	.thumb {
+		flex: none;
+		width: 56px;
+		height: 72px;
+		border-radius: var(--radius-paper);
+		overflow: hidden;
+		background: #dcdcdc;
+	}
+
+	.thumb img {
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+		display: block;
+	}
+
+	.text {
+		min-width: 0;
+		display: flex;
+		flex-direction: column;
+		gap: 2px;
+	}
+
+	.author {
+		font-size: var(--size-meta);
+		color: var(--color-muted-on-light);
+	}
+
+	.name {
+		font-family: var(--font-display);
+		font-size: 19px;
+		line-height: 1.15;
+		display: -webkit-box;
+		-webkit-line-clamp: 2;
+		line-clamp: 2;
+		-webkit-box-orient: vertical;
+		overflow: hidden;
 	}
 
 	.heading {

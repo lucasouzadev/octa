@@ -84,8 +84,8 @@ Turn the flat list into the real Library: collections as cards, a black Collecti
 ### Checkpoint 2a: `pnpm check && pnpm test && pnpm build && pnpm test:e2e` PASS (2026-11-19: 0 errors, 99 unit, 48 e2e); physical demo on the owner's iPhone pending.
 
 ### Phase 2b — Search
-- [ ] T7 Test first: normalize + rank (accents, case, author match, empty query = all).
-- [ ] T8 Search UI in Library header; results across all collections, tap → player; empty-result state; keyboard and a11y labels.
+- [x] T7 Test first: normalize + rank (accents, case, author match, empty query = all).
+- [x] T8 Search UI in Library header; results across all collections, tap → player; empty-result state; keyboard and a11y labels.
 ### Checkpoint 2b: same commands PASS.
 
 ### Phase 2c — View Transitions

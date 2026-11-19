@@ -92,3 +92,7 @@ img {
 		animation-duration: 0.01ms !important;
 	}
 }
+
+.icon-button:disabled {
+	opacity: 0.4;
+}
