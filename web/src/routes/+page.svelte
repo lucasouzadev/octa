@@ -159,10 +159,10 @@
 		</section>
 	{:else}
 		<ul class="list">
-			{#each cards as c (c.key)}
+			{#each cards as c, i (c.key)}
 				<li>
 					<a class="card" href={c.href} data-collection={c.key}>
-						<FanStack items={c.items} />
+						<FanStack items={c.items} id={c.key} order={i} />
 						<h2 class="title">{c.name}</h2>
 						<p class="count">{count(c.items.length)}</p>
 					</a>

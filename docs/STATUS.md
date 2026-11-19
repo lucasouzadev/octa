@@ -6,7 +6,7 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 |---|---|---|
 | 0 | Docs, agent-kit, ADRs, design system | DONE 2026-11-19 |
 | 1 | Paste → resolve → card → player (YouTube long/Shorts, direct .mp4); `/v1/resolve`; URL parser + shared vectors; minimal library list | DONE 2026-11-19 — merged (PR #1, #3); API live on Render, PWA on Vercel; owner confirmed on iPhone |
-| 2 | Library + collections, Threlte fan/stack + CSS fallback, search, View Transitions (plan: `tasks/plan.md`) | 2a collections (2D) DONE (PR #6 merged, owner tested 2026-11-19); 2b search DONE (PR #7 merged, owner approved); 2c View Transitions DONE (PR #8 merged, owner tested); 2d-i CSS-3D fan and stack DONE (PR #9 merged, owner approved on iPhone); iOS findings fix IN REVIEW — branch `fix/ios-findings`; 2d-ii Threlte NOT STARTED |
+| 2 | Library + collections, Threlte fan/stack + CSS fallback, search, View Transitions (plan: `tasks/plan.md`) | 2a collections (2D) DONE (PR #6 merged, owner tested 2026-11-19); 2b search DONE (PR #7 merged, owner approved); 2c View Transitions DONE (PR #8 merged, owner tested); 2d-i CSS-3D fan and stack DONE (PR #9 merged, owner approved on iPhone); iOS findings fix DONE (PR #10 merged); 2d-ii Threlte fan IN REVIEW — branch `feat/slice-2d-threlte`; the WebGL paper stack on Collection NOT STARTED |
 | 3 | Instagram, TikTok, HLS; `/v1/health`; health states; Dead link screen; resume | — |
 | 4 | PWA install, share target, export/import, offline shell, E2E 3 viewports, deploy (owner picks host) | — |
 
@@ -48,6 +48,15 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 - JS gzip, all chunks: 54.3 KB → 54.8 KB (+0.5 KB).
 - NOT RUN: the three fixes on the real iPhone; CI. The scrim only shows with a long list; checked in code, not in a screenshot.
 - Still open: Safari bottom bar over the player thumbnail strip; centered paper stack (cosmetic).
+
+## Slice 2d-ii — evidence (2026-11-19)
+- Scope: WebGL renderer for the Library fan only (`FanStack3D` + `FanScene`), behind the same props as the CSS fan. Deps pinned and checked on the registry: `@threlte/core` 8.7.0, `three` 0.187.0, `@types/three` 0.187.0; `pnpm audit --prod` clean.
+- Gate: `canUseWebGL3D(readEnv())` (WebGL, no reduced motion, no Save-Data, more than 4 cores, memory above 4 GB when exposed). One canvas at a time (`active3d`: first visible card). Loads on idle in its own chunk; context loss gives the CSS fan back.
+- Budget (same gzip method, all JS): main 54.8 KB → 56.6 KB (+1.9 KB, budget was +2 KB); 3D chunk 194 KB gzip, fetched only on capable devices. CSS gzip 7.7 KB.
+- Web: `pnpm test` 135 PASS, `pnpm check` 0/0, `pnpm build` PASS, `pnpm test:e2e` 114 PASS + 6 skipped (mouse-only tests run on desktop); 8 WebGL flows x 3 viewports.
+- Bugs found by testing, fixed in this PR: grey papers (material not recompiled when the texture arrived; DOM checks passed, a pixel test now guards it); the scene drew ~30 frames/s while idle (task auto-invalidate), then again after the spring settled (writes kept redrawing). Now idle draws 0 and a settled spring draws 0 (counted on `drawElements`).
+- Screenshots read at 390 and 1440 (software WebGL in headless Chromium).
+- NOT RUN: real iPhone/iPad GPU (frame time while scrolling, battery, memory); CI. Tilt follows the pointer only (no scroll-driven tilt). The Collection paper stack is still CSS.
 
 ## Known gaps carried to slice 2+
 - Rate limit on Render: `CLIENT_IP_HEADER` unset = ONE shared bucket for all users (30/min, burst 10; proven by a 40-request burst: 10x422 + 30x429). `CF-Connecting-IP` looks per-client (forging it gives 403 at the edge; a burst got no 429) but is NOT PROVEN from a single egress IP. Prove from a phone on 4G, then set it.
