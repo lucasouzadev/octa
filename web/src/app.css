@@ -6,6 +6,12 @@
 	box-sizing: border-box;
 }
 
+/* Dark screens paint the whole page, including the iOS status-bar strip. */
+html:has(.on-dark),
+html:has(.on-dark) body {
+	background: var(--color-bg-dark);
+}
+
 html,
 body {
 	margin: 0;

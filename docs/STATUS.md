@@ -6,7 +6,7 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 |---|---|---|
 | 0 | Docs, agent-kit, ADRs, design system | DONE 2026-11-19 |
 | 1 | Paste → resolve → card → player (YouTube long/Shorts, direct .mp4); `/v1/resolve`; URL parser + shared vectors; minimal library list | DONE 2026-11-19 — merged (PR #1, #3); API live on Render, PWA on Vercel; owner confirmed on iPhone |
-| 2 | Library + collections, Threlte fan/stack + CSS fallback, search, View Transitions (plan: `tasks/plan.md`) | 2a collections (2D) DONE (PR #6 merged, owner tested 2026-11-19); 2b search DONE (PR #7 merged, owner approved); 2c View Transitions DONE (PR #8 merged, owner tested); 2d-i CSS-3D fan and stack IN REVIEW — branch `feat/slice-2d-css3d`; 2d-ii Threlte NOT STARTED |
+| 2 | Library + collections, Threlte fan/stack + CSS fallback, search, View Transitions (plan: `tasks/plan.md`) | 2a collections (2D) DONE (PR #6 merged, owner tested 2026-11-19); 2b search DONE (PR #7 merged, owner approved); 2c View Transitions DONE (PR #8 merged, owner tested); 2d-i CSS-3D fan and stack DONE (PR #9 merged, owner approved on iPhone); iOS findings fix IN REVIEW — branch `fix/ios-findings`; 2d-ii Threlte NOT STARTED |
 | 3 | Instagram, TikTok, HLS; `/v1/health`; health states; Dead link screen; resume | — |
 | 4 | PWA install, share target, export/import, offline shell, E2E 3 viewports, deploy (owner picks host) | — |
 
@@ -40,6 +40,14 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 - Screenshots read at 390 (Library fan, Collection stack): composition matches DESIGN §6. Not read at 834 and 1440.
 - Reduced motion: pose kept, no transition, no hover fan-out. No pointer/drag tilt exists yet (the plan's spring tilt belongs to the Threlte renderer).
 - NOT RUN: iPhone/iPad/desktop physical checks; frame time while scrolling (T14); CI.
+
+## iOS findings fix — evidence (2026-11-19)
+- From the owner's iPhone screenshots of 2d-i: (1) videos saved while Render was asleep kept the generic "Vídeo do YouTube" title (paste timeout 4 s < cold start ~50 s); (2) white strip above the black Collection screen; (3) sticky "Assistir em sequência" ran into the list rows.
+- Fix: `enrich.ts` (`needsEnrich` = health unknown and never checked; `enrichPending` one video at a time, max 5 per Library open, 60 s timeout, best-effort, keeps favorite/collection because `update()` re-reads in its transaction); `html:has(.on-dark)` paints the page dark; footer gets a fade scrim.
+- Web: `pnpm test` 135 PASS (9 new `enrich.spec.ts`, seen red first), `pnpm check` 0/0, `pnpm build` PASS, `pnpm test:e2e` 97 PASS + 2 skipped (2 new flows x 3).
+- JS gzip: 54.3 KB → see PR (measured after build).
+- NOT RUN: the three fixes on the real iPhone; CI. The scrim only shows with a long list; checked in code, not in a screenshot.
+- Still open: Safari bottom bar over the player thumbnail strip; centered paper stack (cosmetic).
 
 ## Known gaps carried to slice 2+
 - Rate limit on Render: `CLIENT_IP_HEADER` unset = ONE shared bucket for all users (30/min, burst 10; proven by a 40-request burst: 10x422 + 30x429). `CF-Connecting-IP` looks per-client (forging it gives 403 at the edge; a burst got no 429) but is NOT PROVEN from a single egress IP. Prove from a phone on 4G, then set it.
