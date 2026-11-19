@@ -2,8 +2,31 @@ import type { Locator, Page } from '@playwright/test';
 
 // The Go API is mocked here; its own tests cover it. Everything off localhost is
 // blocked so runs are deterministic and never hit YouTube.
-export async function mockNetwork(page: Page, opts: { apiDown?: boolean } = {}) {
+export interface HealthCall {
+	items: { id: string; url: string }[];
+	fresh: boolean;
+}
+
+// By default every link answers "unknown", which changes nothing, so a test never
+// depends on the date. A test that cares passes `health` to decide the answers.
+export interface NetworkOptions {
+	apiDown?: boolean;
+	health?: (call: HealthCall) => string;
+}
+
+export async function mockNetwork(page: Page, opts: NetworkOptions = {}) {
+	const healthCalls: HealthCall[] = [];
 	await page.route(/^https?:\/\/(?!localhost)/, (route) => route.abort());
+	await page.route('**/api/v1/health', async (route) => {
+		if (opts.apiDown) return route.fulfill({ status: 502, body: '' });
+		const body = route.request().postDataJSON() as { items: HealthCall['items']; fresh?: boolean };
+		const call = { items: body.items, fresh: body.fresh === true };
+		healthCalls.push(call);
+		const health = opts.health?.(call) ?? 'unknown';
+		await route.fulfill({
+			json: { results: call.items.map((i) => ({ id: i.id, health, checkedAt: new Date().toISOString() })) }
+		});
+	});
 	await page.route('**/api/v1/resolve', async (route) => {
 		if (opts.apiDown) return route.fulfill({ status: 502, body: '' });
 		const { url } = route.request().postDataJSON() as { url: string };
@@ -29,6 +52,7 @@ export async function mockNetwork(page: Page, opts: { apiDown?: boolean } = {}) 
 			}
 		});
 	});
+	return { healthCalls };
 }
 
 // Typing docks the field above the keyboard on touch projects, and the bar sits over the
@@ -73,3 +97,38 @@ window.onYouTubeIframeAPIReady && window.onYouTubeIframeAPIReady();`
 		})
 	);
 }
+
+// Raw IndexedDB access, so a test can age a video the way time would.
+export const patchVideo = (page: Page, patch: Record<string, unknown>) =>
+	page.evaluate(
+		(p) =>
+			new Promise<void>((resolve, reject) => {
+				const open = indexedDB.open('octa');
+				open.onerror = () => reject(open.error);
+				open.onsuccess = () => {
+					const db = open.result;
+					const tx = db.transaction('videos', 'readwrite');
+					const store = tx.objectStore('videos');
+					store.getAll().onsuccess = (e) => {
+						for (const v of (e.target as IDBRequest).result) store.put({ ...v, ...p });
+					};
+					tx.oncomplete = () => (db.close(), resolve());
+					tx.onerror = () => reject(tx.error);
+				};
+			}),
+		patch
+	);
+
+export const readVideo = (page: Page) =>
+	page.evaluate(
+		() =>
+			new Promise<Record<string, any>>((resolve, reject) => {
+				const open = indexedDB.open('octa');
+				open.onerror = () => reject(open.error);
+				open.onsuccess = () => {
+					const db = open.result;
+					const req = db.transaction('videos').objectStore('videos').getAll();
+					req.onsuccess = () => (db.close(), resolve(req.result[0]));
+				};
+			})
+	);

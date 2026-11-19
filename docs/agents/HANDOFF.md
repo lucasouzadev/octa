@@ -1,18 +1,19 @@
-# HANDOFF — 2026-11-19 — slices 3a (PR #18) and 3c cinema player in review
+# HANDOFF — 2026-11-19 — slice 3b (health + resume) in review
 
 ## Goal
-Close the main plan: 2e-3 (merged, PR #17) -> 3a sources -> 3b health -> 4 PWA + CI.
+Close the main plan: 2e-3, 3a, 3c merged -> 3b health + resume (this PR) -> 4 PWA + CI -> owner's "correções da 2e-3".
 
 ## State (verified)
-- Branch `feat/slice-3a-sources`, PR open (not merged).
-- API: `go vet`, `go test -race ./...` PASS. Web: check 0/0, 228 unit PASS, build PASS, e2e 318 PASS + 1 flaky (`enrich.e2e.ts` desktop, passes alone).
-- NOT RUN: live Instagram/TikTok behaviour (no route from sandbox), real iPhone, CI, govulncheck.
+- Branch `feat/slice-3b-health` (from main 5540927). 3a (#18/#20) and 3c (#21) are in main.
+- API: `go vet`, `go test -race ./...` PASS. Web: check 0/0, 257 unit PASS, build PASS. E2E: see STATUS "Slice 3b".
+- NOT RUN: live platform health mappings (no route from sandbox), real iPhone, CI, govulncheck.
 
-## Owner decision (2026-11-19 16:27-16:40)
-"Cinema pessoal": approved option "Projetor oficial" (ADR-0004) and to build it now as slice 3c, before 3b. Branch `feat/slice-3c-cinema` (based on 3a; merge PR #18 first). Extraction/proxy refused (platform terms, ADR-0002).
+## Decisions pending (owner)
+- Home "Continuar assistindo" card (a virtual collection like Favoritos/Assistidos, listing videos with a saved position): not built. Resume itself works on every player.
 
 ## Next step (exact)
-Owner tests and merges 3a (#18) then 3c. Then 3b (/v1/health, real dead-link check, Continuar assistindo), then slice 4.
+Owner tests and merges 3b. Then slice 4: PWA install, share target, export/import, offline shell, CI workflow (then watch it with ci-watcher), CSP, E2E on 3 viewports. Then the owner's 2e-3 corrections (details to come).
 
-## Risks / owner decisions
-- Render limiter shared bucket; `/healthz` unset; app icon open; no CSP yet.
+## Risks
+- Render limiter shared bucket until `CF-Connecting-IP` is proven; `/healthz` health-check path unset on Render; app icon open; no CSP yet.
+- Dev-server proxy logs `ECONNREFUSED /v1/health` in e2e files that do not call `mockNetwork` (noise, swallowed by the client).

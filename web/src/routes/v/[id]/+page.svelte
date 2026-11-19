@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 	import { library, type Video } from '#lib/db/index.ts';
 	import { ALL, playlistFor } from '#lib/db/scope.ts';
+	import { checkVideo, recheck } from '#lib/health.ts';
 	import DangerScreen from '#lib/ui/DangerScreen.svelte';
 	import EditVideoSheet from '#lib/ui/EditVideoSheet.svelte';
 	import HeartBurst from '#lib/ui/HeartBurst.svelte';
@@ -43,10 +44,26 @@
 			});
 	});
 
+	// Keyed on the id: progress saves replace the video object and must not re-stamp this.
+	const openedId = $derived(video?.id);
+	$effect(() => {
+		const opened = openedId;
+		if (!opened) return;
+		library().then((lib) => lib.update(opened, { lastOpenedAt: new Date().toISOString() }));
+	});
+
+	// Before playing: a link not checked in the last 24 h is checked once (SPEC §5).
+	// The check never blocks playback; its answer lands on the screen when it arrives.
+	let checkedOnOpen = '';
 	$effect(() => {
 		const current = video;
-		if (!current) return;
-		library().then((lib) => lib.update(current.id, { lastOpenedAt: new Date().toISOString() }));
+		if (!current || checkedOnOpen === current.id) return;
+		checkedOnOpen = current.id;
+		library()
+			.then((lib) => checkVideo(lib, current))
+			.then((updated) => {
+				if (updated !== current) replace(updated);
+			});
 	});
 
 	const sourceLabel = (v: Video) => (v.source === 'direct' ? 'Arquivo' : cardLabel(v));
@@ -66,12 +83,29 @@
 
 	// Everything below keeps the list the player walks in step with what was saved.
 	function replace(updated: Video) {
-		if (all) all[all.findIndex((v) => v.id === updated.id)] = updated;
+		const at = all ? all.findIndex((v) => v.id === updated.id) : -1;
+		if (all && at >= 0) all[at] = updated;
 	}
 
 	async function toggleWatched() {
 		if (!video) return;
 		replace(await (await library()).update(video.id, { watched: !video.watched }));
+	}
+
+	// "Continuar assistindo": where the person stopped, kept on the video (null = finished).
+	// Takes the id the player was opened with: leaving the screen saves too, and by then
+	// `video` already points at the next one.
+	async function saveProgress(videoId: string, sec: number | null, duration: number) {
+		try {
+			const lib = await library();
+			const known = await lib.get(videoId);
+			if (!known) return;
+			const patch: Partial<Video> = { positionSec: sec === null ? undefined : Math.floor(sec) };
+			if (!known.durationSec && duration > 0) patch.durationSec = Math.floor(duration);
+			replace(await lib.update(videoId, patch));
+		} catch {
+			// the video was deleted while it played
+		}
 	}
 
 	async function markWatched() {
@@ -97,10 +131,13 @@
 		}
 	}
 
+	// "Manter e checar de novo": dismiss the screen now, ask the platform again, and let
+	// the answer land on the card. Never deletes; the streak restarts.
 	async function keepDead() {
 		if (!video) return;
-		keptDead = video.id;
-		replace(await (await library()).update(video.id, { deadStreak: 0 }));
+		const current = video;
+		keptDead = current.id;
+		replace(await recheck(await library(), current));
 	}
 
 	// SPEC: dead twice in a row shows the orange screen; one failure only marks the card.
@@ -145,7 +182,8 @@
 	{:else if video}
 		<section class="stage">
 			{#key `${video.id}|${video.canonicalUrl}`}
-				<Cinema {video} onended={markWatched} />
+				{@const playing = video.id}
+				<Cinema {video} onended={markWatched} onprogress={(sec, dur) => saveProgress(playing, sec, dur)} />
 			{/key}
 
 			<div class="info">

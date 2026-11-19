@@ -153,7 +153,7 @@ export function youtubeRemote(host: HTMLElement, id: string, start: number, titl
 
 const TIKTOK_ORIGIN = 'https://www.tiktok.com';
 
-export function tiktokRemote(frame: HTMLIFrameElement, emit: Emit): Remote {
+export function tiktokRemote(frame: HTMLIFrameElement, emit: Emit, start = 0): Remote {
 	let ready = false;
 	let wantPlay = true;
 	const send = (type: Parameters<typeof tiktokCommand>[0], value?: number) =>
@@ -167,6 +167,7 @@ export function tiktokRemote(frame: HTMLIFrameElement, emit: Emit): Remote {
 		if (ev.kind === 'ready') {
 			ready = true;
 			emit({ ready: true });
+			if (start > 0) send('seekTo', start);
 			if (wantPlay) send('play');
 		} else if (ev.kind === 'phase') emit({ phase: ev.phase });
 		else emit({ time: ev.time, duration: ev.duration || undefined });

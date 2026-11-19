@@ -2,6 +2,7 @@
 	import { library, type Collection, type Video } from '#lib/db/index.ts';
 	import { ALL, FAVORITES, WATCHED } from '#lib/db/scope.ts';
 	import { enrichPending } from '#lib/enrich.ts';
+	import { sweepHealth } from '#lib/health.ts';
 	import { searchVideos } from '#lib/search.ts';
 	import { markSource } from '#lib/transition.ts';
 	import BackToTop from '#lib/ui/BackToTop.svelte';
@@ -18,6 +19,8 @@
 			[videos, collections] = await Promise.all([lib.list(), lib.listCollections()]);
 			// Videos saved while the API was asleep get their real title now.
 			if (await enrichPending(lib)) videos = await lib.list();
+			// Links not checked in the last 24 h are checked now (SPEC §5).
+			if (await sweepHealth(lib)) videos = await lib.list();
 		});
 	});
 

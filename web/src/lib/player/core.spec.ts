@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { clock, startOf, tiktokEvent, tiktokCommand, ytPhase } from './core.ts';
+import { clock, resumeAt, shouldSave, startOf, tiktokEvent, tiktokCommand, ytPhase } from './core.ts';
 
 describe('clock', () => {
 	it('prints m:ss and h:mm:ss, 0:00 for nothing', () => {
@@ -49,5 +49,37 @@ describe('tiktok messages (developers.tiktok.com/doc/embed-player, read 2026-11-
 		expect(tiktokEvent('onPlayerReady')).toBeNull();
 		expect(tiktokEvent({ 'x-tiktok-player': true, type: 'onCurrentTime', value: { currentTime: 'x' } })).toBeNull();
 		expect(tiktokEvent(JSON.stringify({ 'x-tiktok-player': true, type: 'onPlayerReady' }))).toEqual({ kind: 'ready' });
+	});
+});
+
+describe('resumeAt', () => {
+	it('starts over when there is nothing worth resuming', () => {
+		expect(resumeAt(undefined, 600)).toBe(0);
+		expect(resumeAt(4, 600)).toBe(0);
+		expect(resumeAt(NaN, 600)).toBe(0);
+		expect(resumeAt(-20, 600)).toBe(0);
+	});
+
+	it('resumes where the person stopped, whole seconds', () => {
+		expect(resumeAt(83.7, 600)).toBe(83);
+		expect(resumeAt(83.7)).toBe(83); // duration unknown yet
+	});
+
+	it('starts over when the person had practically finished it', () => {
+		expect(resumeAt(595, 600)).toBe(0);
+		expect(resumeAt(589, 600)).toBe(589);
+	});
+});
+
+describe('shouldSave', () => {
+	it('saves every 5 s of progress, also when the person seeks back', () => {
+		expect(shouldSave(0, 4.9)).toBe(false);
+		expect(shouldSave(0, 5)).toBe(true);
+		expect(shouldSave(60, 20)).toBe(true);
+		expect(shouldSave(10, 10)).toBe(false);
+	});
+
+	it('never saves a non-finite time', () => {
+		expect(shouldSave(0, NaN)).toBe(false);
 	});
 });

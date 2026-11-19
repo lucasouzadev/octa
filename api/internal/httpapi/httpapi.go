@@ -21,10 +21,17 @@ import (
 	"github.com/lucasouzadev/octa/api/internal/resolve"
 )
 
-const maxBodyBytes = 8 << 10 // 8 KB is plenty for one URL
+const (
+	maxBodyBytes       = 8 << 10   // 8 KB is plenty for one URL
+	maxHealthBodyBytes = 160 << 10 // 50 items x (2048-byte URL + id)
+	maxHealthItems     = 50
+	maxHealthParallel  = 16 // outbound checks at once (ARCHITECTURE §6)
+	maxURLLen          = 2048
+)
 
 type Resolver interface {
 	Resolve(ctx context.Context, raw string) (resolve.Meta, error)
+	Check(ctx context.Context, raw string, fresh bool) (resolve.Meta, error)
 }
 
 type Config struct {
@@ -73,6 +80,7 @@ func New(cfg Config) *Server {
 		w.Write([]byte("ok\n"))
 	})
 	mux.HandleFunc("POST /v1/resolve", s.limit(s.resolve))
+	mux.HandleFunc("POST /v1/health", s.limit(s.health))
 	mux.HandleFunc("OPTIONS /v1/", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNoContent)
 	})
@@ -105,6 +113,65 @@ func (s *Server) resolve(w http.ResponseWriter, r *http.Request) {
 	default:
 		writeJSON(w, http.StatusOK, m)
 	}
+}
+
+type healthItem struct {
+	ID  string `json:"id"`
+	URL string `json:"url"`
+}
+
+type healthResult struct {
+	ID        string    `json:"id"`
+	Health    string    `json:"health"`
+	CheckedAt time.Time `json:"checkedAt"`
+}
+
+// health checks up to 50 links at once, at most 16 upstream requests in
+// flight. A link that cannot be parsed or reached is "unknown", never an error
+// for the batch. Results carry the caller's id only, never the URL.
+func (s *Server) health(w http.ResponseWriter, r *http.Request) {
+	r.Body = http.MaxBytesReader(w, r.Body, maxHealthBodyBytes)
+	var in struct {
+		Items []healthItem `json:"items"`
+		Fresh bool         `json:"fresh"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&in); err != nil {
+		var tooBig *http.MaxBytesError
+		if errors.As(err, &tooBig) {
+			writeError(w, http.StatusRequestEntityTooLarge, "too_large")
+			return
+		}
+		writeError(w, http.StatusBadRequest, "bad_request")
+		return
+	}
+	if len(in.Items) == 0 {
+		writeError(w, http.StatusBadRequest, "bad_request")
+		return
+	}
+	if len(in.Items) > maxHealthItems {
+		writeError(w, http.StatusRequestEntityTooLarge, "too_large")
+		return
+	}
+	out := make([]healthResult, len(in.Items))
+	sem := make(chan struct{}, maxHealthParallel)
+	var wg sync.WaitGroup
+	for i, it := range in.Items {
+		out[i] = healthResult{ID: it.ID, Health: resolve.HealthUnknown, CheckedAt: time.Now().UTC()}
+		if len(it.URL) > maxURLLen {
+			continue
+		}
+		wg.Add(1)
+		sem <- struct{}{}
+		go func() {
+			defer wg.Done()
+			defer func() { <-sem }()
+			if m, err := s.cfg.Resolver.Check(r.Context(), it.URL, in.Fresh); err == nil {
+				out[i].Health, out[i].CheckedAt = m.Health, m.CheckedAt
+			}
+		}()
+	}
+	wg.Wait()
+	writeJSON(w, http.StatusOK, map[string]any{"results": out})
 }
 
 func (s *Server) cors(next http.Handler) http.Handler {

@@ -5,15 +5,28 @@
 	// player v1 params). Our one control bar sits BELOW the picture, never over it
 	// (YouTube RMF: no overlays on the embedded player). Instagram has no control API,
 	// so it keeps its own player and gets no bar. MP4/HLS are fully ours.
-	import { onDestroy } from 'svelte';
+	import { onDestroy, untrack } from 'svelte';
 	import type { Video } from '#lib/db/index.ts';
 	import { cardLabel } from '#lib/fan.ts';
 	import { attachHls } from '#lib/hls.ts';
-	import { clock, startOf, type Phase } from '#lib/player/core.ts';
+	import { clock, resumeAt, shouldSave, startOf, type Phase } from '#lib/player/core.ts';
 	import { nativeRemote, tiktokRemote, youtubeRemote, type MediaState, type Remote } from '#lib/player/adapters.ts';
 	import Icon from '#lib/ui/Icon.svelte';
 
-	let { video, onended }: { video: Video; onended?: () => void } = $props();
+	let {
+		video,
+		onended,
+		onprogress
+	}: {
+		video: Video;
+		onended?: () => void;
+		/** Where the person is, saved at most every 5 s and when they stop; null = finished. */
+		onprogress?: (sec: number | null, duration: number) => void;
+	} = $props();
+
+	// Where this video was left (slice 3b "Continuar assistindo"); read once when it opens.
+	const resume = untrack(() => resumeAt(video.positionSec, video.durationSec));
+	let lastSaved = resume;
 
 	const vertical = $derived(video.embed.aspect === '9:16');
 	const native = $derived(video.embed.type === 'video' || video.embed.type === 'hls');
@@ -23,7 +36,7 @@
 
 	let started = $state(false); // iframes load on the first tap
 	let phase = $state<Phase>('idle');
-	let time = $state(0);
+	let time = $state(untrack(() => resume));
 	let duration = $state(0);
 	let failed = $state(false);
 	let remote: Remote | null = null;
@@ -32,11 +45,23 @@
 	function emit(s: MediaState) {
 		if (s.phase) {
 			phase = s.phase;
-			if (s.phase === 'ended') onended?.();
+			if (s.phase === 'ended') {
+				onended?.();
+				onprogress?.(null, duration);
+			} else if (s.phase === 'paused') save();
 		}
-		if (s.time !== undefined && Number.isFinite(s.time)) time = s.time;
+		if (s.time !== undefined && Number.isFinite(s.time)) {
+			time = s.time;
+			if (phase === 'playing' && shouldSave(lastSaved, s.time)) save();
+		}
 		if (s.duration !== undefined && Number.isFinite(s.duration) && s.duration > 0) duration = s.duration;
 		if (s.failed) failed = true;
+	}
+
+	function save() {
+		if (!Number.isFinite(time) || time <= 0 || phase === 'ended') return;
+		lastSaved = time;
+		onprogress?.(time, duration);
 	}
 
 	// Actions bind a remote to the element each source renders.
@@ -44,6 +69,7 @@
 		const stopHls = video.embed.type === 'hls' ? attachHls(el, video.embed.src) : () => {};
 		if (video.embed.type !== 'hls') el.src = video.embed.src;
 		remote = nativeRemote(el, emit);
+		if (resume > 0) el.addEventListener('loadedmetadata', () => (el.currentTime = resume), { once: true });
 		return {
 			destroy() {
 				remote?.destroy();
@@ -53,12 +79,12 @@
 	}
 
 	function useYouTube(el: HTMLElement) {
-		remote = youtubeRemote(el, video.id.length === 11 ? video.id : idFromEmbed(), startOf(video.embed.src), video.title, emit);
+		remote = youtubeRemote(el, video.id.length === 11 ? video.id : idFromEmbed(), resume || startOf(video.embed.src), video.title, emit);
 		return { destroy: () => remote?.destroy() };
 	}
 
 	function useTikTok(el: HTMLIFrameElement) {
-		remote = tiktokRemote(el, emit);
+		remote = tiktokRemote(el, emit, resume);
 		return { destroy: () => remote?.destroy() };
 	}
 
@@ -91,7 +117,10 @@
 		else v?.webkitEnterFullscreen?.(); // iPhone Safari: only a <video> can go fullscreen
 	}
 
-	onDestroy(() => remote?.destroy());
+	onDestroy(() => {
+		save(); // leaving the screen is a stop too
+		remote?.destroy();
+	});
 
 	const playing = $derived(phase === 'playing' || phase === 'buffering');
 </script>
