@@ -22,6 +22,12 @@ Updated 2026-11-20. Progress only — the product is defined in `docs/product/SP
 - Evidence: `pnpm test` 266 PASS (5 new, 1 replaced; red first), `pnpm check` 0 errors, `pnpm test:e2e` 398 PASS / 19 skipped / 0 failed (417 tests).
 - NOT proven: a real `vt.`/`vm.` link expanding from the Render API (a fake short link answered 422); iPhone; `VITE_API_BASE` for Vercel previews is still unset (owner decision).
 
+## Fix — TikTok title and cover (2026-11-20, branch `feat/tiktok-handle-title`)
+- Owner's iPhone screenshots: a TikTok saved fine but showed a grey cover and the title "Vídeo do TikTok". Cause (checked 2026-11-20 against the live endpoint and the live API): TikTok's public oEmbed answers 200 with no `title`, `author_name` or `thumbnail_url`; the video page has no `og:` tags.
+- Changed (web only, no API deploy; owner chose the no-scraping option): title `Vídeo de @handle` and author `@handle` from the canonical URL; the API's generic title never overwrites it (a real API title still wins); cards and fans draw the handle instead of a grey cover when there is no thumbnail; saved TikToks that still have the generic title are upgraded on app open (edited titles untouched).
+- Evidence: `pnpm test` 274 PASS (8 new, red first) · `pnpm check` 0 errors · `pnpm test:e2e` 400 PASS / 19 skipped / 1 FAIL: `qa2.e2e.ts:299` "Assistidos: mark in Mais" is flaky (passes alone; 2 of 36 reruns also fail on main without this change: the test navigates before the IndexedDB write commits). Covers inspected in phone screenshots.
+- NOT proven: iPhone; a TikTok video recent enough to carry oEmbed metadata (none seen); real thumbnails are not possible without scraping.
+
 ## Slice 1 — evidence (2026-11-19)
 - API: `go test -race ./...` PASS (provider vectors, SSRF guard incl. redirect to 169.254.169.254, resolver, handlers), `go vet` PASS, `govulncheck` no vulns.
 - Web: `pnpm test` 74 PASS, `pnpm check` 0 errors, `pnpm build` PASS (~40 KB gzip JS), `pnpm test:e2e` 24 PASS (8 flows × 3 viewports).

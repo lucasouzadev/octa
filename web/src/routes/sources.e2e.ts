@@ -52,6 +52,26 @@ test('TikTok video: player v1 without its chrome, 9:16, API title wins', async (
 	await expect(page.getByText('TikTok').first()).toBeVisible();
 });
 
+test('TikTok without title or cover from the API: titled by @handle, drawn cover instead of grey', async ({ page }) => {
+	await net(page, () => ({
+		source: 'tiktok',
+		kind: 'short',
+		id: '7234567890123456789',
+		canonicalUrl: 'https://www.tiktok.com/@user.name/video/7234567890123456789',
+		embed: { type: 'iframe', src: 'x', aspect: '9:16' },
+		title: 'Vídeo do TikTok',
+		durationSec: null,
+		health: 'alive',
+		checkedAt: '2026-11-19T12:00:00Z'
+	}));
+	await paste(page, 'https://www.tiktok.com/@user.name/video/7234567890123456789');
+	await expect(page).toHaveURL(/\/v\//);
+	await expect(page.getByText('Vídeo de @user.name').first()).toBeVisible();
+	await expect(page.getByText('Vídeo do TikTok')).toHaveCount(0);
+	await page.goto('/c/todos');
+	await expect(page.locator('.thumb .cover', { hasText: '@user.name' }).first()).toBeVisible();
+});
+
 test('TikTok short link is expanded by the API; with the API down it says it could not check now', async ({ page }) => {
 	await net(page, (url) =>
 		url.includes('vm.tiktok.com')
