@@ -13,6 +13,15 @@ const RESOLVE_TIMEOUT_MS = 4000;
 // the person is waiting on it: allow for a free-tier API that is waking up from sleep.
 export const EXPAND_TIMEOUT_MS = 20_000;
 
+// TikTok's public oEmbed sends no title, author or cover (checked 2026-11-20): the API answers
+// with this generic title, and the client builds a better one from the @handle in the URL.
+export const GENERIC_TIKTOK_TITLE = 'Vídeo do TikTok';
+const TT_HANDLE_RE = /^https:\/\/www\.tiktok\.com\/(@[^/?#]+)\/video\/\d+$/;
+
+export function tiktokHandle(canonicalUrl: string): string | undefined {
+	return TT_HANDLE_RE.exec(canonicalUrl)?.[1];
+}
+
 export interface AddDeps {
 	library: Library;
 	resolve?: (url: string, signal: AbortSignal) => Promise<Meta>;
@@ -64,6 +73,7 @@ export async function addLink(raw: string, deps: AddDeps): Promise<{ video: Vide
 		kind: ref.kind,
 		embed: ref.embed,
 		title: fallbackTitle(ref),
+		author: fallbackAuthor(ref),
 		thumbnail: fallbackThumb(ref),
 		health: 'unknown',
 		deadStreak: 0,
@@ -96,7 +106,8 @@ export async function addLink(raw: string, deps: AddDeps): Promise<{ video: Vide
 export function metaPatch(meta: Meta): Partial<Video> {
 	const patch: Partial<Video> = { health: meta.health, checkedAt: meta.checkedAt };
 	const title = text(meta.title, 300);
-	if (title) patch.title = title;
+	// Never let the API's generic TikTok title replace the handle title.
+	if (title && !(meta.source === 'tiktok' && title === GENERIC_TIKTOK_TITLE)) patch.title = title;
 	const author = text(meta.author, 120);
 	if (author) patch.author = author;
 	if (meta.thumbnail && /^https:\/\//.test(meta.thumbnail)) patch.thumbnail = meta.thumbnail;
@@ -128,11 +139,33 @@ function fallbackTitle(ref: Ref): string {
 			return 'Vídeo do YouTube';
 		case 'instagram':
 			return ref.kind === 'reel' ? 'Reel do Instagram' : 'Vídeo do Instagram';
-		case 'tiktok':
-			return 'Vídeo do TikTok';
+		case 'tiktok': {
+			const handle = tiktokHandle(ref.canonicalUrl);
+			return handle ? `Vídeo de ${handle}` : GENERIC_TIKTOK_TITLE;
+		}
 		default:
 			return 'Vídeo';
 	}
+}
+
+function fallbackAuthor(ref: Ref): string | undefined {
+	return ref.source === 'tiktok' ? tiktokHandle(ref.canonicalUrl) : undefined;
+}
+
+/**
+ * TikToks saved before the handle title existed keep the generic title. Give them the
+ * handle title, but never touch a title the person edited. Returns how many changed.
+ */
+export async function upgradeGenericTitles(library: Library): Promise<number> {
+	let done = 0;
+	for (const video of await library.list()) {
+		if (video.source !== 'tiktok' || video.title !== GENERIC_TIKTOK_TITLE) continue;
+		const handle = tiktokHandle(video.canonicalUrl);
+		if (!handle) continue;
+		await library.update(video.id, { title: `Vídeo de ${handle}`, author: video.author ?? handle });
+		done++;
+	}
+	return done;
 }
 
 function fallbackThumb(ref: Ref): string | undefined {
@@ -191,7 +224,7 @@ export async function editVideo(
 		embed: ref.embed,
 		title: fallbackTitle(ref),
 		thumbnail: fallbackThumb(ref),
-		author: undefined,
+		author: fallbackAuthor(ref),
 		durationSec: undefined,
 		positionSec: undefined,
 		checkedAt: undefined,

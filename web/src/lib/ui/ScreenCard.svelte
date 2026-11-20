@@ -44,7 +44,7 @@
 				loading="lazy"
 				referrerpolicy="no-referrer"
 				onerror={(e) => ((e.currentTarget as HTMLElement).style.display = 'none')}
-			/>{/if}
+			/>{:else if video.author}<span class="cover">{video.author}</span>{/if}
 	</span>
 	{#if heart}<span class="heart" aria-hidden="true"><Icon name="heart" size={22} filled /></span>{/if}
 </a>
@@ -108,6 +108,18 @@
 		background: linear-gradient(#3a3631 62%, #4a453f 62%);
 		display: grid;
 		place-items: center;
+	}
+
+	/* No cover from the platform (TikTok sends none): the author, drawn, instead of bare grey. */
+	.cover {
+		padding: 0 16px;
+		max-width: 100%;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font-family: var(--font-display);
+		font-size: clamp(22px, 7vw, 34px);
+		color: #f1efe9;
 	}
 
 	.thumb img {

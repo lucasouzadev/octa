@@ -47,6 +47,8 @@ export function cardLabel(v: { source: Source; kind: Kind }): string {
 export interface FanItem {
 	id?: string;
 	thumbnail?: string;
+	/** Drawn on the cover when the platform sent no thumbnail. */
+	author?: string;
 	source: Source;
 	kind: Kind;
 	embed: { aspect: string };

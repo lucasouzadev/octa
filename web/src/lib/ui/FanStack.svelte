@@ -77,6 +77,8 @@
 					referrerpolicy="no-referrer"
 					onerror={(e) => ((e.currentTarget as HTMLElement).style.display = 'none')}
 				/>
+			{:else if c.item?.author}
+				<span class="cover">{c.item.author}</span>
 			{/if}
 			{#if c.item}<span class="tag">{cardLabel(c.item)}</span>{/if}
 		</span>
@@ -115,6 +117,19 @@
 	.tile.vertical {
 		width: 22%;
 		aspect-ratio: 9 / 13;
+	}
+
+	.cover {
+		position: absolute;
+		inset: 50% 6px auto;
+		transform: translateY(-50%);
+		text-align: center;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+		font-family: var(--font-display);
+		font-size: 13px;
+		color: #3a3631;
 	}
 
 	.tag {
