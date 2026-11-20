@@ -24,6 +24,53 @@ async function createCollection(page: Page, name: string) {
 
 const box = async (loc: ReturnType<Page['locator']>) => (await loc.boundingBox())!;
 
+// Raw IndexedDB write: more videos than the two the mocked API can resolve, or marks the app
+// only reaches over time. The clones need their own link (the store keeps one video per link).
+async function cloneVideos(page: Page, count: number, patch: Record<string, unknown> = {}) {
+	await page.evaluate(
+		({ count, patch }) =>
+			new Promise<void>((resolve, reject) => {
+				const open = indexedDB.open('octa');
+				open.onerror = () => reject(open.error);
+				open.onsuccess = () => {
+					const db = open.result;
+					const tx = db.transaction('videos', 'readwrite');
+					const store = tx.objectStore('videos');
+					store.getAll().onsuccess = (e) => {
+						const [base] = (e.target as IDBRequest).result;
+						for (let i = 0; i < count; i++) {
+							store.put({ ...base, ...patch, id: `qa3-${String(i).padStart(8, '0')}`, canonicalUrl: `${base.canonicalUrl}&qa3=${i}` });
+						}
+					};
+					tx.oncomplete = () => (db.close(), resolve());
+					tx.onerror = () => reject(tx.error);
+				};
+			}),
+		{ count, patch }
+	);
+}
+
+async function markAll(page: Page, patch: Record<string, unknown>) {
+	await page.evaluate(
+		(p) =>
+			new Promise<void>((resolve, reject) => {
+				const open = indexedDB.open('octa');
+				open.onerror = () => reject(open.error);
+				open.onsuccess = () => {
+					const db = open.result;
+					const tx = db.transaction('videos', 'readwrite');
+					const store = tx.objectStore('videos');
+					store.getAll().onsuccess = (e) => {
+						for (const v of (e.target as IDBRequest).result) store.put({ ...v, ...p });
+					};
+					tx.oncomplete = () => (db.close(), resolve());
+					tx.onerror = () => reject(tx.error);
+				};
+			}),
+		patch
+	);
+}
+
 test.describe('R3.2 Editar: the options sit below the card', () => {
 	test('each card keeps the full width and its three buttons are under it', async ({ page }) => {
 		await seedTwo(page);
@@ -226,5 +273,83 @@ test.describe('R3.4 Apagar: the cover is clear and big', () => {
 		expect((await box(thumb)).width).toBeGreaterThanOrEqual(Math.min(vw * 0.8, 400));
 		// It is in front of the orange, behind only the words.
 		await expect(page.locator('.danger')).toHaveCSS('background-color', 'rgb(255, 106, 43)');
+	});
+});
+
+test.describe('R3.1 the pile ends where it ends', () => {
+	test('no pulling past the end and no extra room under the sticky button', async ({ page }) => {
+		await seed(page);
+		await cloneVideos(page, 6);
+		await page.goto('/c/todos');
+		await expect(page.locator('.videos li')).toHaveCount(7);
+		await expect(page.locator('html')).toHaveCSS('overscroll-behavior-y', 'none');
+		await page.evaluate(() => window.scrollTo(0, 1e6));
+		const gap = await page.evaluate(() => {
+			const footer = document.querySelector('footer')!.getBoundingClientRect();
+			return document.documentElement.scrollHeight - (footer.bottom + window.scrollY);
+		});
+		// The button's own room (shadow) and the safe area, nothing more.
+		expect(gap).toBeLessThanOrEqual(28);
+	});
+
+	test('the back-to-top arrow stays in front of the screens it passes over', async ({ page }) => {
+		await seed(page);
+		await cloneVideos(page, 12);
+		await page.goto('/c/todos');
+		// Scroll to the very end: the arrow shows after 1.2 screens, whatever the list length.
+		await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+		const arrow = page.getByRole('button', { name: 'Voltar ao topo' });
+		await expect(arrow).toBeVisible();
+		const frontmost = await arrow.evaluate((el) => {
+			const r = el.getBoundingClientRect();
+			return document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2)?.closest('button') === el;
+		});
+		expect(frontmost).toBe(true);
+		// Its own 3D layer, so a tilted screen cannot be painted over it.
+		const own = await arrow.evaluate((el) => ({ translate: getComputedStyle(el).translate, will: getComputedStyle(el).willChange }));
+		expect(own.translate).toContain('1px');
+		expect(own.will).toContain('transform');
+	});
+});
+
+test.describe('R3.3 Favoritos is a matte green screen; the hearts are black and white', () => {
+	const GREEN = 'rgb(47, 107, 79)';
+
+	test('the screen, the page and the browser bar are the green', async ({ page }) => {
+		await seedTwo(page);
+		await markAll(page, { favorite: true });
+		await page.goto('/c/favoritos');
+		await expect(page.locator('main.collection')).toHaveCSS('background-color', GREEN);
+		await expect(page.locator('html')).toHaveCSS('background-color', GREEN);
+		await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#2F6B4F');
+		await expect.poll(() => page.locator('.safe-top').evaluate((el) => getComputedStyle(el).getPropertyValue('--safe-bg').trim())).toBe('#2F6B4F');
+	});
+
+	test('the badge is a black disc with a white heart', async ({ page }) => {
+		await seedTwo(page);
+		await markAll(page, { favorite: true });
+		await page.goto('/c/favoritos');
+		const heart = page.locator('.heart').first();
+		await expect(heart).toHaveCSS('background-color', 'rgb(10, 10, 10)');
+		await expect(heart).toHaveCSS('color', 'rgb(255, 255, 255)');
+	});
+
+	test('Todos and Assistidos stay black; only Favoritos has color', async ({ page }) => {
+		await seedTwo(page);
+		await markAll(page, { favorite: true, watched: true });
+		for (const scope of ['todos', 'assistidos']) {
+			await page.goto(`/c/${scope}`);
+			await expect(page.locator('main.collection')).toHaveCSS('background-color', 'rgb(0, 0, 0)');
+			await expect(page.locator('.heart')).toHaveCount(0);
+		}
+	});
+
+	test('the buttons on the green stay readable', async ({ page }) => {
+		await seedTwo(page);
+		await markAll(page, { favorite: true });
+		await page.goto('/c/favoritos');
+		await expect(page.getByRole('link', { name: 'Voltar' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Editar', exact: true })).toHaveCSS('color', 'rgb(255, 255, 255)');
+		await expect(page.locator('.count')).toHaveCSS('color', 'rgb(220, 231, 225)');
 	});
 });

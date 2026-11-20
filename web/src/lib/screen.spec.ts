@@ -18,6 +18,14 @@ describe('themeColorFor', () => {
 		expect(themeColorFor('/v/[id]')).toBe('#000000');
 	});
 
+	it('is the matte green on the Favoritos collection only', () => {
+		expect(themeColorFor('/c/[id]', 'favoritos')).toBe('#2F6B4F');
+		expect(themeColorFor('/c/[id]', 'todos')).toBe('#000000');
+		expect(themeColorFor('/c/[id]', 'assistidos')).toBe('#000000');
+		expect(themeColorFor('/c/[id]', 'uma-colecao')).toBe('#000000');
+		expect(themeColorFor('/', 'favoritos')).toBe('#FFFFFF');
+	});
+
 	it('falls back to black for unknown or missing routes', () => {
 		expect(themeColorFor(null)).toBe('#000000');
 		expect(themeColorFor('/qualquer')).toBe('#000000');

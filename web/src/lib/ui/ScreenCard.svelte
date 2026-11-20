@@ -167,8 +167,9 @@
 		width: 40px;
 		height: 40px;
 		border-radius: 50%;
-		background: var(--color-action-alert);
-		color: var(--color-text-light);
+		/* Plain black and white: the color belongs to the screen, not to the badge. */
+		background: var(--color-text-light);
+		color: var(--color-text-dark);
 		box-shadow: 0 6px 14px rgb(0 0 0 / 0.45);
 		transform: translateZ(36px) rotate(12deg);
 		pointer-events: none;

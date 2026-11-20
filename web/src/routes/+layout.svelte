@@ -13,7 +13,7 @@
 	let { children }: LayoutProps = $props();
 
 	// The color this screen paints, for the browser chrome and for the strip under the status bar.
-	const screenColor = $derived(theme.override ?? themeColorFor(page.route.id));
+	const screenColor = $derived(theme.override ?? themeColorFor(page.route.id, page.params.id));
 
 	// Cross-fade the screen colors and morph the card thumbnail into the player
 	// frame. No-op without View Transitions; reduced motion gets a short fade.

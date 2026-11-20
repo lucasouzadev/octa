@@ -196,7 +196,7 @@ export function paintShadow(canvas: HTMLCanvasElement, w: number, h: number, rad
 }
 
 /** The Favoritos heart badge: orange disc with a white heart. */
-export function paintHeart(canvas: HTMLCanvasElement, size: number, color: string, scale: number) {
+export function paintHeart(canvas: HTMLCanvasElement, size: number, color: string, scale: number, glyph = '#ffffff') {
 	const g = canvas.getContext('2d')!;
 	g.setTransform(scale, 0, 0, scale, 0, 0);
 	g.clearRect(0, 0, size, size);
@@ -207,7 +207,7 @@ export function paintHeart(canvas: HTMLCanvasElement, size: number, color: strin
 	g.save();
 	g.translate(size / 2 - 11, size / 2 - 10.5);
 	g.scale(22 / 24, 22 / 24);
-	g.fillStyle = '#0a0a0a';
+	g.fillStyle = glyph;
 	g.fill(new Path2D('M12 21s-7-4.6-9.3-9.2C1.4 8.5 3.4 5 6.8 5c1.9 0 3.4 1 5.2 3 1.8-2 3.3-3 5.2-3 3.4 0 5.4 3.5 4.1 6.8C19 16.4 12 21 12 21z'));
 	g.restore();
 }

@@ -162,7 +162,7 @@
 
 </script>
 
-<main class="collection on-dark">
+<main class="collection" class:on-dark={scope !== FAVORITES} class:on-favorite={scope === FAVORITES}>
 	<header>
 		<a class="icon-button" href="/" aria-label="Voltar"><Icon name="back" /></a>
 		{#if videos && !missing}
@@ -306,10 +306,21 @@
 		min-height: 100svh;
 		background: var(--color-bg-dark);
 		color: var(--color-text-dark);
+		/* The sticky button carries its own room below; nothing extra at the end of the pile. */
 		padding: calc(var(--space-6) + env(safe-area-inset-top)) var(--screen-pad)
-			calc(var(--space-9) + env(safe-area-inset-bottom));
+			calc(var(--space-5) + env(safe-area-inset-bottom));
 		display: flex;
 		flex-direction: column;
+	}
+
+	/* Favoritos is an action screen: one matte green, edge to edge. */
+	.collection.on-favorite {
+		background: var(--color-action-favorite);
+	}
+
+	/* The pile ends where it ends: no pulling the page past its last screen. */
+	:global(html:has(.collection)) {
+		overscroll-behavior-y: none;
 	}
 
 	header,

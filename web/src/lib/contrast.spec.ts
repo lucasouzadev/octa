@@ -43,3 +43,19 @@ describe('surfaces are visible without raising the screen brightness', () => {
 		expect(ratio(hex('muted-on-light'), hex('surface-light'))).toBeGreaterThanOrEqual(4.5);
 	});
 });
+
+// QA round 3: Favoritos is an action screen in a matte green (not the loud success green).
+describe('the Favoritos screen reads on its green', () => {
+	it('white text and muted text are AA on the green', () => {
+		expect(ratio(hex('text-dark'), hex('action-favorite'))).toBeGreaterThanOrEqual(4.5);
+		expect(ratio(hex('muted-on-favorite'), hex('action-favorite'))).toBeGreaterThanOrEqual(4.5);
+	});
+
+	it('the green is matte: darker than the success green', () => {
+		expect(luminance(hex('action-favorite'))).toBeLessThan(luminance(hex('action-success')));
+	});
+
+	it('the black heart badge stands out from the cream card it sits on', () => {
+		expect(ratio(hex('text-light'), hex('paper-base'))).toBeGreaterThanOrEqual(4.5);
+	});
+});
