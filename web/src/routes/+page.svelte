@@ -2,6 +2,7 @@
 	import { library, type Collection, type Video } from '#lib/db/index.ts';
 	import { ALL, FAVORITES, WATCHED } from '#lib/db/scope.ts';
 	import { enrichPending } from '#lib/enrich.ts';
+	import { upgradeGenericTitles } from '#lib/links.ts';
 	import { sweepHealth } from '#lib/health.ts';
 	import { searchVideos } from '#lib/search.ts';
 	import { markSource } from '#lib/transition.ts';
@@ -17,6 +18,8 @@
 	$effect(() => {
 		library().then(async (lib) => {
 			[videos, collections] = await Promise.all([lib.list(), lib.listCollections()]);
+			// TikToks saved with the generic title get their @handle title (edited titles stay).
+			if (await upgradeGenericTitles(lib)) videos = await lib.list();
 			// Videos saved while the API was asleep get their real title now.
 			if (await enrichPending(lib)) videos = await lib.list();
 			// Links not checked in the last 24 h are checked now (SPEC §5).

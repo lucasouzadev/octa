@@ -1,26 +1,27 @@
-# HANDOFF — 2026-11-20 — TikTok short link feedback (PR open)
+# HANDOFF — 2026-11-20 — TikTok title and cover (PR open)
 
 ## Goal
-Owner's iPhone screenshot: `vt.tiktok.com` link refused as "not supported". Approved 2026-11-20 by owner: diagnose read-only, then fix #2 (stale paste copy) + #3 (misleading error, longer timeout); read Vercel; redeploy `octa-api` from main.
+Owner's iPhone screenshots: a TikTok saved but showed a grey cover and the title "Vídeo do TikTok". Owner chose (2026-11-20): build the title from the @handle plus a drawn cover, no scraping, and upgrade already-saved generic titles (edited titles untouched).
 
 ## State (verified)
-- Implementation: done — branch `fix/tiktok-short-link-feedback`, SHA a7521fe (from main f456552). Merge: PR open, owner merges. #24 (3e) already merged.
-- Production API: `octa-api` redeployed from f456552, live 2026-11-20 05:01 UTC; canonical TikTok URL answers 200. Web production deploy is f456552. The new web fix is not deployed until merge.
-- QA automated: `pnpm test` 266 PASS · `pnpm check` 0 errors · `pnpm test:e2e` 398 PASS / 19 skipped / 0 failed. No CI workflow exists yet (slice 4).
-- NOT proven: a real `vt.`/`vm.` link expanding from Render (fake one answered 422); iPhone; YouTube/TikTok live.
+- Earlier: PR #25 (short link "could not check now", copy) merged as d81eb7a; `octa-api` redeployed from f456552 (live 2026-11-20 05:01 UTC).
+- Implementation: done on branch `feat/tiktok-handle-title` (from main d81eb7a), web only. Merge: PR open, owner merges. Deploy: Vercel builds main after merge.
+- Cause: TikTok's public oEmbed answers 200 without title, author or thumbnail (live endpoint and live API, 2026-11-20); the page has no og tags. Real covers/titles need scraping the page's internal JSON: not done.
+- QA automated: `pnpm test` 274 PASS, `pnpm check` 0 errors, e2e 400 PASS / 19 skipped / 1 FAIL (`qa2.e2e.ts:299` Assistidos, flaky: 2 of 36 reruns fail on main too; passes alone). No CI workflow yet.
+- NOT proven: iPhone; a recent TikTok with oEmbed metadata; a real `vt.` link expanding from Render.
 
 ## Decisions (and why)
-- Failed expansion is `resolver_unavailable`, not `unsupported_url`: only an API 422 means the link is unsupported.
-- Expansion timeout 20 s: Render free API wakes slowly.
+- Handle title from the canonical URL, API generic title never overwrites it, a real API title wins.
+- Drawn cover = the author text on the card/fan tile when there is no thumbnail (any source).
 
 ## Files touched
-- `web/src/lib/links.ts`, `providers/parse.ts`, `ui/EditVideoSheet.svelte`, `routes/add/+page.svelte` — error code, timeout, copy
-- `links.spec.ts`, `paste-to-player.e2e.ts`, `sources.e2e.ts` — tests (red first); docs: `STATUS.md`, `PROVIDERS.md`
+- `web/src/lib/links.ts` (tiktokHandle, upgradeGenericTitles, metaPatch guard), `fan.ts`, `ui/ScreenCard.svelte`, `ui/FanStack.svelte`, `routes/+page.svelte`
+- tests: `lib/tiktok-meta.spec.ts`, `routes/sources.e2e.ts`; docs: `STATUS.md`, `PROVIDERS.md`
 
 ## Next step (exact)
-Owner: merge the PR, then test on the production URL with the real `vt.` link on iPhone. If it still fails, read Render logs (`/v1/resolve`) and report the status.
+Owner merges the PR, opens the production URL on iPhone (home runs the upgrade), checks title and cover. Then slice 4 (PWA install, share target, export/import, offline shell, CI workflow, CSP, E2E 3 viewports) and the owner's "correções da 2e-3".
 
 ## Risks / owner decisions needed
-- `VITE_API_BASE` is set only for Vercel `production`: preview/branch builds call a relative `/api` and cannot reach the API. Decide: add it for Preview too (not done).
-- Render free sleeps; first request after idle can be slow. TikTok may refuse the API's user-agent (unconfirmed).
-- Then slice 4 (PWA install, share target, export/import, offline shell, CI workflow, CSP, E2E 3 viewports) and the owner's "correções da 2e-3" (details to come).
+- `VITE_API_BASE` is set only for Vercel `production`; preview builds cannot reach the API (not changed).
+- Flaky `qa2.e2e.ts:299` (XS fix, separate PR if wanted): wait for the UI to confirm the mark before `page.goto('/')`.
+- Floating "Assistir em sequência" button covers part of the second card's title while scrolling (low, seen in screenshot, not touched).
