@@ -5,7 +5,8 @@ export default defineConfig({
 	webServer: { command: 'pnpm build && pnpm preview --port 4173 --strictPort', port: 4173, reuseExistingServer: false },
 	testMatch: '**/*.e2e.{ts,js}',
 	reporter: [['list'], ['junit', { outputFile: 'test-results/junit.xml' }]],
-	use: { baseURL: 'http://localhost:4173', trace: 'retain-on-failure', screenshot: 'only-on-failure' },
+	// Service workers are blocked so page.route keeps seeing every request; pwa.e2e.ts opts in.
+	use: { baseURL: 'http://localhost:4173', serviceWorkers: 'block', trace: 'retain-on-failure', screenshot: 'only-on-failure' },
 	projects: [
 		{ name: 'phone', use: { ...devices['Desktop Chrome'], viewport: { width: 390, height: 844 }, hasTouch: true } },
 		{ name: 'tablet', use: { ...devices['Desktop Chrome'], viewport: { width: 834, height: 1194 }, hasTouch: true } },

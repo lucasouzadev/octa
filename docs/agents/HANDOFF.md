@@ -1,17 +1,18 @@
-# HANDOFF — 2026-11-20 — Slice 4, PR 1 (export/import)
+# HANDOFF — 2026-11-20 — Slice 4, PR 2 (PWA)
 
 ## Goal
-Owner 2026-11-20: do slice 4 (PWA install, share target, export/import carrying `rank`; skip `VITE_API_BASE`). Approved: 3 PRs (1 data, 2 PWA, 3 CI+CSP); SvelteKit `service-worker.ts` without @vite-pwa; provisional black/white icon; export/import buttons in the Organizar sheet; duplicate = existing wins.
+Owner 2026-11-20: slice 4 in 3 PRs (data, PWA, CI+CSP); SvelteKit service worker without a plugin; provisional icon; no `VITE_API_BASE` work.
 
 ## State (verified)
-- main has #31, #32, #33 (toast, tilt, organize, QA 3).
-- Branch `feat/export-import` (from main): `lib/backup.ts` (+spec), `lib/backup-io.ts`, `Library.exportAll/importBackup`, OrganizeSheet rows, Organizar visible on empty Library, `backup.e2e.ts`. `pnpm test` 320, `pnpm check` 0 errors. Full e2e: see PR.
-- NOT proven: iOS share/Files on a real iPhone.
+- main: #31, #32, #33. **Known bug on main**: `app.css` `.on-dark:not(dialog)` outranks the alert color (qa2:171 fails on main); fixed in PR #34 and repeated as the same hunk in PR 2.
+- PR #34 `feat/export-import` (export/import JSON with rank): open. Branch `feat/pwa` (from main): manifest, provisional icons, `src/service-worker.ts`, `lib/share.ts` (+spec), `/add` prefill from url/text/title, `pwa.e2e.ts`, Playwright blocks service workers by default, Kit 3 config (`serviceWorker.register`, `paths.relative:false`), tsconfig exclude.
+- `pnpm test` 309, `pnpm check` 0 errors, pwa e2e 42 PASS (2 reps × 3 viewports). Full e2e: 563 pass; failures only health:29 (fails on main), qa2:171 (css, fixed here), qa2:299 (flaky).
+- NOT proven: install prompt / Add to Home Screen on real devices, share target on Android, Lighthouse PWA, SW update across two deploys. **iOS Safari has no Web Share Target** (caniuse): on iPhone the entry stays "Colar um link".
 
 ## Next step
-Open the PR for `feat/export-import`; then PR 2 (manifest, `src/service-worker.ts`, `/share` target route, icons, offline shell tests), then PR 3 (GitHub Actions: go test/vet + pnpm check/test/build + Playwright; CSP per ARCHITECTURE §6).
+Open PR for `feat/pwa`; then PR 3: GitHub Actions workflow (go test/vet/govulncheck + pnpm check/test/build + Playwright) and CSP (must allow the YouTube IFrame API script and `frame-src` youtube-nocookie/instagram/tiktok; verify against the running player before enforcing; ship as report-only first if unsure).
 
 ## Risks / owner decisions needed
-- Share target needs HTTPS + an installed PWA; cannot be proven headless.
-- CSP must allow the YouTube IFrame API script (`www.youtube.com/iframe_api`, `s.ytimg.com`) used by the player: verify before enforcing.
-- Pre-existing flaky: `health.e2e.ts:29` (fails on main), `health.e2e.ts:17`, `enrich.e2e.ts` under load.
+- Final app icon (current is provisional).
+- `src/service-worker.ts` is excluded from svelte-check (Kit requires it); it is not type-checked.
+- Precache includes all build chunks (three/hls) — larger first install on cellular.

@@ -10,7 +10,11 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-			adapter: adapter({ fallback: '200.html' })
+			adapter: adapter({ fallback: '200.html' }),
+			// Kit 3 does not register src/service-worker.ts on its own: ask for it.
+			serviceWorker: { register: true },
+			// Absolute asset URLs: the cached shell is served for every path offline (/c/new, /v/...).
+			paths: { relative: false }
 		})
 	],
 	// Dev and preview forward /api to the Go API (`cd api && go run ./cmd/api`).

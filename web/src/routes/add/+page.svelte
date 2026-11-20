@@ -3,12 +3,13 @@
 	import { page } from '$app/state';
 	import { library } from '#lib/db/index.ts';
 	import { addLink } from '#lib/links.ts';
+	import { sharedLink } from '#lib/share.ts';
 	import { LinkError } from '#lib/providers/parse.ts';
 	import Icon from '#lib/ui/Icon.svelte';
 	import TextField from '#lib/ui/TextField.svelte';
 
-	// ?url= lets the share target (slice 4) and bookmarklets prefill the field.
-	let value = $state(page.url.searchParams.get('url') ?? '');
+	// The share target (and bookmarklets) prefill the field with ?url= / ?text= / ?title=.
+	let value = $state(sharedLink(page.url.searchParams));
 	let error = $state('');
 	let busy = $state(false);
 

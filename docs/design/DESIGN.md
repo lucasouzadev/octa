@@ -140,10 +140,12 @@ Gradient washes, glassmorphism on content, colored chrome on B&W screens, more t
 - Reordenar replaces the header with "Reordenar / Concluir" and lists compact rows (name, count, grip handle). Drag the **handle** (pointer events, `touch-action: none` on the handle only, so the page still scrolls elsewhere); near the top/bottom edge the page auto-scrolls. Keyboard: ArrowUp/ArrowDown on the focused handle, announced in a live region. Each move is saved at once and switches the mode to "Minha ordem"; Concluir shows the toast "Ordem salva". Escape also leaves.
 - NOT proven: a real finger drag on iPhone Safari (rubber band, auto-scroll feel); tested with a mouse in Chromium.
 
-## Export / import (slice 4, owner 2026-11-20)
+## Installable PWA (slice 4, owner 2026-11-20)
 
-- Both live in the Organizar sheet ("Exportar biblioteca", "Importar arquivo"); Organizar is also shown on an empty Library so a first import is possible.
-- File: `{ app: "octa", schema: 1, exportedAt, videos, collections }` (`lib/backup.ts`, pure). Export carries everything on the device, including `rank`, favorites, watched and positions. Phones with a file-capable share sheet use it; everywhere else it is a download `octa-YYYY-MM-DD.json`.
-- Import treats the file as hostile: size cap 10 MB, schema newer than ours is refused, each video is rebuilt from its link by our own parser (source, kind, canonical link and **embed never come from the file**), thumbnails must be https, text is length-capped, reserved collection names are dropped, a video stays in one collection. Bad items are dropped and counted ("1 vídeo importado, 1 ignorado").
-- The existing library wins: a link already saved is skipped; a collection with the same id keeps its name and rank and only receives new videos; new collections go after the ranked ones. Importing the same file twice adds nothing ("Nada novo para importar").
-- NOT proven: the iOS share sheet / Files save on a real iPhone (tests force the download path).
+- `static/manifest.webmanifest`: standalone, black theme/background, icons 192/512 + maskable 512 (provisional: a white octagon ring with a dot on black; `static/icons/`, replaceable by the owner's final icon without code changes), apple-touch icon, `share_target` GET to `/add` with `title`, `text`, `url`.
+- `/add` prefills the field with the first http(s) link found in `url`, then `text`, then `title` (`lib/share.ts`); the person still taps "Gerar player" (a share never saves by itself).
+- **Web Share Target is not supported by Safari/iOS** (caniuse: no iOS version through 27.1; WebKit bug 194593). The installed PWA appears in the share sheet on Android Chrome and desktop Chrome/Edge only. On iPhone the way in stays "Colar um link" (one tap reads the clipboard).
+- `src/service-worker.ts` (registered with `serviceWorker: { register: true }`; Kit 3 does not register it by default): precaches the build files, `static` files and the shell (`/`, which the static fallback serves for any path) so the Library opens offline; same-origin GET only, never `/api`, never a Range request, never another origin, so no video, thumbnail or embed is stored. Navigations offline get the cached shell; the library data is IndexedDB. A new build installs its own cache and removes old ones when it activates (no `skipWaiting`: it takes over when the app is reopened).
+- `paths.relative: false`: the shell is served for `/c/new`, `/v/...`, so asset URLs must be absolute.
+- Playwright blocks service workers by default (`page.route` must see every request); `routes/pwa.e2e.ts` opts in.
+- NOT proven: the install prompt and "Add to Home Screen" flow on real devices, the share target on Android, Lighthouse PWA audit, update behavior across two real deploys.
