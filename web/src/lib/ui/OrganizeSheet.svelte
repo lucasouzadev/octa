@@ -12,6 +12,8 @@
 		canOrder,
 		onmode,
 		onreorder,
+		onexport,
+		onimport,
 		onclose
 	}: {
 		open: boolean;
@@ -20,8 +22,18 @@
 		canOrder: boolean;
 		onmode: (mode: SortMode) => void;
 		onreorder: () => void;
+		onexport: () => void;
+		onimport: (file: File) => void;
 		onclose: () => void;
 	} = $props();
+
+	let picker = $state<HTMLInputElement>();
+
+	function picked(e: Event & { currentTarget: HTMLInputElement }) {
+		const file = e.currentTarget.files?.[0];
+		e.currentTarget.value = ''; // the same file can be chosen again
+		if (file) onimport(file);
+	}
 
 	async function toggleTilt() {
 		if (tilt.enabled) disableTilt();
@@ -40,6 +52,9 @@
 		</div>
 		<button class="option solid" type="button" onclick={onreorder}>Reordenar coleções</button>
 	{/if}
+	<button class="option" type="button" onclick={onexport}>Exportar biblioteca</button>
+	<button class="option" type="button" onclick={() => picker?.click()}>Importar arquivo</button>
+	<input bind:this={picker} class="file" type="file" accept="application/json,.json" aria-label="Arquivo da biblioteca" onchange={picked} />
 	{#if tilt.supported}
 		<button
 			class="option"
@@ -53,9 +68,6 @@
 			<span>Mover com o celular</span>
 			<span class="state" aria-hidden="true">{tilt.enabled ? 'Ligado' : 'Desligado'}</span>
 		</button>
-	{/if}
-	{#if !canOrder && !tilt.supported}
-		<p class="empty">Crie duas coleções para poder ordená-las.</p>
 	{/if}
 </Sheet>
 
@@ -97,8 +109,7 @@
 		color: var(--color-muted-on-dark);
 	}
 
-	.empty {
-		color: var(--color-muted-on-dark);
-		padding: 0 var(--space-2);
+	.file {
+		display: none;
 	}
 </style>
