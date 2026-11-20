@@ -1,6 +1,7 @@
 // The user's library lives on the device (ADR-0001). Schema: ARCHITECTURE §5.
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import type { Embed, Kind, Source } from '#lib/providers/parse.ts';
+import { buildBackup, planImport, type Backup, type ImportSummary } from '#lib/backup.ts';
 import { newId } from '#lib/id.ts';
 
 export type Health = 'alive' | 'dead' | 'restricted' | 'unknown';
@@ -243,6 +244,25 @@ export class Library {
 		if (!same) throw new CollectionError('bad_order');
 		await Promise.all(ids.map((id, rank) => tx.store.put({ ...all.find((c) => c.id === id)!, rank })));
 		await tx.done;
+	}
+
+	/** Everything on the device, ready to be written to a file. */
+	async exportAll(): Promise<Backup> {
+		const tx = this.db.transaction(['videos', 'collections']);
+		const [videos, collections] = await Promise.all([tx.objectStore('videos').getAll(), tx.objectStore('collections').getAll()]);
+		await tx.done;
+		return buildBackup(videos, collections, new Date().toISOString());
+	}
+
+	/** Adds what is new from `backup` in one transaction; what is already here is never changed. */
+	async importBackup(backup: Backup): Promise<ImportSummary> {
+		const tx = this.db.transaction(['videos', 'collections'], 'readwrite');
+		const videos = tx.objectStore('videos');
+		const collections = tx.objectStore('collections');
+		const plan = planImport(await videos.getAll(), await collections.getAll(), backup);
+		await Promise.all([...plan.videos.map((v) => videos.put(v)), ...plan.collections.map((c) => collections.put(c))]);
+		await tx.done;
+		return plan.summary;
 	}
 
 	close() {

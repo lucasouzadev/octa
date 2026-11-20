@@ -1,6 +1,8 @@
 import 'fake-indexeddb/auto';
 import { openDB } from 'idb';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { parseBackup } from '#lib/backup.ts';
+import { parseLink } from '#lib/providers/parse.ts';
 import { CollectionError, Library, type Video } from '#lib/db/library.ts';
 
 let lib: Library;
@@ -222,5 +224,32 @@ describe('setCollectionRanks', () => {
 		expect(await code(lib.setCollectionRanks([a.id, a.id]))).toBe('bad_order');
 		expect(await code(lib.setCollectionRanks([a.id, 'nope']))).toBe('bad_order');
 		expect((await lib.listCollections()).every((c) => c.rank === undefined)).toBe(true);
+	});
+});
+
+// Import rebuilds the embed from the link, so the fixture must carry the real one.
+const real = (id: string): Video => ({ ...video(id), embed: parseLink(`https://youtu.be/${id}`).embed });
+
+describe('exportAll / importBackup', () => {
+	it('moves a whole library into a fresh one with nothing lost', async () => {
+		const a = await lib.createCollection('Aulas');
+		const b = await lib.createCollection('Música');
+		const v1 = await lib.put(real('abcdefghij1'));
+		const v2 = await lib.put(real('abcdefghij2'));
+		await lib.moveVideo(v1.id, a.id);
+		await lib.update(v2.id, { favorite: true, positionSec: 30 });
+		await lib.setCollectionRanks([b.id, a.id]);
+		const file = JSON.parse(JSON.stringify(await lib.exportAll()));
+
+		const fresh = await Library.open(`octa-import-${Math.random()}`);
+		const parsed = parseBackup(JSON.stringify(file));
+		expect(parsed.ok).toBe(true);
+		if (!parsed.ok) return;
+		expect(await fresh.importBackup(parsed.backup)).toMatchObject({ addedVideos: 2, addedCollections: 2 });
+		expect(await fresh.list()).toEqual(await lib.list());
+		expect((await fresh.listCollections()).sort((x, y) => x.id.localeCompare(y.id))).toEqual((await lib.listCollections()).sort((x, y) => x.id.localeCompare(y.id)));
+		// Same file again: nothing new.
+		expect(await fresh.importBackup(parsed.backup)).toMatchObject({ addedVideos: 0, addedCollections: 0, mergedCollections: 0 });
+		fresh.close();
 	});
 });
