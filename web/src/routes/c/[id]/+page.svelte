@@ -10,6 +10,7 @@
 	import DangerScreen from '#lib/ui/DangerScreen.svelte';
 	import EditVideoSheet from '#lib/ui/EditVideoSheet.svelte';
 	import Icon from '#lib/ui/Icon.svelte';
+	import FanStack from '#lib/ui/FanStack.svelte';
 	import Illustration from '#lib/ui/Illustration.svelte';
 	import ScreenCard from '#lib/ui/ScreenCard.svelte';
 	import { canUseWebGL3D, readEnv } from '#lib/capability.ts';
@@ -28,6 +29,8 @@
 	let renaming = $state(false);
 	let renameValue = $state('');
 	let confirmingDelete = $state(false);
+	// One or two covers are small in a fan; five fill the width already.
+	const fanZoom = (n: number) => (n <= 2 ? 1.6 : n === 3 ? 1.35 : 1.05);
 	let moving = $state<Video | null>(null);
 	let editingVideo = $state<Video | null>(null);
 	let removingVideo = $state<Video | null>(null);
@@ -277,11 +280,22 @@
 
 <BackToTop onDark lift={editing || !videos?.length ? 0 : 96} />
 
+<!-- What the collection holds, as the fan on its Library card; an empty one gets the trash can. -->
+{#snippet visual()}
+	{#if videos?.length}
+		<div class="danger-fan" style={`--zoom: ${fanZoom(videos.length)}`}><FanStack items={videos} id="delete-collection" /></div>
+	{:else}
+		<Illustration kind="trash" size={260} />
+	{/if}
+{/snippet}
+
 {#if confirmingDelete && collection}
 	<DangerScreen
 		title={`Excluir “${collection.name}”?`}
 		body="Os vídeos continuam em Todos. Só a coleção e a ordem dela somem."
 		confirmLabel="Excluir coleção"
+		mark={collection.name}
+		{visual}
 		onconfirm={remove}
 		oncancel={() => (confirmingDelete = false)}
 	/>
@@ -305,6 +319,13 @@
 <MoveSheet video={moving} onclose={() => (moving = null)} onmoved={() => load()} />
 
 <style>
+	/* The fan is built for a Library card; here it is the picture of the screen, so it is bigger. */
+	.danger-fan {
+		width: 100%;
+		scale: var(--zoom, 1);
+		transform-origin: 50% 40%;
+	}
+
 	.collection {
 		min-height: 100svh;
 		background: var(--color-bg-dark);

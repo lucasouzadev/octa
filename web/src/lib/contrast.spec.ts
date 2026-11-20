@@ -59,3 +59,14 @@ describe('the Favoritos screen reads on its green', () => {
 		expect(ratio(hex('text-light'), hex('paper-base'))).toBeGreaterThanOrEqual(4.5);
 	});
 });
+
+// QA round 3: the marker pen behind a collection's name on the orange delete screen.
+describe('the marker highlight', () => {
+	it('dark text on the marker is AA', () => {
+		expect(ratio(hex('text-light'), hex('highlight-marker'))).toBeGreaterThanOrEqual(4.5);
+	});
+
+	it('the marker stands out from the orange screen', () => {
+		expect(ratio(hex('highlight-marker'), hex('action-alert'))).toBeGreaterThanOrEqual(1.5);
+	});
+});

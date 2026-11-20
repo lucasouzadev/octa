@@ -494,3 +494,79 @@ test.describe('R3.9 Mover shows the video on the crown of the sheet', () => {
 		await expect(page.locator('dialog.sheet[data-state="open"] .crown')).toHaveCount(0);
 	});
 });
+
+test.describe('R3.5 Excluir coleção shows what is going, and marks the name', () => {
+	async function openDelete(page: Page, name: string) {
+		await page.getByRole('button', { name: 'Editar', exact: true }).click();
+		await page.getByRole('button', { name: 'Excluir', exact: true }).click();
+		await expect(page.locator('.danger')).toBeVisible();
+		await expect(page.locator('.danger h1')).toContainText(name);
+	}
+
+	test('a collection with videos shows a fan of its covers', async ({ page }) => {
+		await seedTwo(page);
+		await createCollection(page, 'Aulas');
+		const url = page.url();
+		await page.goto('/c/todos');
+		for (let i = 0; i < 2; i++) {
+			await page.locator('.videos li a[href*="/v/"]').nth(i).click();
+			await page.getByRole('button', { name: 'Mover', exact: true }).click();
+			await page.getByRole('button', { name: 'Aulas' }).click();
+			// The notice appears once the move is committed; leaving earlier could abort it.
+			await expect(page.locator('p.toast.shown')).toHaveText('Movido para Aulas');
+			await page.goto('/c/todos');
+		}
+		await page.goto(url);
+		await expect(page.locator('.videos li')).toHaveCount(2);
+		await openDelete(page, 'Aulas');
+		await expect(page.locator('.danger .fan')).toHaveCount(1);
+		await expect(page.locator('.danger .fan .tile')).toHaveCount(2);
+		await expect(page.locator('.danger svg[data-kind="trash"]')).toHaveCount(0);
+		// The covers sit in the upper part, above the words, inside the screen.
+		const h1 = await box(page.locator('.danger h1'));
+		const vp = page.viewportSize()!;
+		for (const tile of await page.locator('.danger .fan .tile').all()) {
+			const t = await box(tile);
+			expect(t.x).toBeGreaterThanOrEqual(0);
+			expect(t.x + t.width).toBeLessThanOrEqual(vp.width);
+			expect(t.y).toBeGreaterThanOrEqual(0);
+			expect(t.y + t.height).toBeLessThanOrEqual(h1.y);
+			// Big enough to read as the cover of something, not a speck.
+			expect(t.width).toBeGreaterThanOrEqual(vp.width * 0.3);
+		}
+	});
+
+	test('an empty collection shows a hand throwing a player into a trash can', async ({ page }) => {
+		await seed(page);
+		await createCollection(page, 'Vazia');
+		await openDelete(page, 'Vazia');
+		const art = page.locator('.danger svg[data-kind="trash"]');
+		await expect(art).toBeVisible();
+		await expect(page.locator('.danger .fan')).toHaveCount(0);
+		const a = await box(art);
+		const h1 = await box(page.locator('.danger h1'));
+		expect(a.y + a.height).toBeLessThanOrEqual(h1.y + 4);
+		expect(a.width).toBeGreaterThanOrEqual(200);
+	});
+
+	test('the collection name is marked like with a highlighter, the quotes are not', async ({ page }) => {
+		await seed(page);
+		await createCollection(page, 'Minhas aulas');
+		await openDelete(page, 'Minhas aulas');
+		const mark = page.locator('.danger h1 mark');
+		await expect(mark).toHaveText('Minhas aulas');
+		await expect(page.locator('.danger h1')).toHaveText('Excluir “Minhas aulas”?');
+		await expect(mark).toHaveCSS('color', 'rgb(10, 10, 10)');
+		const bg = await mark.evaluate((el) => getComputedStyle(el).backgroundImage);
+		expect(bg).toContain('255, 225, 77');
+	});
+
+	test('deleting a video keeps its single clear cover and has no marker', async ({ page }) => {
+		await seed(page);
+		await page.goto('/c/todos');
+		await page.getByRole('button', { name: 'Editar', exact: true }).click();
+		await page.getByRole('button', { name: /^Apagar/ }).click();
+		await expect(page.locator('.danger .thumb')).toHaveCount(1);
+		await expect(page.locator('.danger mark')).toHaveCount(0);
+	});
+});
