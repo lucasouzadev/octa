@@ -139,3 +139,11 @@ Gradient washes, glassmorphism on content, colored chrome on B&W screens, more t
 - Order rules (`lib/organize.ts`, pure): "Todos", "Favoritos" and "Assistidos" are virtual and always first; only the person's own collections sort or move. "Minha ordem" uses `Collection.rank` (optional; collections without one come after, oldest first, so existing libraries look as before). Other sorts are views: they never write ranks. The "Mover para" sheet lists collections in the same order.
 - Reordenar replaces the header with "Reordenar / Concluir" and lists compact rows (name, count, grip handle). Drag the **handle** (pointer events, `touch-action: none` on the handle only, so the page still scrolls elsewhere); near the top/bottom edge the page auto-scrolls. Keyboard: ArrowUp/ArrowDown on the focused handle, announced in a live region. Each move is saved at once and switches the mode to "Minha ordem"; Concluir shows the toast "Ordem salva". Escape also leaves.
 - NOT proven: a real finger drag on iPhone Safari (rubber band, auto-scroll feel); tested with a mouse in Chromium.
+
+## Export / import (slice 4, owner 2026-11-20)
+
+- Both live in the Organizar sheet ("Exportar biblioteca", "Importar arquivo"); Organizar is also shown on an empty Library so a first import is possible.
+- File: `{ app: "octa", schema: 1, exportedAt, videos, collections }` (`lib/backup.ts`, pure). Export carries everything on the device, including `rank`, favorites, watched and positions. Phones with a file-capable share sheet use it; everywhere else it is a download `octa-YYYY-MM-DD.json`.
+- Import treats the file as hostile: size cap 10 MB, schema newer than ours is refused, each video is rebuilt from its link by our own parser (source, kind, canonical link and **embed never come from the file**), thumbnails must be https, text is length-capped, reserved collection names are dropped, a video stays in one collection. Bad items are dropped and counted ("1 vídeo importado, 1 ignorado").
+- The existing library wins: a link already saved is skipped; a collection with the same id keeps its name and rank and only receives new videos; new collections go after the ranked ones. Importing the same file twice adds nothing ("Nada novo para importar").
+- NOT proven: the iOS share sheet / Files save on a real iPhone (tests force the download path).
