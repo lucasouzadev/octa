@@ -1,7 +1,7 @@
-# HANDOFF — 2026-11-20 — QA round 3 (PR open)
+# HANDOFF — 2026-11-20 — TikTok title and cover (PR open)
 
 ## Goal
-Owner's iPhone QA, 13 items (R3.1–R3.13). Approved 2026-11-20: one branch `fix/qa-round-3`, one PR, commit per item; #13 = center and enlarge; #3 = new matte green `#2F6B4F`.
+Owner's iPhone screenshots: a TikTok saved but showed a grey cover and the title "Vídeo do TikTok". Owner chose (2026-11-20): build the title from the @handle plus a drawn cover, no scraping, and upgrade already-saved generic titles (edited titles untouched).
 
 ## State (verified)
 - Implementation: done — branch `fix/qa-round-3`, 13 commits from main d81eb7a (R3.1+R3.3 share one commit). Merge: PR open, owner merges. PR #26 (TikTok handle title) is still open and separate.
@@ -9,11 +9,17 @@ Owner's iPhone QA, 13 items (R3.1–R3.13). Approved 2026-11-20: one branch `fix
 - NOT proven: any iPhone behavior (rubber band and arrow z-order R3.1, keyboard white areas R3.6, 3D, real fullscreen R3.13). No CI workflow exists yet (slice 4).
 
 ## Decisions (and why)
-- Docked input removed; plain fields again (owner order). Favoritos = `action.favorite`; hearts black/white. Toast lives in the layout so it survives navigation. Sheet `crown` straddles the top edge; transform moved from `.panel` to `.rise`.
+- Handle title from the canonical URL, API generic title never overwrites it, a real API title wins.
+- Drawn cover = the author text on the card/fan tile when there is no thumbnail (any source).
+
+## Files touched
+- `web/src/lib/links.ts` (tiktokHandle, upgradeGenericTitles, metaPatch guard), `fan.ts`, `ui/ScreenCard.svelte`, `ui/FanStack.svelte`, `routes/+page.svelte`
+- tests: `lib/tiktok-meta.spec.ts`, `routes/sources.e2e.ts`; docs: `STATUS.md`, `PROVIDERS.md`
 
 ## Next step (exact)
-Owner: test the PR preview on iPhone with the AUTOMATED/PHYSICAL list in the PR, then merge. Then: `VITE_API_BASE` for Vercel Preview (decision pending), flaky `health.e2e.ts:29` and `qa2.e2e.ts:299`, slice 4, "Correções da 2e-3".
+Owner merges the PR, opens the production URL on iPhone (home runs the upgrade), checks title and cover. Then slice 4 (PWA install, share target, export/import, offline shell, CI workflow, CSP, E2E 3 viewports) and the owner's "correções da 2e-3".
 
 ## Risks / owner decisions needed
-- iOS may still show the rubber band at the end of the collection (`overscroll-behavior` support varies); if so, next step is a JS guard.
-- Preview builds call a relative `/api` (no `VITE_API_BASE` for Preview).
+- `VITE_API_BASE` is set only for Vercel `production`; preview builds cannot reach the API (not changed).
+- Flaky `qa2.e2e.ts:299` (XS fix, separate PR if wanted): wait for the UI to confirm the mark before `page.goto('/')`.
+- Floating "Assistir em sequência" button covers part of the second card's title while scrolling (low, seen in screenshot, not touched).

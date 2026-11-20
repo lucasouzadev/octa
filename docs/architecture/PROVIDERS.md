@@ -37,7 +37,7 @@ type Provider interface {
 - Hosts: `tiktok.com`, `www.`, `m.`, `vm.tiktok.com`, `vt.tiktok.com` (short links: follow redirects through `internal/fetch` to get `/@user/video/ID`). ID = digits.
 - Kind: `short` (9:16). Canonical: `https://www.tiktok.com/@user/video/ID`.
 - Embed: `https://www.tiktok.com/player/v1/ID?controls=0&...` (TikTok chrome hidden, octa control bar drives it via postMessage, slice 3c).
-- Metadata: oEmbed `https://www.tiktok.com/oembed?url=<canonical>` → title, author_name, thumbnail_url (thumbnail URLs expire: re-resolve when the image 403s).
+- Metadata: oEmbed `https://www.tiktok.com/oembed?url=<canonical>` is called for liveness, but **checked 2026-11-20 (sandbox and live API): it answers 200 with only `html`, `width`, `height` and `provider` fields — no `title`, `author_name` or `thumbnail_url`**, with any user agent; the video page has no `og:` tags either. The API therefore returns its generic title "Vídeo do TikTok" and no cover. The client builds the title `Vídeo de @handle` and the author `@handle` from the canonical URL (never overwritten by the generic API title; a real API title still wins), and the cards draw the handle instead of a grey cover. Existing generic titles are upgraded on app open; titles the person edited are never touched. Reading the page's internal JSON would give more but is scraping an undocumented structure: not done (owner decision 2026-11-20).
 - Health: oEmbed 200 `alive`; 400/404 `dead`; other `unknown`.
 
 ## Direct video
