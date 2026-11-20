@@ -36,6 +36,8 @@ export interface Collection {
 	order: string[];
 	createdAt: string;
 	updatedAt: string;
+	/** Place the person gave it on the Library (0 = first). Absent until they reorder. */
+	rank?: number;
 }
 
 export type CollectionErrorCode = 'empty_name' | 'name_too_long' | 'reserved_name' | 'not_found' | 'bad_order';
@@ -227,6 +229,20 @@ export class Library {
 		await tx.store.put(next);
 		await tx.done;
 		return next;
+	}
+
+	/**
+	 * Saves the order the person gave the collections on the Library: `ids[0]` is first.
+	 * `ids` must be exactly the stored collections. Does not touch `updatedAt`
+	 * (a reorder is not a change to the collection).
+	 */
+	async setCollectionRanks(ids: string[]): Promise<void> {
+		const tx = this.db.transaction('collections', 'readwrite');
+		const all = await tx.store.getAll();
+		const same = ids.length === all.length && new Set(ids).size === ids.length && all.every((c) => ids.includes(c.id));
+		if (!same) throw new CollectionError('bad_order');
+		await Promise.all(ids.map((id, rank) => tx.store.put({ ...all.find((c) => c.id === id)!, rank })));
+		await tx.done;
 	}
 
 	close() {

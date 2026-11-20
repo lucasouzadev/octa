@@ -10,6 +10,9 @@ Updated 2026-11-20. Progress only — the product is defined in `docs/product/SP
 | 3 | Instagram, TikTok, HLS; `/v1/health`; health states; Dead link screen; resume | 3a sources DONE (PR #18/#20 merged); 3c cinema player DONE (PR #21 merged); 3b `/v1/health` + real dead-link check + resume IN REVIEW — branch `feat/slice-3b-health` (home card "Continuar assistindo" pending owner decision) |
 | 4 | PWA install, share target, export/import, offline shell, E2E 3 viewports, deploy (owner picks host) | — |
 
+## Organize collections (2026-11-20, branch `feat/organize-collections`, stacked on `feat/device-tilt`)
+- Header button Organizar (sheet: sort, Reordenar, tilt switch); drag the handle or use arrows; `Collection.rank` stored on the device; rules in `docs/design/DESIGN.md` § Organize the Library. NOT proven: finger drag on a real iPhone.
+
 ## Device tilt (2026-11-20, branch `feat/device-tilt`, stacked on `fix/qa-round-3`)
 - 3D objects lean with the phone; switch in the Library header; rules in `docs/design/DESIGN.md` § Device tilt. Evidence is in the PR. NOT proven: real sensor and iOS permission prompt.
 
