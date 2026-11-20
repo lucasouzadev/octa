@@ -108,7 +108,7 @@
 		overflow: hidden;
 		background: #cfcfcf;
 		box-shadow: 8px -6px 16px rgb(0 0 0 / 0.16);
-		transform: translate(-50%, -50%) rotate(var(--r)) rotateY(var(--ry));
+		transform: translate(-50%, -50%) rotate(var(--r)) rotateY(calc(var(--ry) + var(--tilt-x) * 10deg)) rotateX(calc(var(--tilt-y) * -8deg));
 		transition: transform var(--motion-press);
 	}
 
@@ -127,6 +127,10 @@
 		font-weight: 600;
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
+	}
+
+	:global(html[data-tilt]) .tile {
+		transition: none;
 	}
 
 	@media (prefers-reduced-motion: no-preference) {

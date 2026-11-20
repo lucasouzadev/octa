@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Inline stroke icons (DESIGN §8). Decorative: the button carries the label.
-	type Name = 'search' | 'plus' | 'back' | 'close' | 'play' | 'next' | 'heart' | 'share' | 'link' | 'arrow' | 'move' | 'minus' | 'up' | 'paste' | 'folder-plus' | 'send' | 'more' | 'edit' | 'trash' | 'check' | 'eye' | 'pause' | 'expand';
+	type Name = 'search' | 'plus' | 'back' | 'close' | 'play' | 'next' | 'heart' | 'share' | 'link' | 'arrow' | 'move' | 'minus' | 'up' | 'paste' | 'folder-plus' | 'send' | 'more' | 'edit' | 'trash' | 'check' | 'eye' | 'pause' | 'expand' | 'tilt';
 	let { name, size = 20, filled = false }: { name: Name; size?: number; filled?: boolean } = $props();
 </script>
 
@@ -27,6 +27,8 @@
 		<path d="M7 4.5l10 6.5-10 6.5z" fill="currentColor" stroke="none" />
 	{:else if name === 'pause'}
 		<path d="M7 4.5v13M15 4.5v13" stroke-width="3" />
+	{:else if name === 'tilt'}
+		<rect x="6" y="2.5" width="10" height="17" rx="2.5" /><path d="M2.5 8c-1 2-1 4 0 6M19.5 8c1 2 1 4 0 6" />
 	{:else if name === 'expand'}
 		<path d="M4 8V4h4M14 4h4v4M18 14v4h-4M8 18H4v-4" />
 	{:else if name === 'next'}

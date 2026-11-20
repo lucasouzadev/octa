@@ -10,6 +10,9 @@ Updated 2026-11-20. Progress only — the product is defined in `docs/product/SP
 | 3 | Instagram, TikTok, HLS; `/v1/health`; health states; Dead link screen; resume | 3a sources DONE (PR #18/#20 merged); 3c cinema player DONE (PR #21 merged); 3b `/v1/health` + real dead-link check + resume IN REVIEW — branch `feat/slice-3b-health` (home card "Continuar assistindo" pending owner decision) |
 | 4 | PWA install, share target, export/import, offline shell, E2E 3 viewports, deploy (owner picks host) | — |
 
+## Device tilt (2026-11-20, branch `feat/device-tilt`, stacked on `fix/qa-round-3`)
+- 3D objects lean with the phone; switch in the Library header; rules in `docs/design/DESIGN.md` § Device tilt. Evidence is in the PR. NOT proven: real sensor and iOS permission prompt.
+
 ## QA round 3 (2026-11-20, branch `fix/qa-round-3`)
 - Owner's iPhone QA, 13 items (R3.1–R3.13), one commit each (R3.1+R3.3 share the collection page and one commit); rules in `docs/design/DESIGN.md` § QA round 3.
 - Evidence: see the PR description (G2 table). Unit, check, build and e2e results are recorded there, not here.

@@ -7,6 +7,7 @@
 	import { CanvasTexture, ExtrudeGeometry, Shape, SRGBColorSpace } from 'three';
 	import { onDestroy, onMount } from 'svelte';
 	import { monitorPose, stepSpring, visibleIndexes, type Spring } from '#lib/monitor.ts';
+	import { tilt } from '#lib/tilt.svelte.ts';
 	import { measure, paintFace, paintHeart, paintShadow, type Measured } from './monitorPaint.ts';
 
 	let {
@@ -245,6 +246,13 @@
 	}
 	let hover = $state(new Map<string, Hover>());
 
+	// Redraw when the phone moves (the canvas only draws on demand).
+	$effect(() => {
+		void tilt.x;
+		void tilt.y;
+		invalidate();
+	});
+
 	onMount(() => {
 		const move = (e: PointerEvent) => {
 			if (e.pointerType !== 'mouse') return;
@@ -279,7 +287,8 @@
 		const r = rects[id];
 		if (!r) return null;
 		const h = hover.get(id);
-		const pose = monitorPose(mon.index, r.cy, vh, { x: h?.x.pos ?? 0, y: h?.y.pos ?? 0 });
+		// The phone's own tilt leans every monitor, on top of the mouse spring.
+		const pose = monitorPose(mon.index, r.cy, vh, { x: (h?.x.pos ?? 0) + tilt.x * 0.8, y: (h?.y.pos ?? 0) + tilt.y * 0.8 });
 		return { x: r.cx - vw / 2, y: vh / 2 - r.cy, z: 28 * (h?.lift.pos ?? 0), pose };
 	};
 </script>
