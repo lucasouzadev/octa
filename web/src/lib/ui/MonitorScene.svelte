@@ -113,7 +113,9 @@
 		if (heart) {
 			const hc = document.createElement('canvas');
 			hc.width = hc.height = Math.round(40 * SCALE);
-			paintHeart(hc, 40, getComputedStyle(row.querySelector('.heart') ?? row).backgroundColor, SCALE);
+			// Disc and glyph come from the badge itself, so the canvas heart is always the DOM heart.
+			const badge = getComputedStyle(row.querySelector('.heart') ?? row);
+			paintHeart(hc, 40, badge.backgroundColor, SCALE, badge.color);
 			heartTex = texture(hc);
 		}
 		const mon: Mon = {

@@ -13,6 +13,11 @@ html:has(.on-dark) body {
 	background: var(--color-bg-dark);
 }
 
+html:has(.on-favorite),
+html:has(.on-favorite) body {
+	background: var(--color-action-favorite);
+}
+
 html:has(.on-alert),
 html:has(.on-alert) body {
 	background: var(--color-action-alert);
@@ -109,6 +114,18 @@ img {
 }
 
 .on-dark .icon-button {
+	background: var(--color-surface-dark);
+	color: var(--color-text-dark);
+}
+
+/* Favoritos: the same dark-screen controls, tinted so they read on the green. */
+.on-favorite {
+	--color-surface-dark: rgb(0 0 0 / 0.22);
+	--color-surface-dark-raised: rgb(0 0 0 / 0.32);
+	--color-muted-on-dark: var(--color-muted-on-favorite);
+}
+
+.on-favorite .icon-button {
 	background: var(--color-surface-dark);
 	color: var(--color-text-dark);
 }

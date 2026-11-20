@@ -343,8 +343,25 @@
 		flex-direction: column;
 		gap: var(--space-3);
 		background: #000;
-		padding: calc(var(--space-4) + env(safe-area-inset-top)) var(--space-4)
-			calc(var(--space-3) + env(safe-area-inset-bottom));
+		/* No side padding: the picture goes edge to edge; the button and the bar keep their own. */
+		padding: calc(var(--space-4) + env(safe-area-inset-top)) 0 calc(var(--space-3) + env(safe-area-inset-bottom));
+	}
+
+	.cinema.full .leave {
+		margin-inline-start: var(--space-4);
+	}
+
+	.cinema.full .bar {
+		margin-inline: var(--space-4);
+	}
+
+	/* In our full screen the spare height is split above and below: the picture is centered. */
+	.cinema.full .screen {
+		place-items: center;
+	}
+
+	.cinema.full .frame:not(.vertical) {
+		border-radius: 0;
 	}
 
 	.cinema.full .origin {

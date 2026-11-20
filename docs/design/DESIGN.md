@@ -23,6 +23,8 @@ Status: approved 2026-11-19 (prototype in `README.md` here). Tokens: `tokens.jso
 | `action.create` | `#1A3CFF` | Paste link / add / onboarding screen |
 | `action.alert` | `#FF6A2B` (text `#0A0A0A`) | Dead link / restricted |
 | `action.success` | `#00804A` | reserved: import done, first collection |
+| `action.favorite` | `#2F6B4F` (muted text `#DCE7E1`, `muted.onFavorite`) | the Favoritos screen: a matte green, not the loud success green (QA round 3) |
+| `highlight.marker` | `#FFE14D` | marker-pen stroke behind a collection's name on the delete screen (text stays `#0A0A0A`) |
 | `status.dead` | `#C2410C` | small "Fora do ar" label on paper |
 
 Author tokens in `oklch()` in CSS (hex here is the reference). Screen color changes animate the background through View Transitions (cross-fade 320 ms), never a hard cut. Every color pair must pass 4.5:1 (3:1 for ≥ 24px text).
@@ -75,7 +77,7 @@ Gradient washes, glassmorphism on content, colored chrome on B&W screens, more t
 ## QA round 1 rules (owner, 2026-11-19)
 
 - **Every sheet is `ui/Sheet.svelte`.** Handle, slide-in/out, drag up/down (1:1 down, rubber band up, closes past 1/3 height or on a flick), Esc and backdrop close, reduced motion = no animation. `sheet-rule.spec.ts` fails if any other file uses `<dialog` or `showModal(`.
-- **Text entry on touch devices docks above the keyboard** (`ui/DockedInput.svelte`): the page does not scroll or move, only the field comes forward over a light dim; tap outside closes and keeps the text; Enter or the send icon sends; errors render inside the bar. Mouse devices keep the field in the page. Position comes from `visualViewport` (`lib/keyboard.ts`), so the same code works in Safari, an installed PWA and Capacitor.
+- **SUPERSEDED by QA round 3 (2026-11-19): text entry no longer docks.** ~~Text entry on touch devices docks above the keyboard~~ ** (`ui/DockedInput.svelte`): the page does not scroll or move, only the field comes forward over a light dim; tap outside closes and keeps the text; Enter or the send icon sends; errors render inside the bar. Mouse devices keep the field in the page. Position comes from `visualViewport` (`lib/keyboard.ts`), so the same code works in Safari, an installed PWA and Capacitor.**
 - **Create content** lives in one place: the Library "+" (shown only after the first link) opens a popover from the button (+ becomes −) with "Colar link" and "Nova coleção". No dashed card, no placeholder tiles.
 - **Empty states** = line-art illustration (`ui/Illustration.svelte`, one stroke, currentColor) + action buttons. An empty collection is a plain card without the fan.
 - **Long lists** get a back-to-top arrow (`ui/BackToTop.svelte`) after ~1.2 screens of scroll.
@@ -92,7 +94,7 @@ Gradient washes, glassmorphism on content, colored chrome on B&W screens, more t
 - **Edit:** a video's title and link can be changed (bad link and duplicates rejected); "Mais" in the viewer holds watched, edit, delete.
 - **Rename a collection happens in the title itself** (one input, Enter saves, Esc cancels). No second input below.
 - **App feel on mobile:** zoom and text selection are off (`user-scalable=no`, `user-select:none`), except inside fields; fields are >= 16px so iOS does not zoom. Accessibility tradeoff chosen by the owner.
-- **Docked bar** is pinned to the visual viewport frame (`visualFrame` in `lib/keyboard.ts`), the page is locked while it is open; `?kbdebug` prints the measures on a real device.
+- **SUPERSEDED by QA round 3:** ~~Docked bar is pinned to the visual viewport frame (`visualFrame` in `lib/keyboard.ts`), the page is locked while it is open; `?kbdebug` prints the measures on a real device.~~
 - **Illustrations** are redrawn: one idea per scene, no overlaps, one stroke weight.
 - NOT RUN: real iPhone/iPad.
 
@@ -107,3 +109,18 @@ Gradient washes, glassmorphism on content, colored chrome on B&W screens, more t
 - **One play.** The big button exists only before the video starts; a half-watched video says where it stopped ("Continuar · 4:20"). After the first play all control is in the bar (its play button stays hidden until then).
 - **No play mark on thumbnails** in the Library, Collection or search screens: a play button belongs to the player only.
 - **Vertical video** fits the normal viewer smaller, with every action in view, and opens our full screen on play (slice 3e). Horizontal video enters full screen with the Tela cheia button. Full screen: black, safe areas, picture as big as it gets, our bar below it, exit button top-left.
+
+## QA round 3 rules (owner, 2026-11-19, iPhone)
+
+- **Paste link / New collection are plain screens again** (`ui/TextField.svelte`): no docked bar; one blue layer behind the page so no white shows while the keyboard is open; a mark icon (link / folder-plus) on the left of the header, aligned with the X on the right. `ui/DockedInput.svelte` and `lib/keyboard.ts` were removed.
+- **Favoritos is an action screen in matte green** (`action.favorite`); the browser color follows (`themeColorFor(route, scope)`). Heart badges on the cards are plain black and white (DOM and WebGL read the badge's own colors).
+- **Edit mode** (collection): the row buttons sit below the card, never to its right.
+- **Delete video**: the cover is clear (no film), big (84% of the width), tilted. **Delete collection**: a fan of the collection's covers (CSS/WebGL fan, scaled for the screen) or, when empty, the "hand throws a player into the trash" illustration; the collection's name is marked with a highlighter (`highlight.marker`).
+- **Every action in the sheets answers**: one global notice (`lib/toast.svelte.ts`, `ui/Toast.svelte`, mounted in the layout so it survives navigation): watched/unwatched, video deleted, moved to X / taken out, changes saved, collection deleted, link copied.
+- **Move sheet** shows the video on the sheet's crown: `Sheet` takes an optional `crown` snippet that straddles the top edge (half above, half inside); the panel and crown slide and drag together (`.rise`).
+- **Safe area:** a fixed gradient under the status bar (`.safe-top` in the layout, in the screen's color) so scrolled content never mixes with the clock and battery.
+- **Empty Library with collections:** the collection cards come first, then "Colar um link" / "Nova coleção" below them, no illustration; they disappear after the first video.
+- **Create menu** has an exit animation (fold + items out, 220 ms; reduced motion closes at once).
+- **Collection end:** no pulling past the end (`overscroll-behavior-y: none`), no extra room under the sticky button; the back-to-top arrow is its own 3D layer in front of the tilted screens.
+- **Full screen** centers the picture (spare height split above and below); horizontal videos go edge to edge without rounded corners; the bar and the leave button keep their side margin.
+- NOT RUN: real iPhone (iOS rubber band, Safari 3D z-order, status-bar sampling, keyboard white areas, real fullscreen).

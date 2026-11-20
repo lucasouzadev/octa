@@ -10,6 +10,11 @@ Updated 2026-11-20. Progress only — the product is defined in `docs/product/SP
 | 3 | Instagram, TikTok, HLS; `/v1/health`; health states; Dead link screen; resume | 3a sources DONE (PR #18/#20 merged); 3c cinema player DONE (PR #21 merged); 3b `/v1/health` + real dead-link check + resume IN REVIEW — branch `feat/slice-3b-health` (home card "Continuar assistindo" pending owner decision) |
 | 4 | PWA install, share target, export/import, offline shell, E2E 3 viewports, deploy (owner picks host) | — |
 
+## QA round 3 (2026-11-20, branch `fix/qa-round-3`)
+- Owner's iPhone QA, 13 items (R3.1–R3.13), one commit each (R3.1+R3.3 share the collection page and one commit); rules in `docs/design/DESIGN.md` § QA round 3.
+- Evidence: see the PR description (G2 table). Unit, check, build and e2e results are recorded there, not here.
+- NOT proven: everything iPhone-specific (iOS rubber band and arrow z-order on R3.1, keyboard white areas R3.6, status bar R3.10, 3D, real fullscreen R3.13).
+
 ## Fix — TikTok short link feedback (2026-11-20, branch `fix/tiktok-short-link-feedback`)
 - Owner's iPhone screenshot: a `vt.tiktok.com` link was refused with "não é suportado". Cause (read-only checks): the Render API was still on the PR #4 commit (no TikTok), and `VITE_API_BASE` exists on Vercel for `production` only, so preview/branch builds call a relative `/api`; the client turned any failed expansion into `unsupported_url`.
 - Changed: the paste screen copy (Reels/TikTok are supported), a new client error `resolver_unavailable` for a failed short-link expansion (offline, timeout, 5xx, wrong base), and a 20 s expansion timeout.

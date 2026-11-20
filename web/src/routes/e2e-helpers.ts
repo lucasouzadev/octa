@@ -55,8 +55,7 @@ export async function mockNetwork(page: Page, opts: NetworkOptions = {}) {
 	return { healthCalls };
 }
 
-// Typing docks the field above the keyboard on touch projects, and the bar sits over the
-// page's own button. A real user taps outside first; so does this.
+// Fills a field and leaves it, as a person does before tapping the page's own button.
 export async function fillField(field: Locator, value: string) {
 	await field.fill(value);
 	await field.blur();

@@ -3,6 +3,9 @@
 Dated log of the owner's standing instructions (format and rules: `docs/agents/standard/OWNER-DECISIONS-TEMPLATE.md`).
 Newest first. Never delete: mark `SUPERSEDED by <date>`. The current one-line rule lives in `AGENTS.md`.
 
+## 2026-11-19 — QA round 3 (iPhone, 13 items)
+Approved plan 2026-11-20: one branch `fix/qa-round-3`, one PR, one commit per item. Decisions: the docked input system is dropped and the paste/new-collection screens return to a plain field (supersedes the QA round 1 docked-input rule); Favoritos is a new matte green `#2F6B4F` (not the success green); full screen = center and enlarge the picture. Details: `docs/design/DESIGN.md` § QA round 3.
+
 ## 2026-11-19 — Name and repository
 Project name **octa**, repository `lucasouzadev/octa`. Prototype PDF added at `docs/design/prototype.pdf`.
 

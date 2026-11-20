@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { toast } from '#lib/toast.svelte.ts';
 	import { tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -9,6 +10,7 @@
 	import DangerScreen from '#lib/ui/DangerScreen.svelte';
 	import EditVideoSheet from '#lib/ui/EditVideoSheet.svelte';
 	import Icon from '#lib/ui/Icon.svelte';
+	import FanStack from '#lib/ui/FanStack.svelte';
 	import Illustration from '#lib/ui/Illustration.svelte';
 	import ScreenCard from '#lib/ui/ScreenCard.svelte';
 	import { canUseWebGL3D, readEnv } from '#lib/capability.ts';
@@ -27,6 +29,8 @@
 	let renaming = $state(false);
 	let renameValue = $state('');
 	let confirmingDelete = $state(false);
+	// One or two covers are small in a fan; five fill the width already.
+	const fanZoom = (n: number) => (n <= 2 ? 1.6 : n === 3 ? 1.35 : 1.05);
 	let moving = $state<Video | null>(null);
 	let editingVideo = $state<Video | null>(null);
 	let removingVideo = $state<Video | null>(null);
@@ -142,6 +146,7 @@
 		try {
 			await (await library()).deleteVideo(removingVideo.id);
 			removingVideo = null;
+			toast.show('Vídeo apagado');
 			await load();
 		} catch {
 			error = 'Não deu para apagar agora. Tente de novo.';
@@ -154,6 +159,7 @@
 		if (!collection) return;
 		try {
 			await (await library()).deleteCollection(collection.id);
+			toast.show('Coleção excluída');
 			await goto('/', { replaceState: true });
 		} catch (e) {
 			error = explain(e);
@@ -162,7 +168,7 @@
 
 </script>
 
-<main class="collection on-dark">
+<main class="collection" class:on-dark={scope !== FAVORITES} class:on-favorite={scope === FAVORITES}>
 	<header>
 		<a class="icon-button" href="/" aria-label="Voltar"><Icon name="back" /></a>
 		{#if videos && !missing}
@@ -274,11 +280,22 @@
 
 <BackToTop onDark lift={editing || !videos?.length ? 0 : 96} />
 
+<!-- What the collection holds, as the fan on its Library card; an empty one gets the trash can. -->
+{#snippet visual()}
+	{#if videos?.length}
+		<div class="danger-fan" style={`--zoom: ${fanZoom(videos.length)}`}><FanStack items={videos} id="delete-collection" /></div>
+	{:else}
+		<Illustration kind="trash" size={260} />
+	{/if}
+{/snippet}
+
 {#if confirmingDelete && collection}
 	<DangerScreen
 		title={`Excluir “${collection.name}”?`}
 		body="Os vídeos continuam em Todos. Só a coleção e a ordem dela somem."
 		confirmLabel="Excluir coleção"
+		mark={collection.name}
+		{visual}
 		onconfirm={remove}
 		oncancel={() => (confirmingDelete = false)}
 	/>
@@ -302,14 +319,32 @@
 <MoveSheet video={moving} onclose={() => (moving = null)} onmoved={() => load()} />
 
 <style>
+	/* The fan is built for a Library card; here it is the picture of the screen, so it is bigger. */
+	.danger-fan {
+		width: 100%;
+		scale: var(--zoom, 1);
+		transform-origin: 50% 40%;
+	}
+
 	.collection {
 		min-height: 100svh;
 		background: var(--color-bg-dark);
 		color: var(--color-text-dark);
+		/* The sticky button carries its own room below; nothing extra at the end of the pile. */
 		padding: calc(var(--space-6) + env(safe-area-inset-top)) var(--screen-pad)
-			calc(var(--space-9) + env(safe-area-inset-bottom));
+			calc(var(--space-5) + env(safe-area-inset-bottom));
 		display: flex;
 		flex-direction: column;
+	}
+
+	/* Favoritos is an action screen: one matte green, edge to edge. */
+	.collection.on-favorite {
+		background: var(--color-action-favorite);
+	}
+
+	/* The pile ends where it ends: no pulling the page past its last screen. */
+	:global(html:has(.collection)) {
+		overscroll-behavior-y: none;
 	}
 
 	header,
@@ -497,17 +532,24 @@
 		gap: var(--space-3);
 	}
 
+	/* The options sit under their card, so the card keeps the full width. */
 	.videos.editing li {
 		display: flex;
-		align-items: center;
-		gap: var(--space-3);
+		flex-direction: column;
+		align-items: stretch;
+		gap: var(--space-2);
 		margin-top: 0;
 		perspective: none;
 	}
 
 	.videos.editing li :global(.screen) {
-		flex: 1;
 		min-width: 0;
+	}
+
+	.videos.editing .row-buttons .chip {
+		flex: 1 1 0;
+		min-width: 0;
+		padding-inline: var(--space-2);
 	}
 
 	footer {
