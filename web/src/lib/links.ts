@@ -9,10 +9,14 @@ import { newId } from '#lib/id.ts';
 export { newId };
 
 const RESOLVE_TIMEOUT_MS = 4000;
+// A TikTok short link cannot be saved without the API (only it can follow the redirect), so
+// the person is waiting on it: allow for a free-tier API that is waking up from sleep.
+export const EXPAND_TIMEOUT_MS = 20_000;
 
 export interface AddDeps {
 	library: Library;
 	resolve?: (url: string, signal: AbortSignal) => Promise<Meta>;
+	expandTimeoutMs?: number;
 }
 
 const TIKTOK_SHORT = /^(?:https?:\/\/)?(?:vm|vt)\.tiktok\.com\//i;
@@ -25,14 +29,16 @@ const TIKTOK_SHORT = /^(?:https?:\/\/)?(?:vm|vt)\.tiktok\.com\//i;
  */
 async function parseOrExpand(
 	raw: string,
-	resolve: (url: string, signal: AbortSignal) => Promise<Meta>
+	resolve: (url: string, signal: AbortSignal) => Promise<Meta>,
+	expandTimeoutMs: number
 ): Promise<{ ref: Ref; meta: Meta | null }> {
 	try {
 		return { ref: parseLink(raw), meta: null };
 	} catch (e) {
 		if (!(e instanceof LinkError) || e.code !== 'unsupported_url' || !TIKTOK_SHORT.test(raw.trim())) throw e;
-		const meta = await tryResolve(raw, resolve);
-		if (!meta) throw e;
+		const meta = await tryResolve(raw, resolve, expandTimeoutMs);
+		// Offline, timeout, 5xx or a wrong API base: not the same as "TikTok link we do not support".
+		if (!meta) throw new LinkError('resolver_unavailable');
 		try {
 			const ref = parseLink(meta.canonicalUrl);
 			if (ref.source === 'tiktok') return { ref, meta };
@@ -45,7 +51,7 @@ async function parseOrExpand(
 
 export async function addLink(raw: string, deps: AddDeps): Promise<{ video: Video; created: boolean }> {
 	const resolve = deps.resolve ?? ((u, signal) => resolveLink(u, { signal }));
-	const { ref, meta: expanded } = await parseOrExpand(raw, resolve); // throws LinkError before anything is saved
+	const { ref, meta: expanded } = await parseOrExpand(raw, resolve, deps.expandTimeoutMs ?? EXPAND_TIMEOUT_MS); // throws LinkError before anything is saved
 	const existing = await deps.library.findByCanonical(ref.canonicalUrl);
 	if (existing) return { video: existing, created: false };
 
@@ -172,7 +178,7 @@ export async function editVideo(
 	}
 
 	const resolve = deps.resolve ?? ((u, signal) => resolveLink(u, { signal }));
-	const { ref, meta: expanded } = await parseOrExpand(raw, resolve); // throws LinkError before anything changes
+	const { ref, meta: expanded } = await parseOrExpand(raw, resolve, deps.expandTimeoutMs ?? EXPAND_TIMEOUT_MS); // throws LinkError before anything changes
 	if (ref.canonicalUrl !== current.canonicalUrl) {
 		const other = await deps.library.findByCanonical(ref.canonicalUrl);
 		if (other && other.id !== id) throw new EditError('duplicate');

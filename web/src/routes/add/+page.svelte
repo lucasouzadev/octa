@@ -14,7 +14,8 @@
 
 	const messages = {
 		invalid_url: 'Isso não parece um link. Confira e tente de novo.',
-		unsupported_url: 'Esse tipo de link ainda não é suportado. Por enquanto: YouTube, Shorts e arquivos .mp4.'
+		unsupported_url: 'Esse tipo de link ainda não é suportado. Por enquanto: YouTube, Shorts, Reels, TikTok e arquivos de vídeo (.mp4, .webm).',
+		resolver_unavailable: 'Não consegui abrir o link curto do TikTok agora. Tente de novo em instantes ou cole o link completo do vídeo.'
 	};
 
 	// One tap instead of long-press, select, paste. The browser may ask permission.
@@ -66,7 +67,7 @@
 			autocapitalize="off"
 			spellcheck={false}
 			placeholder="youtube.com/watch?v=…"
-			hint="YouTube · Shorts · .mp4 — Reels e TikTok chegam em breve"
+			hint="YouTube · Shorts · Reels · TikTok · .mp4"
 			{error}
 			{busy}
 			sendLabel="Enviar"

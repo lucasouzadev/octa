@@ -71,6 +71,26 @@ test('unsupported and invalid links explain themselves and save nothing', async 
 	await expect(page.getByRole('heading', { name: 'Nada aqui ainda.' })).toBeVisible();
 });
 
+test('paste screen names every supported source and no longer promises Reels/TikTok "soon"', async ({ page }) => {
+	await mockNetwork(page);
+	await page.goto('/add');
+	await expect(page.getByText('chegam em breve')).toHaveCount(0);
+	await expect(page.getByText(/Reels/).first()).toBeVisible();
+	await expect(page.getByText(/TikTok/).first()).toBeVisible();
+	await paste(page, 'https://example.com/page');
+	await expect(page.getByRole('alert')).toContainText('Reels');
+	await expect(page.getByRole('alert')).toContainText('TikTok');
+});
+
+test('TikTok short link with the API down says it could not check now, not "unsupported"', async ({ page }) => {
+	await mockNetwork(page, { apiDown: true });
+	await paste(page, 'https://vt.tiktok.com/ZSabc123/');
+	const alert = page.getByRole('alert');
+	await expect(alert).toContainText('Não consegui abrir o link curto do TikTok agora');
+	await expect(alert).not.toContainText('ainda não é suportado');
+	await expect(page.getByLabel('Link do vídeo')).toHaveValue('https://vt.tiktok.com/ZSabc123/');
+});
+
 test('API down: the link is still saved and playable from the client parser', async ({ page }) => {
 	await mockNetwork(page, { apiDown: true });
 	await fakeYouTube(page);

@@ -23,7 +23,7 @@ export interface Ref {
 }
 
 export class LinkError extends Error {
-	constructor(public code: 'invalid_url' | 'unsupported_url') {
+	constructor(public code: 'invalid_url' | 'unsupported_url' | 'resolver_unavailable') {
 		super(code);
 		this.name = 'LinkError';
 	}
