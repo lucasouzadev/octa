@@ -1,4 +1,5 @@
 <script lang="ts">
+	import Toast from '#lib/ui/Toast.svelte';
 	import '@fontsource-variable/inter';
 	import '@fontsource-variable/newsreader';
 	import '../app.css';
@@ -47,6 +48,8 @@
 <div class="safe-top" aria-hidden="true" style={`--safe-bg: ${screenColor}`}></div>
 
 {@render children()}
+
+<Toast />
 
 <style>
 	.safe-top {

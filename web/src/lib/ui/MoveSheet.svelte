@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { toast } from '#lib/toast.svelte.ts';
 	import { CollectionError, library, type Collection, type Video } from '#lib/db/index.ts';
 	import Sheet from '#lib/ui/Sheet.svelte';
 
@@ -33,6 +34,8 @@
 		busy = true;
 		try {
 			await (await library()).moveVideo(video.id, target);
+			const name = collections.find((c) => c.id === target)?.name;
+			toast.show(name ? `Movido para ${name}` : 'Tirado da coleção');
 			onclose();
 			onmoved(target);
 		} catch (e) {

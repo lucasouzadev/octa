@@ -353,3 +353,87 @@ test.describe('R3.3 Favoritos is a matte green screen; the hearts are black and 
 		await expect(page.locator('.count')).toHaveCSS('color', 'rgb(220, 231, 225)');
 	});
 });
+
+test.describe('R3.8 every action in the sheets answers with a short notice', () => {
+	const toast = (page: Page) => page.locator('p.toast.shown[role="status"]');
+
+	test('marking as watched says so, both ways', async ({ page }) => {
+		await seed(page);
+		await page.getByRole('button', { name: 'Mais ações' }).click();
+		await page.getByRole('button', { name: 'Marcar como assistido' }).click();
+		await expect(toast(page)).toHaveText('Marcado como assistido');
+		await page.getByRole('button', { name: 'Mais ações' }).click();
+		await page.getByRole('button', { name: 'Desmarcar como assistido' }).click();
+		await expect(toast(page)).toHaveText('Desmarcado como assistido');
+	});
+
+	test('the notice goes away by itself', async ({ page }) => {
+		await seed(page);
+		await page.getByRole('button', { name: 'Mais ações' }).click();
+		await page.getByRole('button', { name: 'Marcar como assistido' }).click();
+		await expect(toast(page)).toBeVisible();
+		await expect(toast(page)).toHaveCount(0, { timeout: 6000 });
+	});
+
+	test('deleting a video says so on the screen it lands on', async ({ page }) => {
+		await seedTwo(page);
+		await page.getByRole('button', { name: 'Mais ações' }).click();
+		await page.getByRole('button', { name: 'Apagar da biblioteca' }).click();
+		await page.getByRole('button', { name: 'Apagar vídeo' }).click();
+		await expect(page.getByRole('button', { name: 'Apagar vídeo' })).toHaveCount(0);
+		await expect(toast(page)).toHaveText('Vídeo apagado');
+	});
+
+	test('deleting from the collection list says so too', async ({ page }) => {
+		await seed(page);
+		await page.goto('/c/todos');
+		await page.getByRole('button', { name: 'Editar', exact: true }).click();
+		await page.getByRole('button', { name: /^Apagar/ }).click();
+		await page.getByRole('button', { name: 'Apagar vídeo' }).click();
+		await expect(toast(page)).toHaveText('Vídeo apagado');
+	});
+
+	test('moving names the collection', async ({ page }) => {
+		await seed(page);
+		await createCollection(page, 'Aulas');
+		await page.goto('/c/todos');
+		await page.locator('.videos li a[href*="/v/"]').first().click();
+		await expect(page).toHaveURL(/\/v\//);
+		await page.getByRole('button', { name: 'Mover', exact: true }).click();
+		await page.getByRole('button', { name: 'Aulas' }).click();
+		await expect(toast(page)).toHaveText('Movido para Aulas');
+	});
+
+	test('saving an edit says so', async ({ page }) => {
+		await seed(page);
+		await page.getByRole('button', { name: 'Mais ações' }).click();
+		await page.getByRole('button', { name: 'Editar título ou link' }).click();
+		await page.getByLabel('Título').fill('Meu título novo');
+		await page.getByRole('button', { name: 'Salvar' }).click();
+		await expect(toast(page)).toHaveText('Alterações salvas');
+	});
+
+	test('deleting a collection says so on the Library', async ({ page }) => {
+		await seed(page);
+		await createCollection(page, 'Temporária');
+		await page.getByRole('button', { name: 'Editar', exact: true }).click();
+		await page.getByRole('button', { name: 'Excluir', exact: true }).click();
+		await page.getByRole('button', { name: 'Excluir coleção' }).click();
+		await expect(page).toHaveURL('/');
+		await expect(toast(page)).toHaveText('Coleção excluída');
+	});
+
+	test('the notice sits above the home indicator and never covers the bottom actions', async ({ page }) => {
+		await seed(page);
+		await page.getByRole('button', { name: 'Mais ações' }).click();
+		await page.getByRole('button', { name: 'Marcar como assistido' }).click();
+		const t = toast(page);
+		await expect(t).toBeVisible();
+		const b = await box(t);
+		const vp = page.viewportSize()!;
+		expect(b.y + b.height).toBeLessThanOrEqual(vp.height);
+		expect(b.x).toBeGreaterThanOrEqual(0);
+		expect(b.x + b.width).toBeLessThanOrEqual(vp.width);
+		await expect(t).toHaveCSS('pointer-events', 'none');
+	});
+});

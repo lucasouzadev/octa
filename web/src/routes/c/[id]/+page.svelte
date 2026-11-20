@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { toast } from '#lib/toast.svelte.ts';
 	import { tick } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -142,6 +143,7 @@
 		try {
 			await (await library()).deleteVideo(removingVideo.id);
 			removingVideo = null;
+			toast.show('Vídeo apagado');
 			await load();
 		} catch {
 			error = 'Não deu para apagar agora. Tente de novo.';
@@ -154,6 +156,7 @@
 		if (!collection) return;
 		try {
 			await (await library()).deleteCollection(collection.id);
+			toast.show('Coleção excluída');
 			await goto('/', { replaceState: true });
 		} catch (e) {
 			error = explain(e);

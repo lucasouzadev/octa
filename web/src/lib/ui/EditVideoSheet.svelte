@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { toast } from '#lib/toast.svelte.ts';
 	import { library, type Video } from '#lib/db/index.ts';
 	import { editVideo, EditError } from '#lib/links.ts';
 	import { LinkError } from '#lib/providers/parse.ts';
@@ -38,6 +39,7 @@
 		try {
 			const saved = await editVideo(video.id, { title, url }, { library: await library() });
 			onclose();
+			toast.show('Alterações salvas');
 			onsaved(saved);
 		} catch (e) {
 			error =

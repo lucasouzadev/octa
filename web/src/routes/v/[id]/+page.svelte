@@ -12,10 +12,10 @@
 	import MoreSheet from '#lib/ui/MoreSheet.svelte';
 	import MoveSheet from '#lib/ui/MoveSheet.svelte';
 	import Cinema from '#lib/ui/Cinema.svelte';
+	import { toast } from '#lib/toast.svelte.ts';
 
 	let all = $state<Video[] | null>(null);
 	let scope = $state(ALL);
-	let notice = $state('');
 	let moving = $state<Video | null>(null);
 	let likes = $state(0);
 	let more = $state<Video | null>(null);
@@ -89,7 +89,9 @@
 
 	async function toggleWatched() {
 		if (!video) return;
-		replace(await (await library()).update(video.id, { watched: !video.watched }));
+		const watched = !video.watched;
+		replace(await (await library()).update(video.id, { watched }));
+		toast.show(watched ? 'Marcado como assistido' : 'Desmarcado como assistido');
 	}
 
 	// "Continuar assistindo": where the person stopped, kept on the video (null = finished).
@@ -122,6 +124,7 @@
 			const rest = all.filter((v) => v.id !== gone);
 			await (await library()).deleteVideo(gone);
 			removing = false;
+			toast.show('Vídeo apagado');
 			if (rest.length === 0) await goto(scope === ALL ? '/' : `/c/${scope}`, { replaceState: true });
 			else await goto(at(rest[Math.min(index, rest.length - 1)].id), { replaceState: true });
 		} catch {
@@ -151,15 +154,10 @@
 				return;
 			}
 			await navigator.clipboard.writeText(video.canonicalUrl);
-			flash('Link copiado');
+			toast.show('Link copiado');
 		} catch (e) {
-			if ((e as DOMException)?.name !== 'AbortError') flash('Não deu para compartilhar');
+			if ((e as DOMException)?.name !== 'AbortError') toast.show('Não deu para compartilhar');
 		}
-	}
-
-	function flash(text: string) {
-		notice = text;
-		setTimeout(() => (notice = ''), 2200);
 	}
 </script>
 
@@ -209,7 +207,6 @@
 					<Icon name="next" size={22} />
 				</button>
 			</div>
-			<p class="notice" role="status">{notice}</p>
 		</section>
 
 		{#if all && all.length > 1}
@@ -398,13 +395,6 @@
 		cursor: default;
 	}
 
-	.notice {
-		flex: none;
-		min-height: 1.4em;
-		text-align: center;
-		font-size: var(--size-meta);
-		color: var(--color-muted-on-dark);
-	}
 
 	.timeline {
 		flex: none;
