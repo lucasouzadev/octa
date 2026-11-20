@@ -13,7 +13,7 @@
 
 	let { children }: LayoutProps = $props();
 
-	// The color this screen paints, for the browser chrome and for the strip under the status bar.
+	// The color this screen paints, for the browser chrome.
 	const screenColor = $derived(theme.override ?? themeColorFor(page.route.id, page.params.id));
 
 	// Cross-fade the screen colors and morph the card thumbnail into the player
@@ -44,22 +44,7 @@
 	<meta name="theme-color" content={screenColor} />
 </svelte:head>
 
-<!-- Content that scrolls up under the clock and battery fades out here instead of mixing with them. -->
-<div class="safe-top" aria-hidden="true" style={`--safe-bg: ${screenColor}`}></div>
-
 {@render children()}
 
 <Toast />
 
-<style>
-	.safe-top {
-		position: fixed;
-		top: 0;
-		left: 0;
-		right: 0;
-		z-index: 80;
-		height: calc(env(safe-area-inset-top) + 14px);
-		background: linear-gradient(to bottom, var(--safe-bg) 0, var(--safe-bg) env(safe-area-inset-top), transparent 100%);
-		pointer-events: none;
-	}
-</style>

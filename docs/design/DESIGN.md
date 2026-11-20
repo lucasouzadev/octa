@@ -118,7 +118,7 @@ Gradient washes, glassmorphism on content, colored chrome on B&W screens, more t
 - **Delete video**: the cover is clear (no film), big (84% of the width), tilted. **Delete collection**: a fan of the collection's covers (CSS/WebGL fan, scaled for the screen) or, when empty, the "hand throws a player into the trash" illustration; the collection's name is marked with a highlighter (`highlight.marker`).
 - **Every action in the sheets answers**: one global notice (`lib/toast.svelte.ts`, `ui/Toast.svelte`, mounted in the layout so it survives navigation): watched/unwatched, video deleted, moved to X / taken out, changes saved, collection deleted, link copied.
 - **Move sheet** shows the video on the sheet's crown: `Sheet` takes an optional `crown` snippet that straddles the top edge (half above, half inside); the panel and crown slide and drag together (`.rise`).
-- **Safe area:** a fixed gradient under the status bar (`.safe-top` in the layout, in the screen's color) so scrolled content never mixes with the clock and battery.
+- **Safe area:** no strip or gradient under the status bar (removed at the owner's request: it got in the way of navigation).
 - **Empty Library with collections:** the collection cards come first, then "Colar um link" / "Nova coleção" below them, no illustration; they disappear after the first video.
 - **Create menu** has an exit animation (fold + items out, 220 ms; reduced motion closes at once).
 - **Collection end:** no pulling past the end (`overscroll-behavior-y: none`), no extra room under the sticky button; the back-to-top arrow is its own 3D layer in front of the tilted screens.
