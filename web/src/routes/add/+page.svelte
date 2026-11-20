@@ -4,8 +4,8 @@
 	import { library } from '#lib/db/index.ts';
 	import { addLink } from '#lib/links.ts';
 	import { LinkError } from '#lib/providers/parse.ts';
-	import DockedInput from '#lib/ui/DockedInput.svelte';
 	import Icon from '#lib/ui/Icon.svelte';
+	import TextField from '#lib/ui/TextField.svelte';
 
 	// ?url= lets the share target (slice 4) and bookmarklets prefill the field.
 	let value = $state(page.url.searchParams.get('url') ?? '');
@@ -48,17 +48,17 @@
 
 <main class="paste on-blue">
 	<header>
+		<span class="mark"><Icon name="link" size={32} /></span>
 		<a class="close" href="/" aria-label="Voltar para a biblioteca"><Icon name="close" /></a>
 	</header>
 
 	<div class="intro">
-		<Icon name="link" size={40} />
 		<h1>Cole um link.<span>O resto é com a gente.</span></h1>
 		<p>Nada sobe, nada baixa. O vídeo fica aqui enquanto o link existir.</p>
 	</div>
 
 	<form onsubmit={submit} novalidate>
-		<DockedInput
+		<TextField
 			id="link"
 			label="Link do vídeo"
 			bind:value
@@ -70,7 +70,6 @@
 			hint="YouTube · Shorts · Reels · TikTok · .mp4"
 			{error}
 			{busy}
-			sendLabel="Enviar"
 			onpaste={pasteFromClipboard}
 		/>
 		<button class="cta" type="submit" disabled={busy || !value.trim()}>
@@ -95,13 +94,29 @@
 		max-width: 100%;
 	}
 
-	/* The close button sits on the right so the title can start higher. */
+	/* Under the page, edge to edge: when the browser pans the page for the keyboard, only blue shows. */
+	.paste::before {
+		content: '';
+		position: fixed;
+		inset: 0;
+		z-index: -1;
+		background: var(--color-action-create);
+	}
+
+	/* The mark on the left and the X on the right share one line. */
 	header {
 		display: flex;
-		justify-content: flex-end;
+		align-items: center;
+		justify-content: space-between;
 		width: 100%;
 		max-width: var(--layout-content-max);
 		margin-inline: auto;
+	}
+
+	.mark {
+		display: inline-flex;
+		align-items: center;
+		height: var(--layout-touch-min);
 	}
 
 	.close {

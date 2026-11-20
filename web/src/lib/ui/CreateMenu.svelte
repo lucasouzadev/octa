@@ -4,21 +4,48 @@
 	// The Library's "+": a popover that grows from the button itself. The plus turns
 	// into a minus while open; the menu offers the two ways to create content.
 	let open = $state(false);
+	// The exit runs after `open` turns false: the panel shrinks back into the button.
+	let leaving = $state(false);
 	let root = $state<HTMLElement>();
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	const EXIT_MS = 220;
+	const shown = $derived(open || leaving);
+
+	function show() {
+		clearTimeout(timer);
+		leaving = false;
+		open = true;
+	}
+
+	function hide() {
+		if (!open) return;
+		open = false;
+		if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+		leaving = true;
+		clearTimeout(timer);
+		timer = setTimeout(() => (leaving = false), EXIT_MS);
+	}
+
+	// Going to another screen: nothing left to animate.
+	function leave() {
+		clearTimeout(timer);
+		leaving = false;
+		open = false;
+	}
 
 	function onpointerdown(e: PointerEvent) {
-		if (open && root && !root.contains(e.target as Node)) open = false;
+		if (open && root && !root.contains(e.target as Node)) hide();
 	}
 
 	function onkeydown(e: KeyboardEvent) {
-		if (open && e.key === 'Escape') open = false;
+		if (open && e.key === 'Escape') hide();
 	}
 </script>
 
 <svelte:window {onpointerdown} {onkeydown} />
 
-<div class="create" class:open bind:this={root}>
-	{#if open}
+<div class="create" class:open data-state={open ? 'open' : leaving ? 'closing' : 'closed'} bind:this={root}>
+	{#if shown}
 		<!-- The panel grows out of the button: the button sits inside it, filled white. -->
 		<div class="panel" aria-hidden="true"></div>
 	{/if}
@@ -28,18 +55,18 @@
 		aria-label={open ? 'Fechar menu de criação' : 'Criar conteúdo'}
 		aria-expanded={open}
 		aria-haspopup="menu"
-		onclick={() => (open = !open)}
+		onclick={() => (open ? hide() : show())}
 	>
 		<Icon name={open ? 'minus' : 'plus'} />
 	</button>
 
-	{#if open}
+	{#if shown}
 		<div class="menu" role="menu" aria-label="Criar conteúdo">
-			<a role="menuitem" href="/add" onclick={() => (open = false)}>
+			<a role="menuitem" href="/add" onclick={leave}>
 				<Icon name="link" size={20} />
 				Colar link
 			</a>
-			<a role="menuitem" href="/c/new" onclick={() => (open = false)}>
+			<a role="menuitem" href="/c/new" onclick={leave}>
 				<Icon name="folder-plus" size={20} />
 				Nova coleção
 			</a>
@@ -108,6 +135,29 @@
 	.menu a:focus-visible {
 		background: rgb(255 255 255 / 0.14);
 		outline: none;
+	}
+
+	/* The way out: the panel folds back into the button, the options fade first. */
+	.create[data-state='closing'] .panel {
+		animation: fold 220ms cubic-bezier(0.4, 0, 0.8, 0.4) forwards;
+	}
+
+	.create[data-state='closing'] .menu {
+		animation: items-out 120ms ease-in forwards;
+		pointer-events: none;
+	}
+
+	@keyframes fold {
+		to {
+			opacity: 0.4;
+			transform: scale(0.3);
+		}
+	}
+
+	@keyframes items-out {
+		to {
+			opacity: 0;
+		}
 	}
 
 	@keyframes grow {

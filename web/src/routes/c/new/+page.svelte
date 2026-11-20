@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { CollectionError, COLLECTION_NAME_MAX, library } from '#lib/db/index.ts';
-	import DockedInput from '#lib/ui/DockedInput.svelte';
 	import Icon from '#lib/ui/Icon.svelte';
+	import TextField from '#lib/ui/TextField.svelte';
 
 	let name = $state('');
 	let error = $state('');
@@ -34,6 +34,7 @@
 
 <main class="create on-blue">
 	<header>
+		<span class="mark"><Icon name="folder-plus" size={32} /></span>
 		<a class="close" href="/" aria-label="Voltar para a biblioteca"><Icon name="close" /></a>
 	</header>
 
@@ -43,7 +44,7 @@
 	</div>
 
 	<form onsubmit={submit} novalidate>
-		<DockedInput
+		<TextField
 			id="name"
 			label="Nome da coleção"
 			bind:value={name}
@@ -51,7 +52,6 @@
 			maxlength={COLLECTION_NAME_MAX + 10}
 			{error}
 			{busy}
-			sendLabel="Enviar"
 		/>
 		<button class="cta" type="submit" disabled={busy || !name.trim()}>
 			{busy ? 'Criando…' : 'Criar coleção'}
@@ -75,13 +75,29 @@
 		max-width: 100%;
 	}
 
-	/* The close button sits on the right so the title can start higher. */
+	/* Under the page, edge to edge: when the browser pans the page for the keyboard, only blue shows. */
+	.create::before {
+		content: '';
+		position: fixed;
+		inset: 0;
+		z-index: -1;
+		background: var(--color-action-create);
+	}
+
+	/* The mark on the left and the X on the right share one line. */
 	header {
 		display: flex;
-		justify-content: flex-end;
+		align-items: center;
+		justify-content: space-between;
 		width: 100%;
 		max-width: var(--layout-content-max);
 		margin-inline: auto;
+	}
+
+	.mark {
+		display: inline-flex;
+		align-items: center;
+		height: var(--layout-touch-min);
 	}
 
 	.close {

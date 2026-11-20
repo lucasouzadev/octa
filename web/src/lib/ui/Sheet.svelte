@@ -10,8 +10,16 @@
 		open,
 		title,
 		onclose,
+		crown,
 		children
-	}: { open: boolean; title: string; onclose: () => void; children: Snippet } = $props();
+	}: {
+		open: boolean;
+		title: string;
+		onclose: () => void;
+		/** Optional preview that sits on the top edge, half above the sheet (decoration only). */
+		crown?: Snippet;
+		children: Snippet;
+	} = $props();
 
 	let dialog = $state<HTMLDialogElement>();
 	let panel = $state<HTMLElement>();
@@ -100,25 +108,23 @@
 		if (e.target === dialog) hide(true);
 	}}
 >
-	<div
-		class="panel"
-		class:dragging
-		bind:this={panel}
-		tabindex="-1"
-		style={`--drag: ${offset}px`}
-	>
-		<div
-			class="grab"
-			role="presentation"
-			onpointerdown={down}
-			onpointermove={move}
-			onpointerup={up}
-			onpointercancel={up}
-		>
-			<span class="handle"></span>
-			<h2>{title}</h2>
+	<div class="rise" class:dragging style={`--drag: ${offset}px`}>
+		<!-- Outside the panel: the panel scrolls, and a scroll area would clip the half above the edge. -->
+		{#if crown}<div class="crown" aria-hidden="true">{@render crown()}</div>{/if}
+		<div class="panel" class:crowned={!!crown} bind:this={panel} tabindex="-1">
+			<div
+				class="grab"
+				role="presentation"
+				onpointerdown={down}
+				onpointermove={move}
+				onpointerup={up}
+				onpointercancel={up}
+			>
+				<span class="handle"></span>
+				<h2>{title}</h2>
+			</div>
+			<div class="body">{@render children()}</div>
 		</div>
-		<div class="body">{@render children()}</div>
 	</div>
 </dialog>
 
@@ -144,6 +150,23 @@
 		background: rgb(0 0 0 / 0.6);
 	}
 
+	/* Moves as one: the panel and the crown slide and drag together. */
+	.rise {
+		position: relative;
+		--crown-half: 56px;
+		transform: translateY(calc(100% + var(--drag)));
+		transition: transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+		will-change: transform;
+	}
+
+	.sheet[data-state='open'] .rise {
+		transform: translateY(var(--drag));
+	}
+
+	.rise.dragging {
+		transition: none;
+	}
+
 	.panel {
 		background: var(--color-surface-dark);
 		border-radius: var(--radius-card) var(--radius-card) 0 0;
@@ -152,17 +175,21 @@
 		overflow-y: auto;
 		overscroll-behavior: contain;
 		outline: none;
-		transform: translateY(calc(100% + var(--drag)));
-		transition: transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
-		will-change: transform;
 	}
 
-	.sheet[data-state='open'] .panel {
-		transform: translateY(var(--drag));
+	/* The lower half of the crown lives inside the sheet: leave room so nothing sits under it. */
+	.panel.crowned {
+		padding-top: var(--crown-half);
 	}
 
-	.panel.dragging {
-		transition: none;
+	/* A 200x112 preview centered on the top edge. */
+	.crown {
+		position: absolute;
+		z-index: 1;
+		top: 0;
+		left: 50%;
+		translate: -50% -50%;
+		pointer-events: none;
 	}
 
 	/* Generous grab zone: the handle and the title both drag. */
@@ -199,7 +226,7 @@
 
 	@media (prefers-reduced-motion: reduce) {
 		.sheet::backdrop,
-		.panel {
+		.rise {
 			transition: none;
 		}
 	}

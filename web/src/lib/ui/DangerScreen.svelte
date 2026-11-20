@@ -1,4 +1,6 @@
 <script lang="ts">
+	import type { Snippet } from 'svelte';
+	import { splitMark } from '#lib/danger.ts';
 	import { theme } from '#lib/theme.svelte.ts';
 
 	// The orange full-screen moment (DESIGN: "Dead link", action.alert) used for every
@@ -12,6 +14,8 @@
 		busy = false,
 		error = '',
 		thumb,
+		visual,
+		mark,
 		onconfirm,
 		oncancel
 	}: {
@@ -21,13 +25,18 @@
 		cancelLabel?: string;
 		busy?: boolean;
 		error?: string;
-		/** A faded, tilted cover of what is about to go. */
+		/** The cover of what is about to go, clear and tilted. */
 		thumb?: string;
+		/** What is about to go, drawn above the words (a fan of covers, an illustration). */
+		visual?: Snippet;
+		/** A part of the title to paint with a marker pen (the name of the collection). */
+		mark?: string;
 		onconfirm: () => void;
 		oncancel: () => void;
 	} = $props();
 
 	let cancel = $state<HTMLButtonElement>();
+	const parts = $derived(splitMark(title, mark));
 
 	$effect(() => {
 		theme.override = '#FF6A2B'; // color.action.alert
@@ -44,8 +53,9 @@
 
 <div class="danger on-alert" role="alertdialog" aria-modal="true" aria-labelledby="danger-title" aria-describedby="danger-body">
 	{#if thumb}<img class="thumb" src={thumb} alt="" />{/if}
+	{#if visual}<div class="visual" aria-hidden="true">{@render visual()}</div>{/if}
 	<div class="copy">
-		<h1 id="danger-title">{title}</h1>
+		<h1 id="danger-title">{parts[0]}{#if parts[1]}<mark>{parts[1]}</mark>{parts[2]}{/if}</h1>
 		<p id="danger-body">{body}</p>
 		{#if error}<p class="error" role="alert">{error}</p>{/if}
 	</div>
@@ -72,17 +82,29 @@
 		overflow: hidden;
 	}
 
+	/* The cover is shown as it is: clear, big, a little tilted. Nothing tints it. */
 	.thumb {
 		position: absolute;
-		top: 14%;
+		top: calc(12% + env(safe-area-inset-top));
 		left: 50%;
-		width: min(64%, 320px);
+		width: min(84%, 420px);
 		aspect-ratio: 16 / 9;
 		object-fit: cover;
-		border-radius: 16px;
-		opacity: 0.35;
-		filter: grayscale(1) contrast(0.9);
-		transform: translateX(-50%) rotate(-8deg);
+		border-radius: 18px;
+		box-shadow: 0 10px 30px rgb(0 0 0 / 0.28);
+		transform: translateX(-50%) rotate(-6deg);
+	}
+
+	/* Same place as the single cover: upper part, centered, above the words. */
+	.visual {
+		position: absolute;
+		top: calc(10% + env(safe-area-inset-top));
+		left: 50%;
+		width: min(88%, 420px);
+		translate: -50% 0;
+		display: grid;
+		place-items: center;
+		color: var(--color-text-light);
 	}
 
 	.copy,
@@ -99,6 +121,17 @@
 		font-size: clamp(36px, 9vw, 56px);
 		line-height: 1.05;
 		text-wrap: balance;
+	}
+
+	/* A highlighter stroke over the lower part of the name, not a box. */
+	mark {
+		color: var(--color-text-light);
+		background: linear-gradient(transparent 12%, var(--color-highlight-marker) 12%, var(--color-highlight-marker) 92%, transparent 92%);
+		padding: 0 0.12em;
+		margin: 0 -0.04em;
+		border-radius: 0.12em;
+		-webkit-box-decoration-break: clone;
+		box-decoration-break: clone;
 	}
 
 	p {

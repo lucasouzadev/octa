@@ -48,6 +48,9 @@
 		color: var(--color-text-dark);
 		box-shadow: 0 2px 6px rgb(0 0 0 / 0.3), 0 8px 22px rgb(0 0 0 / 0.3);
 		animation: top-in 180ms ease-out;
+		/* Its own 3D layer, in front: Safari can paint tilted 3D screens over a flat fixed button. */
+		translate: 0 0 1px;
+		will-change: transform;
 	}
 
 	/* On dark screens the arrow flips to a light disc so it stays visible. */

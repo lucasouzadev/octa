@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { toast } from '#lib/toast.svelte.ts';
 	import { CollectionError, library, type Collection, type Video } from '#lib/db/index.ts';
 	import Sheet from '#lib/ui/Sheet.svelte';
 
@@ -33,6 +34,8 @@
 		busy = true;
 		try {
 			await (await library()).moveVideo(video.id, target);
+			const name = collections.find((c) => c.id === target)?.name;
+			toast.show(name ? `Movido para ${name}` : 'Tirado da coleção');
 			onclose();
 			onmoved(target);
 		} catch (e) {
@@ -44,6 +47,17 @@
 </script>
 
 <Sheet open={video !== null} title="Mover para" {onclose}>
+	{#snippet crown()}
+		{#if video}
+			<div class="preview">
+				{#if video.thumbnail}
+					<img src={video.thumbnail} alt={video.title} referrerpolicy="no-referrer" />
+				{:else}
+					<span class="blank"></span>
+				{/if}
+			</div>
+		{/if}
+	{/snippet}
 	{#if video}
 		{#each collections as c (c.id)}
 			<button class="option" type="button" disabled={here?.id === c.id} onclick={() => moveTo(c.id)}>
@@ -62,6 +76,26 @@
 </Sheet>
 
 <style>
+	/* The cover of the video being moved, tilted like the screens in the Library. */
+	.preview {
+		width: 200px;
+		height: 112px;
+		border-radius: var(--radius-thumb, 14px);
+		overflow: hidden;
+		background: var(--color-surface-dark-raised);
+		border: 2px solid var(--color-text-dark);
+		box-shadow: 0 12px 28px rgb(0 0 0 / 0.5);
+		rotate: -3deg;
+	}
+
+	.preview img,
+	.blank {
+		display: block;
+		width: 100%;
+		height: 100%;
+		object-fit: cover;
+	}
+
 	.option {
 		display: flex;
 		align-items: center;

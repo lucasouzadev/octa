@@ -81,7 +81,7 @@ test.describe('R1.3 native sheet', () => {
 		await expect(sheet).toHaveAttribute('data-state', 'open');
 		// Let the slide-up finish so the handle holds still while the test grabs it.
 		await expect
-			.poll(() => sheet.locator('.panel').evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m42))
+			.poll(() => sheet.locator('.rise').evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m42))
 			.toBeLessThan(0.5);
 		return sheet;
 	}
@@ -97,7 +97,7 @@ test.describe('R1.3 native sheet', () => {
 		const sheet = await openMove(page);
 		const handle = sheet.locator('.handle');
 		await expect(handle).toBeVisible();
-		const panel = sheet.locator('.panel');
+		const panel = sheet.locator('.rise');
 		expect(parseFloat(await panel.evaluate((el) => getComputedStyle(el).transitionDuration))).toBeGreaterThan(0.1);
 		// The old sheet focused its first option and drew a white ring around it.
 		const focused = await page.evaluate(() => document.activeElement?.matches('button.option, a.option') ?? false);
@@ -106,7 +106,7 @@ test.describe('R1.3 native sheet', () => {
 
 	test('a long drag down on the handle closes it; a short one springs back', async ({ page }) => {
 		const sheet = await openMove(page);
-		const panel = sheet.locator('.panel');
+		const panel = sheet.locator('.rise');
 		const box = (await sheet.locator('.handle').boundingBox())!;
 		const at = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 
@@ -125,7 +125,7 @@ test.describe('R1.3 native sheet', () => {
 
 	test('pulling up resists and springs back', async ({ page }) => {
 		const sheet = await openMove(page);
-		const panel = sheet.locator('.panel');
+		const panel = sheet.locator('.rise');
 		const box = (await sheet.locator('.handle').boundingBox())!;
 		const release = await drag(page, { x: box.x + box.width / 2, y: box.y + box.height / 2 }, -300);
 		const y = await panel.evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m42);
@@ -149,7 +149,7 @@ test.describe('R1.3 native sheet', () => {
 	test('reduced motion: no slide', async ({ page }) => {
 		await page.emulateMedia({ reducedMotion: 'reduce' });
 		const sheet = await openMove(page);
-		expect(parseFloat(await sheet.locator('.panel').evaluate((el) => getComputedStyle(el).transitionDuration))).toBeLessThan(0.001);
+		expect(parseFloat(await sheet.locator('.rise').evaluate((el) => getComputedStyle(el).transitionDuration))).toBeLessThan(0.001);
 	});
 });
 
@@ -255,9 +255,6 @@ test.describe('R1.4 viewer', () => {
 });
 
 test.describe('R1.1 / R1.2 create screens', () => {
-	const field = (page: Page) => page.locator('.field');
-	const scrollY = (page: Page) => page.evaluate(() => window.scrollY);
-
 	test('close is on the right and the title sits high on the screen', async ({ page }) => {
 		await mockNetwork(page);
 		for (const path of ['/c/new', '/add']) {
@@ -269,101 +266,6 @@ test.describe('R1.1 / R1.2 create screens', () => {
 			// Used to start near the middle of the screen; now it opens the content.
 			expect(h1.y, `${path}: title too low`).toBeLessThan(page.viewportSize()!.height * 0.3);
 		}
-	});
-
-	test('the bar and the dim sit on the visible window when iOS pans it above the keyboard', async ({ page }, testInfo) => {
-		test.skip(testInfo.project.name === 'desktop', 'the keyboard bar is for touch devices');
-		await mockNetwork(page);
-		await page.goto('/c/new');
-		// What iOS reports with the keyboard open and the page panned 120px down.
-		await page.evaluate(() => {
-			const fake = { height: 500, width: window.innerWidth, offsetTop: 120, offsetLeft: 0, addEventListener() {}, removeEventListener() {} };
-			Object.defineProperty(window, 'visualViewport', { value: fake, configurable: true });
-		});
-		await page.getByLabel('Nome da coleção').click();
-		const bar = await page.locator('.field').boundingBox();
-		expect(Math.abs(bar!.y + bar!.height - 620)).toBeLessThan(2); // offsetTop + height: top of the keyboard
-		const dim = await page.locator('.dim').boundingBox();
-		expect(Math.abs(dim!.y - 120)).toBeLessThan(2);
-		expect(Math.abs(dim!.height - 500)).toBeLessThan(2);
-	});
-
-	test('with a mouse the field stays in the page and nothing docks', async ({ page }, testInfo) => {
-		test.skip(testInfo.project.name !== 'desktop', 'desktop only');
-		await mockNetwork(page);
-		await page.goto('/c/new');
-		await page.getByLabel('Nome da coleção').click();
-		await expect(page.locator('.field')).not.toHaveClass(/docked/);
-		await expect(page.getByRole('button', { name: 'Criar coleção' })).toBeVisible();
-	});
-
-	test('focusing the field docks it above the keyboard without moving the page', async ({ page }, testInfo) => {
-	test.skip(testInfo.project.name === 'desktop', 'the keyboard bar is for touch devices');
-		await mockNetwork(page);
-		await page.goto('/c/new');
-		const h1Before = (await page.locator('h1').boundingBox())!;
-		const input = page.getByLabel('Nome da coleção');
-		await input.click();
-		await expect(field(page)).toHaveClass(/docked/);
-		const box = (await field(page).boundingBox())!;
-		const height = page.viewportSize()!.height;
-		expect(box.y + box.height).toBeLessThanOrEqual(height + 1); // sits on the bottom edge (no keyboard in tests)
-		expect(box.y).toBeGreaterThan(height * 0.5); // it is the bottom bar, not mid-page
-		expect(await scrollY(page)).toBe(0);
-		expect((await page.locator('h1').boundingBox())!.y).toBe(h1Before.y); // nothing moved
-		await expect(page.locator('html')).toHaveCSS('overflow', 'hidden');
-		await expect(input).toBeFocused();
-	});
-
-	test('tapping outside closes it and keeps what was typed', async ({ page }, testInfo) => {
-	test.skip(testInfo.project.name === 'desktop', 'the keyboard bar is for touch devices');
-		await mockNetwork(page);
-		await page.goto('/c/new');
-		const input = page.getByLabel('Nome da coleção');
-		await input.fill('Receitas');
-		await page.locator('h1').click();
-		await expect(field(page)).not.toHaveClass(/docked/);
-		await expect(input).toHaveValue('Receitas');
-		await expect(input).not.toBeFocused();
-		await expect(page.locator('html')).not.toHaveCSS('overflow', 'hidden');
-	});
-
-	test('the send icon creates the collection from the docked bar', async ({ page }, testInfo) => {
-	test.skip(testInfo.project.name === 'desktop', 'the keyboard bar is for touch devices');
-		await mockNetwork(page);
-		await page.goto('/c/new');
-		await page.getByLabel('Nome da coleção').fill('Receitas');
-		await expect(field(page)).toHaveClass(/docked/);
-		await page.getByRole('button', { name: 'Enviar' }).click();
-		await expect(page).toHaveURL(/\/c\/[0-9a-f-]{36}$/);
-		await expect(page.getByRole('heading', { name: 'Receitas' })).toBeVisible();
-	});
-
-	test('Enter also sends, and the send icon stays off until there is text', async ({ page }, testInfo) => {
-	test.skip(testInfo.project.name === 'desktop', 'the keyboard bar is for touch devices');
-		await mockNetwork(page);
-		await page.goto('/c/new');
-		const input = page.getByLabel('Nome da coleção');
-		await input.click();
-		await expect(page.getByRole('button', { name: 'Enviar' })).toBeDisabled();
-		await input.fill('Estudos');
-		await expect(page.getByRole('button', { name: 'Enviar' })).toBeEnabled();
-		await input.press('Enter');
-		await expect(page).toHaveURL(/\/c\/[0-9a-f-]{36}$/);
-	});
-
-	test('errors show inside the docked bar, where the keyboard cannot hide them', async ({ page }, testInfo) => {
-	test.skip(testInfo.project.name === 'desktop', 'the keyboard bar is for touch devices');
-		await mockNetwork(page);
-		await page.goto('/c/new');
-		await page.getByLabel('Nome da coleção').fill('todos');
-		await page.getByRole('button', { name: 'Enviar' }).click();
-		const error = page.getByRole('alert');
-		await expect(error).toContainText('reservado');
-		const f = (await field(page).boundingBox())!;
-		const e = (await error.boundingBox())!;
-		expect(e.y).toBeGreaterThanOrEqual(f.y);
-		expect(e.y + e.height).toBeLessThanOrEqual(f.y + f.height + 1);
 	});
 
 	test('Colar fills the link from the clipboard, only on the link screen', async ({ page, context }) => {
@@ -389,16 +291,6 @@ test.describe('R1.1 / R1.2 create screens', () => {
 		await page.getByRole('button', { name: 'Colar', exact: true }).click();
 		await expect(page.getByRole('alert')).toContainText('área de transferência');
 		await expect(page.getByLabel('Link do vídeo')).toHaveValue('');
-	});
-
-	test('reduced motion: the bar does not animate', async ({ page }, testInfo) => {
-	test.skip(testInfo.project.name === 'desktop', 'the keyboard bar is for touch devices');
-		await page.emulateMedia({ reducedMotion: 'reduce' });
-		await mockNetwork(page);
-		await page.goto('/c/new');
-		await page.getByLabel('Nome da coleção').click();
-		const seconds = await field(page).evaluate((el) => parseFloat(getComputedStyle(el).transitionDuration));
-		expect(seconds).toBeLessThan(0.001);
 	});
 });
 
