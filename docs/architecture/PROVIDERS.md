@@ -48,4 +48,6 @@ type Provider interface {
 - Health: `HEAD` (fallback `GET` + `Range: bytes=0-0`): 2xx/206 `alive`; 404/410 `dead`; 401/403 `restricted`; other `unknown`. Never download the body.
 
 ## Unsupported
-Return `422 unsupported_url`. The web shows the paste screen with "Esse tipo de link ainda não é suportado" and keeps the text in the field.
+Return `422 unsupported_url`. The web shows the paste screen with "Esse tipo de link ainda não é suportado. Por enquanto: YouTube, Shorts, Reels, TikTok e arquivos de vídeo" and keeps the text in the field.
+
+A TikTok `vm.`/`vt.` short link is the one case the client cannot parse alone, so the web asks the API to expand it (timeout 20 s, long enough for a free-tier API waking up). If the API cannot be reached (offline, timeout, 5xx, wrong `VITE_API_BASE`) the web shows "Não consegui abrir o link curto do TikTok agora…" (client error `resolver_unavailable`), never "não é suportado". Only an API answer of `422 unsupported_url` means the link itself is unsupported.

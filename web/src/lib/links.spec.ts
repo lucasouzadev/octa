@@ -1,7 +1,7 @@
 import 'fake-indexeddb/auto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { Library } from '#lib/db/library.ts';
-import { addLink } from '#lib/links.ts';
+import { addLink, EXPAND_TIMEOUT_MS } from '#lib/links.ts';
 import { ApiError, type Meta } from '#lib/api.ts';
 import { LinkError } from '#lib/providers/parse.ts';
 
@@ -143,7 +143,7 @@ describe('addLink: TikTok short links (only the API can follow the redirect)', (
 		expect(video.title).toBe('Receita rápida');
 	});
 
-	it('is unsupported when the API is down: nothing is saved', async () => {
+	it('says the resolver is unavailable (not "unsupported") when the API is down: nothing is saved', async () => {
 		await expect(
 			addLink('https://vm.tiktok.com/ZMabc123/', {
 				library: lib,
@@ -151,8 +151,47 @@ describe('addLink: TikTok short links (only the API can follow the redirect)', (
 					throw new ApiError(502);
 				}
 			})
-		).rejects.toMatchObject({ code: 'unsupported_url' });
+		).rejects.toMatchObject({ code: 'resolver_unavailable' });
 		expect(await lib.list()).toHaveLength(0);
+	});
+
+	it('says the resolver is unavailable when the request never reaches the API (wrong base, offline)', async () => {
+		await expect(
+			addLink('https://vt.tiktok.com/ZSabc123/', {
+				library: lib,
+				resolve: async () => {
+					throw new TypeError('Failed to fetch');
+				}
+			})
+		).rejects.toMatchObject({ code: 'resolver_unavailable' });
+		expect(await lib.list()).toHaveLength(0);
+	});
+
+	it('says the resolver is unavailable when the API takes longer than the expand timeout', async () => {
+		await expect(
+			addLink('https://vt.tiktok.com/ZSabc123/', {
+				library: lib,
+				expandTimeoutMs: 20,
+				resolve: (_url, signal) =>
+					new Promise((_resolve, reject) => signal.addEventListener('abort', () => reject(new DOMException('aborted', 'AbortError'))))
+			})
+		).rejects.toMatchObject({ code: 'resolver_unavailable' });
+		expect(await lib.list()).toHaveLength(0);
+	});
+
+	it('keeps "unsupported" when the API itself answers that the short link is not a TikTok video', async () => {
+		await expect(
+			addLink('https://vt.tiktok.com/ZSabc123/', {
+				library: lib,
+				resolve: async () => {
+					throw new LinkError('unsupported_url');
+				}
+			})
+		).rejects.toMatchObject({ code: 'unsupported_url' });
+	});
+
+	it('waits long enough for a free-tier API that is waking up (expand timeout >= 15 s)', () => {
+		expect(EXPAND_TIMEOUT_MS).toBeGreaterThanOrEqual(15_000);
 	});
 
 	it('is unsupported when the API points somewhere that is not a TikTok video', async () => {

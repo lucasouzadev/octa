@@ -52,7 +52,7 @@ test('TikTok video: player v1 without its chrome, 9:16, API title wins', async (
 	await expect(page.getByText('TikTok').first()).toBeVisible();
 });
 
-test('TikTok short link is expanded by the API; with the API down it says unsupported', async ({ page }) => {
+test('TikTok short link is expanded by the API; with the API down it says it could not check now', async ({ page }) => {
 	await net(page, (url) =>
 		url.includes('vm.tiktok.com')
 			? {
@@ -76,7 +76,8 @@ test('TikTok short link is expanded by the API; with the API down it says unsupp
 	const down = await page.context().newPage();
 	await net(down, () => null);
 	await paste(down, 'https://vt.tiktok.com/ZMdown/');
-	await expect(down.getByRole('alert')).toContainText('não é suportado');
+	await expect(down.getByRole('alert')).toContainText('Não consegui abrir o link curto do TikTok agora');
+	await expect(down.getByRole('alert')).not.toContainText('não é suportado');
 });
 
 test('HLS playlist plays in a native video element, hls.js loads only on demand', async ({ page }) => {

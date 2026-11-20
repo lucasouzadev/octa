@@ -44,7 +44,9 @@
 				e instanceof EditError
 					? messages[e.code]
 					: e instanceof LinkError
-						? 'Isso não parece um link que o app reconheça. Confira e tente de novo.'
+						? e.code === 'resolver_unavailable'
+							? 'Não consegui abrir o link curto do TikTok agora. Tente de novo em instantes ou cole o link completo do vídeo.'
+							: 'Isso não parece um link que o app reconheça. Confira e tente de novo.'
 						: 'Não deu para salvar agora. Tente de novo.';
 		} finally {
 			busy = false;

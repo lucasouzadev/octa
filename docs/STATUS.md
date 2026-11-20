@@ -1,6 +1,6 @@
 # STATUS — what is actionable now
 
-Updated 2026-11-19. Progress only — the product is defined in `docs/product/SPEC.md`.
+Updated 2026-11-20. Progress only — the product is defined in `docs/product/SPEC.md`.
 
 | Slice | Scope (SPEC §8) | State |
 |---|---|---|
@@ -9,6 +9,13 @@ Updated 2026-11-19. Progress only — the product is defined in `docs/product/SP
 | 2 | Library + collections, Threlte fan/stack + CSS fallback, search, View Transitions (plan: `tasks/plan.md`) | 2a collections (2D) DONE (PR #6 merged, owner tested 2026-11-19); 2b search DONE (PR #7 merged, owner approved); 2c View Transitions DONE (PR #8 merged, owner tested); 2d-i CSS-3D fan and stack DONE (PR #9 merged, owner approved on iPhone); iOS findings fix DONE (PR #10 merged); 2d-ii WebGL fan DONE (PR #11 merged, owner approved); 2e-1 Library cards per the prototype DONE (PR #12 merged, owner approved); 2e-2 Collection screen as tilted 3D screens IN REVIEW — branch `feat/slice-2e2-collection-screens`; 2e-3 WebGL monitors IN REVIEW (branch `feat/slice-2e3-webgl-monitors`) |
 | 3 | Instagram, TikTok, HLS; `/v1/health`; health states; Dead link screen; resume | 3a sources DONE (PR #18/#20 merged); 3c cinema player DONE (PR #21 merged); 3b `/v1/health` + real dead-link check + resume IN REVIEW — branch `feat/slice-3b-health` (home card "Continuar assistindo" pending owner decision) |
 | 4 | PWA install, share target, export/import, offline shell, E2E 3 viewports, deploy (owner picks host) | — |
+
+## Fix — TikTok short link feedback (2026-11-20, branch `fix/tiktok-short-link-feedback`)
+- Owner's iPhone screenshot: a `vt.tiktok.com` link was refused with "não é suportado". Cause (read-only checks): the Render API was still on the PR #4 commit (no TikTok), and `VITE_API_BASE` exists on Vercel for `production` only, so preview/branch builds call a relative `/api`; the client turned any failed expansion into `unsupported_url`.
+- Changed: the paste screen copy (Reels/TikTok are supported), a new client error `resolver_unavailable` for a failed short-link expansion (offline, timeout, 5xx, wrong base), and a 20 s expansion timeout.
+- Ops (owner-approved 2026-11-20): `octa-api` redeployed from main f456552, live 05:01 UTC; `/v1/resolve` for a canonical TikTok URL now answers 200.
+- Evidence: `pnpm test` 266 PASS (5 new, 1 replaced; red first), `pnpm check` 0 errors, `pnpm test:e2e` 398 PASS / 19 skipped / 0 failed (417 tests).
+- NOT proven: a real `vt.`/`vm.` link expanding from the Render API (a fake short link answered 422); iPhone; `VITE_API_BASE` for Vercel previews is still unset (owner decision).
 
 ## Slice 1 — evidence (2026-11-19)
 - API: `go test -race ./...` PASS (provider vectors, SSRF guard incl. redirect to 169.254.169.254, resolver, handlers), `go vet` PASS, `govulncheck` no vulns.
