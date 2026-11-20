@@ -50,7 +50,7 @@ docs/
 | Layout | container queries, `clamp()` fluid type, logical properties | same layout on every screen size |
 | Color | `oklch()` tokens | smooth single-color screen transitions |
 | Storage | IndexedDB via `idb` | local-first, works offline |
-| PWA | `@vite-pwa/sveltekit` (or SvelteKit service worker, decide in slice 4) | install, offline shell, share target |
+| PWA | SvelteKit's own `src/service-worker.ts` + `static/manifest.webmanifest` (decided 2026-11-20: no plugin, no new dependency) | install, offline shell, share target |
 | HLS | `hls.js`, only where the browser lacks native HLS | Safari plays HLS natively |
 | Tests | Go `testing` + `httptest`; Vitest; Playwright (390/834/1440 viewports) | |
 | Package manager | pnpm | |

@@ -1,18 +1,18 @@
-# HANDOFF — 2026-11-20 — Organize collections (drag + Organizar sheet)
+# HANDOFF — 2026-11-20 — Slice 4, PR 2 (PWA)
 
 ## Goal
-Owner 2026-11-20: toast on top (PR #28), 3D follows the phone (PR #30), drag-and-drop reorder + "Organizar" header button (this branch). Decisions: Organizar = sheet (sort Minha ordem/A–Z/recentes/mais vídeos + Reordenar); virtual collections fixed on top; tilt switch moved into the sheet. Owner said "Pode codar" (2026-11-20).
+Owner 2026-11-20: slice 4 in 3 PRs (data, PWA, CI+CSP); SvelteKit service worker without a plugin; provisional icon; no `VITE_API_BASE` work.
 
 ## State (verified)
-- Owner merged #26, #27, #28, #30 (#28 and #30 into `fix/qa-round-3`); #29 merged it to main earlier; **PR #31** (`fix/qa-round-3` → main) is open and carries toast + tilt.
-- `feat/organize-collections` is based on `fix/qa-round-3` tip 41a7bb5 (PR base = `fix/qa-round-3`; merge #31 first or retarget to main). Implemented: `lib/organize.ts` (+spec), `Collection.rank` + `setCollectionRanks`, `OrganizeSheet`, Reordenar mode on the Library, MoveSheet order, tilt switch moved, `organize.e2e.ts`, tilt e2e adapted.
-- `pnpm test` 295 PASS, `pnpm check` 0 errors, organize+tilt e2e PASS (3 viewports). Full e2e: see PR.
-- NOT proven: finger drag on real iPhone (mouse only), auto-scroll feel.
-- Pre-existing flaky: `health.e2e.ts:29` (fails on main), `health.e2e.ts:17`, `enrich.e2e.ts:5` under load.
+- main: #31, #32, #33. **Known bug on main**: `app.css` `.on-dark:not(dialog)` outranks the alert color (qa2:171 fails on main); fixed in PR #34 and repeated as the same hunk in PR 2.
+- PR #34 `feat/export-import` (export/import JSON with rank): open. Branch `feat/pwa` (from main): manifest, provisional icons, `src/service-worker.ts`, `lib/share.ts` (+spec), `/add` prefill from url/text/title, `pwa.e2e.ts`, Playwright blocks service workers by default, Kit 3 config (`serviceWorker.register`, `paths.relative:false`), tsconfig exclude.
+- `pnpm test` 309, `pnpm check` 0 errors, pwa e2e 42 PASS (2 reps × 3 viewports). Full e2e: 563 pass; failures only health:29 (fails on main), qa2:171 (css, fixed here), qa2:299 (flaky).
+- NOT proven: install prompt / Add to Home Screen on real devices, share target on Android, Lighthouse PWA, SW update across two deploys. **iOS Safari has no Web Share Target** (caniuse): on iPhone the entry stays "Colar um link".
 
 ## Next step
-Owner tests on the iPhone preview. Open: `VITE_API_BASE` for Vercel Preview; slice 4 (PWA install, share target, export/import — export must include `rank`).
+Open PR for `feat/pwa`; then PR 3: GitHub Actions workflow (go test/vet/govulncheck + pnpm check/test/build + Playwright) and CSP (must allow the YouTube IFrame API script and `frame-src` youtube-nocookie/instagram/tiktok; verify against the running player before enforcing; ship as report-only first if unsure).
 
 ## Risks / owner decisions needed
-- Export/import (slice 4) must carry `Collection.rank`.
-- Reordering inside a collection (videos) already exists; not touched.
+- Final app icon (current is provisional).
+- `src/service-worker.ts` is excluded from svelte-check (Kit requires it); it is not type-checked.
+- Precache includes all build chunks (three/hls) — larger first install on cellular.
