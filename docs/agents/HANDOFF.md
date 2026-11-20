@@ -1,18 +1,18 @@
-# HANDOFF — 2026-11-20 — Slice 4, PR 2 (PWA)
+# HANDOFF — 2026-11-20 — Slice 4, PR 3 (CI + CSP)
 
 ## Goal
-Owner 2026-11-20: slice 4 in 3 PRs (data, PWA, CI+CSP); SvelteKit service worker without a plugin; provisional icon; no `VITE_API_BASE` work.
+Owner 2026-11-20: slice 4 in 3 PRs; PR 3 = GitHub Actions + CSP. No `VITE_API_BASE` work.
 
-## State (verified)
-- main: #31, #32, #33. **Known bug on main**: `app.css` `.on-dark:not(dialog)` outranks the alert color (qa2:171 fails on main); fixed in PR #34 and repeated as the same hunk in PR 2.
-- PR #34 `feat/export-import` (export/import JSON with rank): open. Branch `feat/pwa` (from main): manifest, provisional icons, `src/service-worker.ts`, `lib/share.ts` (+spec), `/add` prefill from url/text/title, `pwa.e2e.ts`, Playwright blocks service workers by default, Kit 3 config (`serviceWorker.register`, `paths.relative:false`), tsconfig exclude.
-- `pnpm test` 309, `pnpm check` 0 errors, pwa e2e 42 PASS (2 reps × 3 viewports). Full e2e: 563 pass; failures only health:29 (fails on main), qa2:171 (css, fixed here), qa2:299 (flaky).
-- NOT proven: install prompt / Add to Home Screen on real devices, share target on Android, Lighthouse PWA, SW update across two deploys. **iOS Safari has no Web Share Target** (caniuse): on iPhone the entry stays "Colar um link".
+## State
+- Open: #34 export/import (rank included), #35 PWA (install, share target, offline), PR 3 on `feat/ci-csp` (this work; commit/push/PR pending the full e2e run).
+- Known main bug: `app.css` `.on-dark` repaint (qa2:171); the fix is the same hunk in #34, #35 and PR 3.
+- PR 3: `ci.yml`, Kit `csp` in `vite.config.ts`, `vercel.json` headers, `csp.e2e.ts`, test fixes (time-bomb `checkedAt`, `<style>` injection, `fetch('data:')`), docs.
+- Evidence: unit 303 PASS, check 0 errors, csp/health/qa/webgl/monitors/transitions e2e PASS; full run in progress.
+- NOT proven: workflow on GitHub, live embeds under the CSP, vercel headers on a deploy.
 
-## Next step
-Open PR for `feat/pwa`; then PR 3: GitHub Actions workflow (go test/vet/govulncheck + pnpm check/test/build + Playwright) and CSP (must allow the YouTube IFrame API script and `frame-src` youtube-nocookie/instagram/tiktok; verify against the running player before enforcing; ship as report-only first if unsure).
+## Next
+Owner merges #34, #35, PR 3 (any order; app.css hunk identical). Then check the first CI run on main; final app icon; real-device checks (install, share target on Android, iOS share has no target).
 
-## Risks / owner decisions needed
-- Final app icon (current is provisional).
-- `src/service-worker.ts` is excluded from svelte-check (Kit requires it); it is not type-checked.
-- Precache includes all build chunks (three/hls) — larger first install on cellular.
+## Risks / decisions
+- `connect-src https:` and `style-src-attr 'unsafe-inline'` are deliberate wide spots (hls.js hosts, Svelte styles).
+- Actions pinned by tag, not SHA (full SHAs unverifiable from the sandbox).

@@ -49,7 +49,7 @@ test('the monitors show the cover, not a flat grey', async ({ page }, testInfo) 
 	await page.waitForTimeout(600);
 	const shot = await page.screenshot();
 	const strongest = await page.evaluate(async (b64) => {
-		const img = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob());
+		const img = await createImageBitmap(new Blob([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))]));
 		const c = new OffscreenCanvas(img.width, img.height);
 		const g = c.getContext('2d')!;
 		g.drawImage(img, 0, 0);

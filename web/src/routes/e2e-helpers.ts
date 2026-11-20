@@ -48,7 +48,7 @@ export async function mockNetwork(page: Page, opts: NetworkOptions = {}) {
 				thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
 				durationSec: null,
 				health: 'alive',
-				checkedAt: '2026-11-19T12:00:00Z'
+				checkedAt: new Date().toISOString() // never a fixed date: it goes stale (24 h) and the player check fires
 			}
 		});
 	});

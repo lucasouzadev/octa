@@ -121,7 +121,7 @@ test.describe('R2.4 buttons', () => {
 	test('on the dark collection the arrow is a white disc with a dark icon', async ({ page }) => {
 		await seed(page);
 		await page.goto('/c/todos');
-		await page.addStyleTag({ content: 'main.collection { min-height: 4000px !important; }' });
+		await page.locator('main.collection').evaluate((el: HTMLElement) => (el.style.minHeight = '4000px')); // style attribute: the policy refuses <style> tags
 		const up = page.getByRole('button', { name: 'Voltar ao topo' });
 		await expect(async () => {
 			await page.evaluate(() => window.scrollTo(0, 3000));
@@ -134,7 +134,7 @@ test.describe('R2.4 buttons', () => {
 	test('on the white Library the arrow stays a dark disc', async ({ page }) => {
 		await seed(page);
 		await page.goto('/');
-		await page.addStyleTag({ content: 'main.library { min-height: 4000px !important; }' });
+		await page.locator('main.library').evaluate((el: HTMLElement) => (el.style.minHeight = '4000px')); // style attribute: the policy refuses <style> tags
 		const up = page.getByRole('button', { name: 'Voltar ao topo' });
 		await expect(async () => {
 			await page.evaluate(() => window.scrollTo(0, 3000));

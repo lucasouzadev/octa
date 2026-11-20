@@ -379,7 +379,7 @@ test.describe('R1.6 create menu, empty states, back to top', () => {
 	test('the back-to-top arrow shows deep in a long page and scrolls up', async ({ page }) => {
 		await seed(page);
 		await page.goto('/');
-		await page.addStyleTag({ content: 'main.library { min-height: 4000px !important; }' });
+		await page.locator('main.library').evaluate((el: HTMLElement) => (el.style.minHeight = '4000px')); // style attribute: the policy refuses <style> tags
 		const up = page.getByRole('button', { name: 'Voltar ao topo' });
 		await expect(up).toHaveCount(0);
 		await expect(async () => {
@@ -394,7 +394,7 @@ test.describe('R1.6 create menu, empty states, back to top', () => {
 	test('the back-to-top arrow also exists on a long collection and clears the Assistir button', async ({ page }) => {
 		await seed(page);
 		await page.goto('/c/todos');
-		await page.addStyleTag({ content: 'main.collection { min-height: 4000px !important; }' });
+		await page.locator('main.collection').evaluate((el: HTMLElement) => (el.style.minHeight = '4000px')); // style attribute: the policy refuses <style> tags
 		const up = page.getByRole('button', { name: 'Voltar ao topo' });
 		await expect(async () => {
 			await page.evaluate(() => window.scrollTo(0, 3000));
