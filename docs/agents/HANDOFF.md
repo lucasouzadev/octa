@@ -1,25 +1,17 @@
-# HANDOFF — 2026-11-20 — TikTok title and cover (PR open)
+# HANDOFF — 2026-11-20 — Device tilt (PR open, stacked)
 
 ## Goal
-Owner's iPhone screenshots: a TikTok saved but showed a grey cover and the title "Vídeo do TikTok". Owner chose (2026-11-20): build the title from the @handle plus a drawn cover, no scraping, and upgrade already-saved generic titles (edited titles untouched).
+Owner 2026-11-20: 3D follows the phone's movement; then drag-and-drop reorder + "Organizar" header button; toast on top. Order approved: toast (PR #28), tilt (this), drag/organizer (needs a spec first). Decisions: organizer = sheet with sort (A–Z, recent, most videos, manual) + "Reordenar"; virtual collections fixed on top; tilt permission via a switch.
 
 ## State (verified)
-- Implementation: done — branch `fix/qa-round-3`, 13 commits from main d81eb7a (R3.1+R3.3 share one commit). Merge: PR open, owner merges. PR #26 (TikTok handle title) is still open and separate.
-- Automated: `pnpm test` 274 PASS · `pnpm check` 0 errors · full e2e 501 PASS / 9 failed / 12 skipped (522). The 9: `health.e2e.ts:29` x3 viewports fails the same on origin/main (pre-existing); 6 were my tests assuming the phone viewport, fixed and re-run green on 3 viewports (no second full run).
-- NOT proven: any iPhone behavior (rubber band and arrow z-order R3.1, keyboard white areas R3.6, 3D, real fullscreen R3.13). No CI workflow exists yet (slice 4).
-
-## Decisions (and why)
-- Handle title from the canonical URL, API generic title never overwrites it, a real API title wins.
-- Drawn cover = the author text on the card/fan tile when there is no thumbnail (any source).
-
-## Files touched
-- `web/src/lib/links.ts` (tiktokHandle, upgradeGenericTitles, metaPatch guard), `fan.ts`, `ui/ScreenCard.svelte`, `ui/FanStack.svelte`, `routes/+page.svelte`
-- tests: `lib/tiktok-meta.spec.ts`, `routes/sources.e2e.ts`; docs: `STATUS.md`, `PROVIDERS.md`
+- PR #27 `fix/qa-round-3` (QA round 3 + strip removal): open, owner merges. PR #28 `feat/toast-top` (toast at top): open, based on #27. This branch `feat/device-tilt` is based on #27 (not on #28).
+- Tilt: implemented; `pnpm test` 282 PASS, `pnpm check` 0 errors, tilt e2e 18 PASS (phone, tablet; desktop skipped). Full e2e: see PR.
+- NOT proven: real sensor, iOS permission prompt, WebGL consumers (no e2e on the lean of the WebGL scenes), battery cost.
+- Pre-existing failing: `health.e2e.ts:29` (fails on main too).
 
 ## Next step (exact)
-Owner merges the PR, opens the production URL on iPhone (home runs the upgrade), checks title and cover. Then slice 4 (PWA install, share target, export/import, offline shell, CI workflow, CSP, E2E 3 viewports) and the owner's "correções da 2e-3".
+Owner tests tilt on the iPhone preview. Then drag-and-drop: write a spec first (pointer-events drag with long press, auto-scroll, IndexedDB v3 `order` field, keyboard move up/down, interplay with tilt and the 3D fan) and get approval.
 
 ## Risks / owner decisions needed
-- `VITE_API_BASE` is set only for Vercel `production`; preview builds cannot reach the API (not changed).
-- Flaky `qa2.e2e.ts:299` (XS fix, separate PR if wanted): wait for the UI to confirm the mark before `page.goto('/')`.
-- Floating "Assistir em sequência" button covers part of the second card's title while scrolling (low, seen in screenshot, not touched).
+- The switch is a third header button; it moves into "Organizar" when that exists.
+- `VITE_API_BASE` for Vercel Preview still unset.

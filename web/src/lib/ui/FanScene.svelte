@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { T, useTask, useThrelte } from '@threlte/core';
 	import { CanvasTexture, SRGBColorSpace } from 'three';
+	import { tilt } from '#lib/tilt.svelte.ts';
 	import { onDestroy, onMount } from 'svelte';
 	import { cardLabel, fanCards, type FanItem } from '#lib/fan.ts';
 
@@ -157,7 +158,12 @@
 	// Tilt: follows the pointer over the card with a spring (DESIGN §6).
 	const STIFFNESS = 0.15;
 	const DAMPING = 0.8;
-	let target = { x: 0, y: 0 };
+	let aimed = { x: 0, y: 0 }; // where the pointer wants it
+	let target = { x: 0, y: 0 }; // aimed plus the phone's tilt
+	const lean = () => ({
+		x: Math.max(-1, Math.min(1, aimed.x + tilt.x * 0.8)),
+		y: Math.max(-1, Math.min(1, aimed.y + tilt.y * 0.8))
+	});
 	let pos = $state({ x: 0, y: 0 });
 	let vel = { x: 0, y: 0 };
 
@@ -171,14 +177,16 @@
 				y: Math.max(-1, Math.min(1, ((e.clientY - r.top) / r.height) * 2 - 1))
 			};
 			// Browsers repeat pointermove for a still mouse; redraw only when it really moved.
-			if (Math.abs(next.x - target.x) < 0.01 && Math.abs(next.y - target.y) < 0.01) return;
-			target = next;
+			if (Math.abs(next.x - aimed.x) < 0.01 && Math.abs(next.y - aimed.y) < 0.01) return;
+			aimed = next;
+			target = lean();
 			resting = false;
 			invalidate();
 		};
 		const leave = () => {
-			if (target.x === 0 && target.y === 0) return;
-			target = { x: 0, y: 0 };
+			if (aimed.x === 0 && aimed.y === 0) return;
+			aimed = { x: 0, y: 0 };
+			target = lean();
 			resting = false;
 			invalidate();
 		};
@@ -195,6 +203,15 @@
 	// A task runs every frame, and writing `pos` redraws the scene. So once the spring
 	// is close enough it snaps to its target and stops writing until the next move.
 	let resting = true;
+
+	// The phone moved: lean toward it and let the spring settle.
+	$effect(() => {
+		void tilt.x;
+		void tilt.y;
+		target = lean();
+		resting = false;
+		invalidate();
+	});
 
 	useTask(
 		() => {

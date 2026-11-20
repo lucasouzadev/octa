@@ -124,3 +124,11 @@ Gradient washes, glassmorphism on content, colored chrome on B&W screens, more t
 - **Collection end:** no pulling past the end (`overscroll-behavior-y: none`), no extra room under the sticky button; the back-to-top arrow is its own 3D layer in front of the tilted screens.
 - **Full screen** centers the picture (spare height split above and below); horizontal videos go edge to edge without rounded corners; the bar and the leave button keep their side margin.
 - NOT RUN: real iPhone (iOS rubber band, Safari 3D z-order, status-bar sampling, keyboard white areas, real fullscreen).
+
+## Device tilt (owner, 2026-11-20)
+
+- On touch devices with a motion sensor the 3D objects lean with the phone, the counterpart of the mouse on desktop: `lib/tilt.ts` (pure math: rest pose = first reading, dead zone 1°, full tilt at 22°, smoothing, the rest pose slowly follows a new posture), `lib/tilt.svelte.ts` (one sensor listener, permission, persistence in `localStorage` `octa.tilt`, writes `--tilt-x` / `--tilt-y` on `<html>`).
+- Consumers: CSS screens (`ScreenCard`), Library fan tiles (`FanStack`), WebGL monitors (`MonitorScene`) and the WebGL fan (`FanScene`), added on top of the mouse spring. While tilt is on, `html[data-tilt]` removes the CSS transitions on those objects (the sensor already smooths).
+- The switch "Mover com o celular" (`ui/TiltSwitch.svelte`) is a header button on the Library, shown only with touch + sensor and never under reduced motion. Where the platform has a permission question (iOS, recent Chrome) it starts off and the tap on the switch asks; after a reload the first tap anywhere asks again. Without that API it starts on. It is planned to move into the "Organizar" sheet when that button exists (header limit of 3 actions).
+- Only upright portrait is mapped (landscape rests the objects); a hidden page stops listening.
+- NOT RUN: real iPhone/Android sensor and permission prompt (headless readings are dispatched by hand).
