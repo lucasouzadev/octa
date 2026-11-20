@@ -1,18 +1,17 @@
-# HANDOFF — 2026-11-20 — Organize collections (drag + Organizar sheet)
+# HANDOFF — 2026-11-20 — Slice 4, PR 1 (export/import)
 
 ## Goal
-Owner 2026-11-20: toast on top (PR #28), 3D follows the phone (PR #30), drag-and-drop reorder + "Organizar" header button (this branch). Decisions: Organizar = sheet (sort Minha ordem/A–Z/recentes/mais vídeos + Reordenar); virtual collections fixed on top; tilt switch moved into the sheet. Owner said "Pode codar" (2026-11-20).
+Owner 2026-11-20: do slice 4 (PWA install, share target, export/import carrying `rank`; skip `VITE_API_BASE`). Approved: 3 PRs (1 data, 2 PWA, 3 CI+CSP); SvelteKit `service-worker.ts` without @vite-pwa; provisional black/white icon; export/import buttons in the Organizar sheet; duplicate = existing wins.
 
 ## State (verified)
-- Owner merged #26, #27, #28, #30 (#28 and #30 into `fix/qa-round-3`); #29 merged it to main earlier; **PR #31** (`fix/qa-round-3` → main) is open and carries toast + tilt.
-- `feat/organize-collections` is based on `fix/qa-round-3` tip 41a7bb5 (PR base = `fix/qa-round-3`; merge #31 first or retarget to main). Implemented: `lib/organize.ts` (+spec), `Collection.rank` + `setCollectionRanks`, `OrganizeSheet`, Reordenar mode on the Library, MoveSheet order, tilt switch moved, `organize.e2e.ts`, tilt e2e adapted.
-- `pnpm test` 295 PASS, `pnpm check` 0 errors, organize+tilt e2e PASS (3 viewports). Full e2e: see PR.
-- NOT proven: finger drag on real iPhone (mouse only), auto-scroll feel.
-- Pre-existing flaky: `health.e2e.ts:29` (fails on main), `health.e2e.ts:17`, `enrich.e2e.ts:5` under load.
+- main has #31, #32, #33 (toast, tilt, organize, QA 3).
+- Branch `feat/export-import` (from main): `lib/backup.ts` (+spec), `lib/backup-io.ts`, `Library.exportAll/importBackup`, OrganizeSheet rows, Organizar visible on empty Library, `backup.e2e.ts`. `pnpm test` 320, `pnpm check` 0 errors. Full e2e: see PR.
+- NOT proven: iOS share/Files on a real iPhone.
 
 ## Next step
-Owner tests on the iPhone preview. Open: `VITE_API_BASE` for Vercel Preview; slice 4 (PWA install, share target, export/import — export must include `rank`).
+Open the PR for `feat/export-import`; then PR 2 (manifest, `src/service-worker.ts`, `/share` target route, icons, offline shell tests), then PR 3 (GitHub Actions: go test/vet + pnpm check/test/build + Playwright; CSP per ARCHITECTURE §6).
 
 ## Risks / owner decisions needed
-- Export/import (slice 4) must carry `Collection.rank`.
-- Reordering inside a collection (videos) already exists; not touched.
+- Share target needs HTTPS + an installed PWA; cannot be proven headless.
+- CSP must allow the YouTube IFrame API script (`www.youtube.com/iframe_api`, `s.ytimg.com`) used by the player: verify before enforcing.
+- Pre-existing flaky: `health.e2e.ts:29` (fails on main), `health.e2e.ts:17`, `enrich.e2e.ts` under load.

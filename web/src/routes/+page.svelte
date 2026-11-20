@@ -12,12 +12,39 @@
 	import Icon from '#lib/ui/Icon.svelte';
 	import OrganizeSheet from '#lib/ui/OrganizeSheet.svelte';
 	import { loadMode, moveBy, moveTo, saveMode, slotAt, sortCollections, type SortMode } from '#lib/organize.ts';
+	import { BACKUP_ERROR_TEXT, exportLibrary, importLibrary, importMessage } from '#lib/backup-io.ts';
 	import { toast } from '#lib/toast.svelte.ts';
 	import Illustration from '#lib/ui/Illustration.svelte';
 
 	let videos = $state<Video[] | null>(null);
 	let collections = $state<Collection[] | null>(null);
 	let mode = $state<SortMode>('manual');
+
+	async function reload() {
+		const lib = await library();
+		[videos, collections] = await Promise.all([lib.list(), lib.listCollections()]);
+	}
+
+	async function doExport() {
+		organizeOpen = false;
+		try {
+			await exportLibrary();
+		} catch {
+			toast.show('Não deu para exportar');
+		}
+	}
+
+	async function doImport(file: File) {
+		organizeOpen = false;
+		try {
+			const r = await importLibrary(file);
+			if (!r.ok) return toast.show(BACKUP_ERROR_TEXT[r.error]);
+			await reload();
+			toast.show(importMessage(r.summary, r.dropped));
+		} catch {
+			toast.show('Não deu para importar');
+		}
+	}
 
 	$effect(() => {
 		library().then(async (lib) => {
@@ -260,11 +287,11 @@
 				{#if videos}<p>{summary}</p>{/if}
 			</div>
 			<div class="side end">
-				{#if videos && videos.length > 0}
+				{#if videos}
 					<button class="icon-button" type="button" onclick={() => (organizeOpen = true)} aria-label="Organizar">
 						<Icon name="sort" />
 					</button>
-					<CreateMenu />
+					{#if videos.length > 0}<CreateMenu />{/if}
 				{:else}
 					<span class="spacer" aria-hidden="true"></span>
 				{/if}
@@ -406,6 +433,8 @@
 	canOrder={(collections?.length ?? 0) >= 2}
 	onmode={chooseMode}
 	onreorder={startReorder}
+	onexport={doExport}
+	onimport={doImport}
 	onclose={() => (organizeOpen = false)}
 />
 
