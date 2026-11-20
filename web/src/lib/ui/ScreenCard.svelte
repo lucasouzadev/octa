@@ -77,6 +77,8 @@
 	.screen.flat {
 		transform: none;
 		box-shadow: none;
+		/* No pile to hide under: the card ends where its title ends. */
+		padding-bottom: var(--space-3);
 	}
 
 	@media (prefers-reduced-motion: no-preference) {

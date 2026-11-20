@@ -497,17 +497,24 @@
 		gap: var(--space-3);
 	}
 
+	/* The options sit under their card, so the card keeps the full width. */
 	.videos.editing li {
 		display: flex;
-		align-items: center;
-		gap: var(--space-3);
+		flex-direction: column;
+		align-items: stretch;
+		gap: var(--space-2);
 		margin-top: 0;
 		perspective: none;
 	}
 
 	.videos.editing li :global(.screen) {
-		flex: 1;
 		min-width: 0;
+	}
+
+	.videos.editing .row-buttons .chip {
+		flex: 1 1 0;
+		min-width: 0;
+		padding-inline: var(--space-2);
 	}
 
 	footer {
