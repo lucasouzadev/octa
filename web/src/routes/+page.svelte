@@ -10,14 +10,18 @@
 	import CreateMenu from '#lib/ui/CreateMenu.svelte';
 	import FanStack from '#lib/ui/FanStack.svelte';
 	import Icon from '#lib/ui/Icon.svelte';
-	import TiltSwitch from '#lib/ui/TiltSwitch.svelte';
+	import OrganizeSheet from '#lib/ui/OrganizeSheet.svelte';
+	import { loadMode, moveBy, moveTo, saveMode, slotAt, sortCollections, type SortMode } from '#lib/organize.ts';
+	import { toast } from '#lib/toast.svelte.ts';
 	import Illustration from '#lib/ui/Illustration.svelte';
 
 	let videos = $state<Video[] | null>(null);
 	let collections = $state<Collection[] | null>(null);
+	let mode = $state<SortMode>('manual');
 
 	$effect(() => {
 		library().then(async (lib) => {
+			mode = loadMode();
 			[videos, collections] = await Promise.all([lib.list(), lib.listCollections()]);
 			// TikToks saved with the generic title get their @handle title (edited titles stay).
 			if (await upgradeGenericTitles(lib)) videos = await lib.list();
@@ -35,7 +39,10 @@
 		items: Video[];
 	}
 
-	// "Todos" is virtual and always first; user collections follow, oldest first.
+	// The person's own collections, in the order they chose (default: oldest first).
+	const mine = $derived(collections ? sortCollections(collections, mode) : []);
+
+	// "Todos" is virtual and always first; user collections follow.
 	const cards = $derived.by<Card[] | null>(() => {
 		if (!videos || !collections) return null;
 		const byId = new Map(videos.map((v) => [v.id, v]));
@@ -48,7 +55,7 @@
 			]
 				.filter((c) => c.items.length > 0)
 				.map((c) => ({ ...c, href: `/c/${c.key}` })),
-			...collections.map((c) => ({
+			...mine.map((c) => ({
 				key: c.id,
 				href: `/c/${c.id}`,
 				name: c.name,
@@ -83,15 +90,141 @@
 		query = '';
 	}
 
+	// --- Organizar / Reordenar -------------------------------------------------------------
+	let organizeOpen = $state(false);
+	let reordering = $state(false);
+	/** Ids of the person's collections while reordering (the saved order is written on each move). */
+	let draft = $state<string[]>([]);
+	let live = $state('');
+	let listEl = $state<HTMLElement>();
+
+	interface Drag {
+		id: string;
+		from: number;
+		to: number;
+		/** Pointer distance from the row's top edge, in page pixels. */
+		grab: number;
+		tops: number[];
+		height: number;
+		dy: number;
+	}
+	let drag = $state<Drag | null>(null);
+	let pointerY = 0;
+	let frame = 0;
+
+	const rows = $derived(drag ? moveTo(draft, drag.from, drag.to) : draft);
+	const byId = $derived(new Map((collections ?? []).map((c) => [c.id, c])));
+
+	function chooseMode(next: SortMode) {
+		mode = next;
+		saveMode(next);
+	}
+
+	function startReorder() {
+		organizeOpen = false;
+		draft = mine.map((c) => c.id);
+		reordering = true;
+		closeSearch();
+		scrollTo({ top: 0 });
+	}
+
+	async function save(ids: string[]) {
+		draft = ids;
+		// What the screen shows is the saved order: switch to "Minha ordem" with it.
+		collections = (collections ?? []).map((c) => ({ ...c, rank: ids.indexOf(c.id) }));
+		chooseMode('manual');
+		try {
+			await (await library()).setCollectionRanks(ids);
+		} catch {
+			toast.show('Não deu para salvar a ordem');
+		}
+	}
+
+	function announce(id: string, ids: string[]) {
+		live = `${byId.get(id)?.name ?? ''}: posição ${ids.indexOf(id) + 1} de ${ids.length}`;
+	}
+
+	function handleKey(e: KeyboardEvent, id: string) {
+		if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+		e.preventDefault();
+		const next = moveBy(draft, id, e.key === 'ArrowUp' ? -1 : 1);
+		if (next.join() === draft.join()) return;
+		save(next);
+		announce(id, next);
+	}
+
+	function place() {
+		if (!drag) return;
+		const page = pointerY + scrollY;
+		const center = page - drag.grab + drag.height / 2;
+		const to = slotAt(center, drag.tops, drag.height);
+		drag = { ...drag, to, dy: page - drag.grab - drag.tops[to] };
+	}
+
+	// While the finger is near an edge the page keeps scrolling under it.
+	function follow() {
+		if (!drag) return;
+		const edge = 88;
+		if (pointerY < edge) scrollBy(0, -Math.ceil((edge - pointerY) / 6));
+		else if (pointerY > innerHeight - edge) scrollBy(0, Math.ceil((pointerY - (innerHeight - edge)) / 6));
+		place();
+		frame = requestAnimationFrame(follow);
+	}
+
+	function startDrag(e: PointerEvent, id: string) {
+		if (drag || !listEl || (e.pointerType === 'mouse' && e.button !== 0)) return;
+		const items = [...listEl.querySelectorAll<HTMLElement>('li[data-mine]')];
+		const from = items.findIndex((el) => el.dataset.mine === id);
+		if (from < 0) return;
+		const rects = items.map((el) => el.getBoundingClientRect());
+		const tops = rects.map((r) => r.top + scrollY);
+		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+		pointerY = e.clientY;
+		drag = { id, from, to: from, grab: e.clientY + scrollY - tops[from], tops, height: rects[from].height, dy: 0 };
+		cancelAnimationFrame(frame);
+		frame = requestAnimationFrame(follow);
+	}
+
+	function moveDrag(e: PointerEvent) {
+		if (!drag) return;
+		pointerY = e.clientY;
+		place();
+	}
+
+	function endDrag() {
+		if (!drag) return;
+		cancelAnimationFrame(frame);
+		const { id, from, to } = drag;
+		drag = null;
+		if (from === to) return;
+		const next = moveTo(draft, from, to);
+		save(next);
+		announce(id, next);
+	}
+
+	function finishReorder() {
+		reordering = false;
+		toast.show('Ordem salva');
+	}
+
 	function onkeydown(e: KeyboardEvent) {
 		if (searching && e.key === 'Escape') closeSearch();
+		if (reordering && !drag && e.key === 'Escape') finishReorder();
 	}
 </script>
 
 <svelte:window {onkeydown} />
 
 <main class="library">
-	{#if searching}
+	{#if reordering}
+		<header class="reorderbar">
+			<div class="heading">
+				<h1>Reordenar</h1>
+				<p>Arraste pela alça, ou use as setas.</p>
+			</div>
+			<button class="text-button" type="button" onclick={finishReorder}>Concluir</button>
+		</header>
+	{:else if searching}
 		<header class="searchbar">
 			<form role="search" onsubmit={(e) => e.preventDefault()}>
 				<span class="glass"><Icon name="search" size={20} /></span>
@@ -121,7 +254,6 @@
 			>
 				<Icon name="search" />
 			</button>
-			<TiltSwitch />
 			</div>
 			<div class="heading">
 				<h1>Minha coleção</h1>
@@ -129,6 +261,9 @@
 			</div>
 			<div class="side end">
 				{#if videos && videos.length > 0}
+					<button class="icon-button" type="button" onclick={() => (organizeOpen = true)} aria-label="Organizar">
+						<Icon name="sort" />
+					</button>
 					<CreateMenu />
 				{:else}
 					<span class="spacer" aria-hidden="true"></span>
@@ -137,7 +272,45 @@
 		</header>
 	{/if}
 
-	{#if searching && typed}
+	{#if reordering}
+		<ul class="reorder" bind:this={listEl} aria-label="Coleções">
+			{#each cards ?? [] as c (c.key)}
+				{#if !byId.has(c.key)}
+					<li class="rrow fixed">
+						<span class="rname">{c.name}</span>
+						<span class="rcount">{count(c.items.length)}</span>
+					</li>
+				{/if}
+			{/each}
+			{#each rows as id (id)}
+				{@const c = byId.get(id)}
+				{#if c}
+					<li
+						class="rrow"
+						class:lifted={drag?.id === id}
+						data-mine={id}
+						style:transform={drag?.id === id ? `translateY(${drag.dy}px)` : undefined}
+					>
+						<span class="rname">{c.name}</span>
+						<span class="rcount">{count(c.order.length)}</span>
+						<button
+							class="handle"
+							type="button"
+							aria-label={`Mover ${c.name}`}
+							onpointerdown={(e) => startDrag(e, id)}
+							onpointermove={moveDrag}
+							onpointerup={endDrag}
+							onpointercancel={endDrag}
+							onkeydown={(e) => handleKey(e, id)}
+						>
+							<Icon name="grip" />
+						</button>
+					</li>
+				{/if}
+			{/each}
+		</ul>
+		<p class="sr-only" role="status" aria-live="polite">{live}</p>
+	{:else if searching && typed}
 		<p class="status" role="status">
 			{results.length === 0
 				? 'Nenhum vídeo encontrado.'
@@ -227,6 +400,15 @@
 	{/if}
 </main>
 
+<OrganizeSheet
+	open={organizeOpen}
+	{mode}
+	canOrder={(collections?.length ?? 0) >= 2}
+	onmode={chooseMode}
+	onreorder={startReorder}
+	onclose={() => (organizeOpen = false)}
+/>
+
 <BackToTop />
 
 <style>
@@ -252,6 +434,85 @@
 		grid-template-columns: 1fr auto 1fr;
 		align-items: center;
 		padding: 0 var(--space-1) var(--space-6);
+	}
+
+	header.reorderbar {
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: var(--space-3);
+	}
+
+	header.reorderbar .heading {
+		text-align: left;
+	}
+
+	.reorder {
+		list-style: none;
+		padding: 0;
+		margin-block: 0;
+		max-width: var(--layout-content-max);
+		margin-inline: auto;
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+		user-select: none;
+		-webkit-user-select: none;
+	}
+
+	.rrow {
+		display: flex;
+		align-items: center;
+		gap: var(--space-3);
+		min-height: 64px;
+		padding: 0 var(--space-2) 0 var(--space-5);
+		border-radius: var(--radius-pill);
+		background: var(--color-surface-light);
+	}
+
+	.rrow.fixed {
+		opacity: 0.55;
+	}
+
+	.rrow.lifted {
+		position: relative;
+		z-index: 2;
+		box-shadow: 0 10px 24px rgb(0 0 0 / 0.22);
+		background: var(--color-bg-light);
+		outline: 2px solid var(--color-text-light);
+	}
+
+	.rname {
+		flex: 1;
+		min-width: 0;
+		font-weight: 600;
+		overflow: hidden;
+		text-overflow: ellipsis;
+		white-space: nowrap;
+	}
+
+	.rcount {
+		flex: none;
+		font-size: var(--size-meta);
+		color: var(--color-muted-on-light);
+	}
+
+	.handle {
+		flex: none;
+		width: var(--layout-touch-min);
+		height: var(--layout-touch-min);
+		display: grid;
+		place-items: center;
+		border: 0;
+		border-radius: 50%;
+		background: none;
+		color: inherit;
+		touch-action: none; /* the drag must not scroll the page */
+		cursor: grab;
+	}
+
+	.handle:focus-visible {
+		outline: 2px solid var(--color-text-light);
 	}
 
 	header.searchbar {

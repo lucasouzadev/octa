@@ -14,8 +14,9 @@
 
 /* Every screen paints the whole page, including the iOS status-bar and bottom strips,
    so there are no white bands around a blue or black screen. */
-html:has(.on-dark),
-html:has(.on-dark) body {
+/* A dark bottom sheet (a <dialog>) sits on light screens too: it does not repaint the page. */
+html:has(.on-dark:not(dialog)),
+html:has(.on-dark:not(dialog)) body {
 	background: var(--color-bg-dark);
 }
 

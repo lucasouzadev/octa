@@ -45,8 +45,9 @@ async function turnOn(page: Page) {
 	await askAnswers(page, 'granted');
 	await seed(page);
 	await page.goto('/');
-	await sw(page).click();
-	await expect(sw(page)).toHaveAttribute('aria-pressed', 'true');
+	await (await openSw(page)).click();
+	await expect(sw(page)).toHaveAttribute('aria-checked', 'true');
+	await closeSheet(page);
 }
 
 /** After a full reload iOS asks again, and only from a tap: the first tap anywhere does it. */
@@ -58,7 +59,19 @@ async function retap(page: Page) {
 	}).toPass({ timeout: 8000 });
 }
 
-const sw = (page: Page) => page.getByRole('button', { name: 'Mover com o celular' });
+// The switch lives in the "Organizar" sheet: open it first (the sheet stays open until closed).
+const sw = (page: Page) => page.getByRole('switch', { name: 'Mover com o celular' });
+async function openSw(page: Page) {
+	if (!(await sw(page).isVisible())) {
+		await page.getByRole('button', { name: 'Organizar', exact: true }).click();
+		await expect(sw(page)).toBeVisible();
+	}
+	return sw(page);
+}
+async function closeSheet(page: Page) {
+	await page.keyboard.press('Escape');
+	await expect(page.locator('dialog.sheet[open]')).toHaveCount(0);
+}
 
 test.describe('R4 tilt follows the phone', () => {
 	test.beforeEach(({}, info) => {
@@ -69,8 +82,7 @@ test.describe('R4 tilt follows the phone', () => {
 		await noPermissionApi(page);
 		await seed(page);
 		await page.goto('/');
-		await expect(sw(page)).toBeVisible();
-		await expect(sw(page)).toHaveAttribute('aria-pressed', 'true');
+		await expect(await openSw(page)).toHaveAttribute('aria-checked', 'true');
 		await expect(page.locator('html')).toHaveAttribute('data-tilt', 'on');
 	});
 
@@ -109,21 +121,22 @@ test.describe('R4 tilt follows the phone', () => {
 		await turnOn(page);
 		await lean(page, 45, 30);
 		expect(await tiltVar(page, '--tilt-x')).toBeGreaterThan(0.3);
-		await sw(page).click();
-		await expect(sw(page)).toHaveAttribute('aria-pressed', 'false');
+		await (await openSw(page)).click();
+		await expect(sw(page)).toHaveAttribute('aria-checked', 'false');
 		await expect(page.locator('html')).not.toHaveAttribute('data-tilt', 'on');
 		expect(await tiltVar(page, '--tilt-x')).toBe(0);
 		await lean(page, 45, 30);
 		expect(await tiltVar(page, '--tilt-x')).toBe(0);
 		await page.reload();
-		await expect(sw(page)).toHaveAttribute('aria-pressed', 'false');
+		await expect(await openSw(page)).toHaveAttribute('aria-checked', 'false');
 	});
 
 	test('with reduced motion there is no switch and no lean', async ({ page }) => {
 		await page.emulateMedia({ reducedMotion: 'reduce' });
 		await seed(page);
 		await page.goto('/');
-		await expect(page.getByRole('button', { name: 'Buscar vídeos' })).toBeVisible();
+		await page.getByRole('button', { name: 'Organizar', exact: true }).click();
+		await expect(page.locator('dialog.sheet[data-state="open"]')).toBeVisible();
 		await expect(sw(page)).toHaveCount(0);
 		await lean(page, 45, 30);
 		expect(await tiltVar(page, '--tilt-x')).toBe(0);
@@ -149,10 +162,10 @@ test.describe('R4 iOS asks permission from the tap', () => {
 		await askAnswers(page, 'granted');
 		await seed(page);
 		await page.goto('/');
-		await expect(sw(page)).toHaveAttribute('aria-pressed', 'false');
+		await expect(await openSw(page)).toHaveAttribute('aria-checked', 'false');
 		expect(await page.evaluate(() => (window as unknown as { __asked?: number }).__asked ?? 0)).toBe(0);
 		await sw(page).click();
-		await expect(sw(page)).toHaveAttribute('aria-pressed', 'true');
+		await expect(sw(page)).toHaveAttribute('aria-checked', 'true');
 		expect(await page.evaluate(() => (window as unknown as { __asked: number }).__asked)).toBe(1);
 		await lean(page, 45, 30);
 		expect(await tiltVar(page, '--tilt-x')).toBeGreaterThan(0.3);
@@ -162,8 +175,8 @@ test.describe('R4 iOS asks permission from the tap', () => {
 		await askAnswers(page, 'denied');
 		await seed(page);
 		await page.goto('/');
-		await sw(page).click();
-		await expect(sw(page)).toHaveAttribute('aria-pressed', 'false');
+		await (await openSw(page)).click();
+		await expect(sw(page)).toHaveAttribute('aria-checked', 'false');
 		await lean(page, 45, 30);
 		expect(await tiltVar(page, '--tilt-x')).toBe(0);
 	});
