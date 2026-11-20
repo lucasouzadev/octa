@@ -10,7 +10,30 @@ export default defineConfig({
 				runes: ({ filename }) =>
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
-			adapter: adapter({ fallback: '200.html' })
+			adapter: adapter({ fallback: '200.html' }),
+			// Strict policy (ARCHITECTURE §6). The app is static, so Kit emits it as a <meta> tag with
+			// hashes for its own inline bootstrap; frame-ancestors lives in vercel.json (meta ignores it).
+			// connect-src allows https: only because hls.js fetches playlists from whatever host the
+			// user's .m3u8 lives on; scripts, frames and objects stay on an allowlist.
+			csp: {
+				mode: 'hash',
+				directives: {
+					'default-src': ['none'],
+					'script-src': ['self', 'https://www.youtube.com'],
+					'style-src': ['self'],
+					'style-src-attr': ['unsafe-inline'],
+					'img-src': ['self', 'https:', 'data:', 'blob:'],
+					'media-src': ['self', 'https:', 'blob:'],
+					'connect-src': ['self', 'https:'],
+					'frame-src': ['https://www.youtube-nocookie.com', 'https://www.instagram.com', 'https://www.tiktok.com'],
+					'worker-src': ['self', 'blob:'],
+					'manifest-src': ['self'],
+					'font-src': ['self', 'data:'],
+					'object-src': ['none'],
+					'base-uri': ['self'],
+					'form-action': ['self']
+				}
+			}
 		})
 	],
 	// Dev and preview forward /api to the Go API (`cd api && go run ./cmd/api`).

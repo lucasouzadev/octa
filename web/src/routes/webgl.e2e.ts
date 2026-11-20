@@ -59,7 +59,7 @@ test('a capable device gets one WebGL canvas and the CSS fan steps aside', async
 	// Regression guard: the papers must show the thumbnail, not a flat grey (a material
 	// that was never recompiled for its texture drew grey while every DOM check passed).
 	const strongest = await page.evaluate(async (b64) => {
-		const img = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob());
+		const img = await createImageBitmap(new Blob([Uint8Array.from(atob(b64), (c) => c.charCodeAt(0))]));
 		const c = new OffscreenCanvas(img.width, img.height);
 		const g = c.getContext('2d')!;
 		g.drawImage(img, 0, 0);
