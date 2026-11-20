@@ -1,26 +1,19 @@
-# HANDOFF — 2026-11-20 — TikTok short link feedback (PR open)
+# HANDOFF — 2026-11-20 — QA round 3 (PR open)
 
 ## Goal
-Owner's iPhone screenshot: `vt.tiktok.com` link refused as "not supported". Approved 2026-11-20 by owner: diagnose read-only, then fix #2 (stale paste copy) + #3 (misleading error, longer timeout); read Vercel; redeploy `octa-api` from main.
+Owner's iPhone QA, 13 items (R3.1–R3.13). Approved 2026-11-20: one branch `fix/qa-round-3`, one PR, commit per item; #13 = center and enlarge; #3 = new matte green `#2F6B4F`.
 
 ## State (verified)
-- Implementation: done — branch `fix/tiktok-short-link-feedback`, SHA a7521fe (from main f456552). Merge: PR open, owner merges. #24 (3e) already merged.
-- Production API: `octa-api` redeployed from f456552, live 2026-11-20 05:01 UTC; canonical TikTok URL answers 200. Web production deploy is f456552. The new web fix is not deployed until merge.
-- QA automated: `pnpm test` 266 PASS · `pnpm check` 0 errors · `pnpm test:e2e` 398 PASS / 19 skipped / 0 failed. No CI workflow exists yet (slice 4).
-- NOT proven: a real `vt.`/`vm.` link expanding from Render (fake one answered 422); iPhone; YouTube/TikTok live.
+- Implementation: done — branch `fix/qa-round-3`, 13 commits from main d81eb7a (R3.1+R3.3 share one commit). Merge: PR open, owner merges. PR #26 (TikTok handle title) is still open and separate.
+- Automated: `pnpm test` 274 PASS · `pnpm check` 0 errors · full e2e 501 PASS / 9 failed / 12 skipped (522). The 9: `health.e2e.ts:29` x3 viewports fails the same on origin/main (pre-existing); 6 were my tests assuming the phone viewport, fixed and re-run green on 3 viewports (no second full run).
+- NOT proven: any iPhone behavior (rubber band and arrow z-order R3.1, keyboard white areas R3.6, status bar R3.10, 3D, real fullscreen R3.13). No CI workflow exists yet (slice 4).
 
 ## Decisions (and why)
-- Failed expansion is `resolver_unavailable`, not `unsupported_url`: only an API 422 means the link is unsupported.
-- Expansion timeout 20 s: Render free API wakes slowly.
-
-## Files touched
-- `web/src/lib/links.ts`, `providers/parse.ts`, `ui/EditVideoSheet.svelte`, `routes/add/+page.svelte` — error code, timeout, copy
-- `links.spec.ts`, `paste-to-player.e2e.ts`, `sources.e2e.ts` — tests (red first); docs: `STATUS.md`, `PROVIDERS.md`
+- Docked input removed; plain fields again (owner order). Favoritos = `action.favorite`; hearts black/white. Toast lives in the layout so it survives navigation. Sheet `crown` straddles the top edge; transform moved from `.panel` to `.rise`.
 
 ## Next step (exact)
-Owner: merge the PR, then test on the production URL with the real `vt.` link on iPhone. If it still fails, read Render logs (`/v1/resolve`) and report the status.
+Owner: test the PR preview on iPhone with the AUTOMATED/PHYSICAL list in the PR, then merge. Then: `VITE_API_BASE` for Vercel Preview (decision pending), flaky `health.e2e.ts:29` and `qa2.e2e.ts:299`, slice 4, "Correções da 2e-3".
 
 ## Risks / owner decisions needed
-- `VITE_API_BASE` is set only for Vercel `production`: preview/branch builds call a relative `/api` and cannot reach the API. Decide: add it for Preview too (not done).
-- Render free sleeps; first request after idle can be slow. TikTok may refuse the API's user-agent (unconfirmed).
-- Then slice 4 (PWA install, share target, export/import, offline shell, CI workflow, CSP, E2E 3 viewports) and the owner's "correções da 2e-3" (details to come).
+- iOS may still show the rubber band at the end of the collection (`overscroll-behavior` support varies); if so, next step is a JS guard.
+- Preview builds call a relative `/api` (no `VITE_API_BASE` for Preview).

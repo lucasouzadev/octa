@@ -294,8 +294,9 @@ test.describe('R3.1 the pile ends where it ends', () => {
 
 	test('the back-to-top arrow stays in front of the screens it passes over', async ({ page }) => {
 		await seed(page);
-		await cloneVideos(page, 12);
+		await cloneVideos(page, 40);
 		await page.goto('/c/todos');
+		await expect(page.locator('.videos li')).toHaveCount(41);
 		// Scroll to the very end: the arrow shows after 1.2 screens, whatever the list length.
 		await page.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
 		const arrow = page.getByRole('button', { name: 'Voltar ao topo' });
@@ -532,7 +533,7 @@ test.describe('R3.5 Excluir coleção shows what is going, and marks the name', 
 			expect(t.y).toBeGreaterThanOrEqual(0);
 			expect(t.y + t.height).toBeLessThanOrEqual(h1.y);
 			// Big enough to read as the cover of something, not a speck.
-			expect(t.width).toBeGreaterThanOrEqual(vp.width * 0.3);
+			expect(t.width).toBeGreaterThanOrEqual(Math.min(vp.width * 0.3, 140));
 		}
 	});
 
@@ -593,9 +594,11 @@ test.describe('R3.13 full screen: the picture is centered and as big as it can b
 		const screen = await box(page.locator('.cinema.full .screen'));
 		// Not resting on the bar: the spare height is split above and below.
 		expect(Math.abs(frame.y + frame.height / 2 - (screen.y + screen.height / 2))).toBeLessThanOrEqual(2);
-		// As wide as the screen: no side margin, no rounded corners.
-		expect(Math.round(frame.x)).toBe(0);
-		expect(Math.round(frame.width)).toBe(vp.width);
+		// As big as the box allows (the full width on a phone; on a wide screen the height decides):
+		// no side margin of its own, no rounded corners.
+		expect(Math.round(frame.width)).toBe(Math.round(Math.min(screen.width, (screen.height * 16) / 9)));
+		expect(Math.abs(frame.x + frame.width / 2 - vp.width / 2)).toBeLessThanOrEqual(2);
+		if (vp.width <= 600) expect(Math.round(frame.x)).toBe(0);
 		await expect(page.locator('.cinema.full .frame')).toHaveCSS('border-radius', '0px');
 	});
 
