@@ -160,7 +160,8 @@ test.describe('R3.12 the "+" menu leaves the way it came', () => {
 		await seed(page);
 		await page.goto('/');
 		await page.getByRole('button', { name: 'Criar conteúdo' }).click();
-		await page.locator('.heading h1').click();
+		// Outside the popover: its panel covers the middle of the header on a phone.
+		await page.mouse.click(8, 400);
 		await expect(page.locator('.create[data-state="closing"]')).toHaveCount(1);
 		await expect(page.locator('.create .panel')).toHaveCount(0, { timeout: 1500 });
 	});

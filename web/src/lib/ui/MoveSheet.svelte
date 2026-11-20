@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { toast } from '#lib/toast.svelte.ts';
 	import { CollectionError, library, type Collection, type Video } from '#lib/db/index.ts';
+	import { loadMode, sortCollections } from '#lib/organize.ts';
 	import Sheet from '#lib/ui/Sheet.svelte';
 
 	// "Mover para": the one place a video changes collection (collection screen and player).
@@ -24,7 +25,7 @@
 	$effect(() => {
 		if (!video) return;
 		error = '';
-		library().then(async (lib) => (collections = await lib.listCollections()));
+		library().then(async (lib) => (collections = sortCollections(await lib.listCollections(), loadMode())));
 	});
 
 	const here = $derived(video ? collections.find((c) => c.order.includes(video.id)) : undefined);

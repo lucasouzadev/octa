@@ -24,7 +24,7 @@ Anything else → friendly "link not supported yet" state; nothing is saved. Par
 ## 4. Flows
 1. **Paste link** (blue screen): one field, one button. Also opens from the OS share sheet (Web Share Target) and from clipboard paste anywhere in the app. Duplicate link → open the existing item.
 2. **Resolve**: web calls `POST /v1/resolve`; shows the card (thumb, title, author, duration if known, source). On API failure the item is still saved with what the URL parser knows (source + id) and resolved later.
-3. **Library** (white): collections as cards with fanned 3D thumbnails, name and count. Header: search, add. A default collection "Todos" always exists.
+3. **Library** (white): collections as cards with fanned 3D thumbnails, name and count. Header: search, Organizar (sort, reorder by dragging, tilt switch), add. A default collection "Todos" always exists; virtual ones stay on top, the person orders their own.
 4. **Collection** (black): videos as a 3D paper stack; tap a card → player. One primary action: "Assistir em sequência".
 5. **Player** (black): video centered, author, serif title, 3 pill actions (next, save/favorite, share), thumbnail timeline at the bottom to jump. Remembers position for native `<video>`; for embeds remembers "last opened" only.
 6. **Dead link** (orange): shown when health is `dead`. Two actions: remove from collection, or keep and re-check tomorrow.

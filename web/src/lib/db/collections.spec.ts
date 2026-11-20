@@ -203,3 +203,24 @@ describe('listVideos / reorder', () => {
 		expect((await lib.getCollection(c.id))?.order).toEqual(['aaaaaaaaaaa']);
 	});
 });
+
+describe('setCollectionRanks', () => {
+	it('stores the order and keeps every other field', async () => {
+		const a = await lib.createCollection('Aulas');
+		const b = await lib.createCollection('Música');
+		await lib.setCollectionRanks([b.id, a.id]);
+		const stored = await lib.listCollections();
+		expect(stored.find((c) => c.id === b.id)?.rank).toBe(0);
+		expect(stored.find((c) => c.id === a.id)?.rank).toBe(1);
+		expect(stored.find((c) => c.id === a.id)?.updatedAt).toBe(a.updatedAt);
+		expect(stored.find((c) => c.id === a.id)?.name).toBe('Aulas');
+	});
+	it('rejects a list that is not exactly the stored collections', async () => {
+		const a = await lib.createCollection('Aulas');
+		await lib.createCollection('Música');
+		expect(await code(lib.setCollectionRanks([a.id]))).toBe('bad_order');
+		expect(await code(lib.setCollectionRanks([a.id, a.id]))).toBe('bad_order');
+		expect(await code(lib.setCollectionRanks([a.id, 'nope']))).toBe('bad_order');
+		expect((await lib.listCollections()).every((c) => c.rank === undefined)).toBe(true);
+	});
+});
