@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { mockNetwork, paste } from './e2e-helpers';
+import { fakeYouTube, mockNetwork, paste } from './e2e-helpers';
 
 // QA round 3 (owner's iPhone, 2026-11-19 17:31-17:37, list of 13 items).
 
@@ -568,5 +568,57 @@ test.describe('R3.5 Excluir coleção shows what is going, and marks the name', 
 		await page.getByRole('button', { name: /^Apagar/ }).click();
 		await expect(page.locator('.danger .thumb')).toHaveCount(1);
 		await expect(page.locator('.danger mark')).toHaveCount(0);
+	});
+});
+
+test.describe('R3.13 full screen: the picture is centered and as big as it can be', () => {
+	async function fullScreen(page: Page, url: string) {
+		await mockNetwork(page);
+		await fakeYouTube(page);
+		await paste(page, url);
+		await expect(page).toHaveURL(/\/v\//);
+		if (url.includes('/shorts/')) {
+			await page.getByRole('button', { name: /^Assistir/ }).click(); // vertical opens it by itself
+		} else {
+			await page.getByRole('button', { name: /^Assistir/ }).click();
+			await page.getByRole('button', { name: 'Tela cheia' }).click();
+		}
+		await expect(page.locator('.cinema.full')).toBeVisible();
+	}
+
+	test('a long (horizontal) video sits in the middle of the screen, edge to edge', async ({ page }) => {
+		await fullScreen(page, 'https://youtu.be/dQw4w9WgXcQ');
+		const vp = page.viewportSize()!;
+		const frame = await box(page.locator('.cinema.full .frame'));
+		const screen = await box(page.locator('.cinema.full .screen'));
+		// Not resting on the bar: the spare height is split above and below.
+		expect(Math.abs(frame.y + frame.height / 2 - (screen.y + screen.height / 2))).toBeLessThanOrEqual(2);
+		// As wide as the screen: no side margin, no rounded corners.
+		expect(Math.round(frame.x)).toBe(0);
+		expect(Math.round(frame.width)).toBe(vp.width);
+		await expect(page.locator('.cinema.full .frame')).toHaveCSS('border-radius', '0px');
+	});
+
+	test('a short (vertical) video is centered and as big as the box allows', async ({ page }) => {
+		test.skip(page.viewportSize()!.width > 600, 'phone layout');
+		await fullScreen(page, 'https://www.youtube.com/shorts/aBcDeFgHiJ0');
+		const frame = await box(page.locator('.cinema.full .frame'));
+		const screen = await box(page.locator('.cinema.full .screen'));
+		expect(Math.abs(frame.x + frame.width / 2 - page.viewportSize()!.width / 2)).toBeLessThanOrEqual(2);
+		expect(Math.abs(frame.y + frame.height / 2 - (screen.y + screen.height / 2))).toBeLessThanOrEqual(2);
+		// As big as the box allows: it touches either the full width or the full height.
+		expect(frame.height >= screen.height - 2 || frame.width >= screen.width - 2).toBe(true);
+	});
+
+	test('the leave button is above the picture and the bar below it, never over it', async ({ page }) => {
+		await fullScreen(page, 'https://youtu.be/dQw4w9WgXcQ');
+		const frame = await box(page.locator('.cinema.full .frame'));
+		const leave = await box(page.getByRole('button', { name: 'Sair da tela cheia' }));
+		const bar = await box(page.getByRole('group', { name: 'Controles do vídeo' }));
+		expect(leave.y + leave.height).toBeLessThanOrEqual(frame.y + 1);
+		expect(bar.y).toBeGreaterThanOrEqual(frame.y + frame.height - 1);
+		const vp = page.viewportSize()!;
+		expect(bar.y + bar.height).toBeLessThanOrEqual(vp.height);
+		expect(bar.x).toBeGreaterThanOrEqual(8); // the controls keep their side margin
 	});
 });
