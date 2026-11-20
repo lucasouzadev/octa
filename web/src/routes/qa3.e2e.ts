@@ -395,17 +395,22 @@ test.describe('R3.8 every action in the sheets answers with a short notice', () 
 		await expect(toast(page)).toHaveText('Coleção excluída');
 	});
 
-	test('the notice sits above the home indicator and never covers the bottom actions', async ({ page }) => {
+	test('the notice drops from the top like an in-app banner, inside the screen, and never takes a tap', async ({ page }) => {
 		await seed(page);
 		await page.getByRole('button', { name: 'Mais ações' }).click();
 		await page.getByRole('button', { name: 'Marcar como assistido' }).click();
 		const t = toast(page);
 		await expect(t).toBeVisible();
+		// Let the slide-in finish before measuring.
+		await page.waitForTimeout(400);
 		const b = await box(t);
 		const vp = page.viewportSize()!;
-		expect(b.y + b.height).toBeLessThanOrEqual(vp.height);
+		expect(b.y).toBeLessThan(vp.height / 4); // in the top part
+		expect(b.y).toBeGreaterThanOrEqual(0);
 		expect(b.x).toBeGreaterThanOrEqual(0);
 		expect(b.x + b.width).toBeLessThanOrEqual(vp.width);
+		// Centered on the screen.
+		expect(Math.abs(b.x + b.width / 2 - vp.width / 2)).toBeLessThanOrEqual(2);
 		await expect(t).toHaveCSS('pointer-events', 'none');
 	});
 });
