@@ -437,3 +437,60 @@ test.describe('R3.8 every action in the sheets answers with a short notice', () 
 		await expect(t).toHaveCSS('pointer-events', 'none');
 	});
 });
+
+test.describe('R3.9 Mover shows the video on the crown of the sheet', () => {
+	async function openMove(page: Page) {
+		await seed(page);
+		await createCollection(page, 'Aulas');
+		await page.goto('/c/todos');
+		await page.locator('.videos li a[href*="/v/"]').first().click();
+		await expect(page).toHaveURL(/\/v\//);
+		await page.getByRole('button', { name: 'Mover', exact: true }).click();
+		await expect(page.locator('dialog.sheet[data-state="open"]')).toHaveCount(1);
+		// Let the slide-up finish before anything is measured.
+		await expect
+			.poll(() => page.locator('dialog.sheet[data-state="open"] .rise').evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m42))
+			.toBeLessThan(0.5);
+	}
+
+	test('the preview straddles the top edge: half above the sheet, half inside it', async ({ page }) => {
+		await openMove(page);
+		const crown = page.locator('dialog.sheet[data-state="open"] .crown img');
+		const panel = page.locator('dialog.sheet[data-state="open"] .panel.crowned');
+		await expect(crown).toBeVisible();
+		const c = await box(crown);
+		const p = await box(panel);
+		const center = c.y + c.height / 2;
+		expect(Math.abs(center - p.y)).toBeLessThanOrEqual(6);
+		expect(c.y).toBeLessThan(p.y);
+		expect(c.y + c.height).toBeGreaterThan(p.y);
+		// Centered on the sheet.
+		expect(Math.abs(c.x + c.width / 2 - (p.x + p.width / 2))).toBeLessThanOrEqual(2);
+		// Not clipped by the panel's scroll area.
+		expect(await crown.evaluate((el) => !!el.closest('.panel'))).toBe(false);
+	});
+
+	test('it is the cover of the video being moved and never covers the title or the options', async ({ page }) => {
+		await openMove(page);
+		const crown = page.locator('dialog.sheet[data-state="open"] .crown img');
+		await expect(crown).toHaveAttribute('src', /.+/);
+		const c = await box(crown);
+		const title = await box(page.locator('dialog.sheet[data-state="open"] h2'));
+		expect(title.y).toBeGreaterThanOrEqual(c.y + c.height - 2);
+		const first = await box(page.getByRole('button', { name: 'Aulas' }));
+		expect(first.y).toBeGreaterThanOrEqual(c.y + c.height);
+	});
+
+	test('the preview is decoration: the sheet still closes by dragging its handle', async ({ page }) => {
+		await openMove(page);
+		await expect(page.locator('dialog.sheet .crown')).toHaveCSS('pointer-events', 'none');
+		await expect(page.locator('dialog.sheet .crown')).toHaveAttribute('aria-hidden', 'true');
+	});
+
+	test('other sheets have no crown', async ({ page }) => {
+		await seed(page);
+		await page.getByRole('button', { name: 'Mais ações' }).click();
+		await expect(page.locator('dialog.sheet[data-state="open"]')).toHaveCount(1);
+		await expect(page.locator('dialog.sheet[data-state="open"] .crown')).toHaveCount(0);
+	});
+});

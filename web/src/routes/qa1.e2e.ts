@@ -81,7 +81,7 @@ test.describe('R1.3 native sheet', () => {
 		await expect(sheet).toHaveAttribute('data-state', 'open');
 		// Let the slide-up finish so the handle holds still while the test grabs it.
 		await expect
-			.poll(() => sheet.locator('.panel').evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m42))
+			.poll(() => sheet.locator('.rise').evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m42))
 			.toBeLessThan(0.5);
 		return sheet;
 	}
@@ -97,7 +97,7 @@ test.describe('R1.3 native sheet', () => {
 		const sheet = await openMove(page);
 		const handle = sheet.locator('.handle');
 		await expect(handle).toBeVisible();
-		const panel = sheet.locator('.panel');
+		const panel = sheet.locator('.rise');
 		expect(parseFloat(await panel.evaluate((el) => getComputedStyle(el).transitionDuration))).toBeGreaterThan(0.1);
 		// The old sheet focused its first option and drew a white ring around it.
 		const focused = await page.evaluate(() => document.activeElement?.matches('button.option, a.option') ?? false);
@@ -106,7 +106,7 @@ test.describe('R1.3 native sheet', () => {
 
 	test('a long drag down on the handle closes it; a short one springs back', async ({ page }) => {
 		const sheet = await openMove(page);
-		const panel = sheet.locator('.panel');
+		const panel = sheet.locator('.rise');
 		const box = (await sheet.locator('.handle').boundingBox())!;
 		const at = { x: box.x + box.width / 2, y: box.y + box.height / 2 };
 
@@ -125,7 +125,7 @@ test.describe('R1.3 native sheet', () => {
 
 	test('pulling up resists and springs back', async ({ page }) => {
 		const sheet = await openMove(page);
-		const panel = sheet.locator('.panel');
+		const panel = sheet.locator('.rise');
 		const box = (await sheet.locator('.handle').boundingBox())!;
 		const release = await drag(page, { x: box.x + box.width / 2, y: box.y + box.height / 2 }, -300);
 		const y = await panel.evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m42);
@@ -149,7 +149,7 @@ test.describe('R1.3 native sheet', () => {
 	test('reduced motion: no slide', async ({ page }) => {
 		await page.emulateMedia({ reducedMotion: 'reduce' });
 		const sheet = await openMove(page);
-		expect(parseFloat(await sheet.locator('.panel').evaluate((el) => getComputedStyle(el).transitionDuration))).toBeLessThan(0.001);
+		expect(parseFloat(await sheet.locator('.rise').evaluate((el) => getComputedStyle(el).transitionDuration))).toBeLessThan(0.001);
 	});
 });
 
