@@ -176,17 +176,9 @@
 			{/each}
 		</ul>
 	{:else if videos && videos.length === 0}
-		<section class="empty">
-			<Illustration kind="library" />
-			<h2>Nada aqui ainda.</h2>
-			<p>Cole o link de um vídeo do YouTube, de um Shorts ou de um arquivo .mp4.</p>
-			<div class="actions">
-				<a class="pill" href="/add"><Icon name="link" size={20} /> Colar um link</a>
-				<a class="pill ghost" href="/c/new"><Icon name="folder-plus" size={20} /> Nova coleção</a>
-			</div>
-		</section>
 		{#if cards.length > 0}
-			<ul class="list after-empty" aria-label="Coleções">
+			<!-- Collections exist but no video yet: the collections lead, the way to the first video follows. -->
+			<ul class="list" aria-label="Coleções">
 				{#each cards as c (c.key)}
 					<li>
 						<a class="card bare" href={c.href} data-collection={c.key}>
@@ -196,6 +188,20 @@
 					</li>
 				{/each}
 			</ul>
+			<div class="actions after-list">
+				<a class="pill" href="/add"><Icon name="link" size={20} /> Colar um link</a>
+				<a class="pill ghost" href="/c/new"><Icon name="folder-plus" size={20} /> Nova coleção</a>
+			</div>
+		{:else}
+			<section class="empty">
+				<Illustration kind="library" />
+				<h2>Nada aqui ainda.</h2>
+				<p>Cole o link de um vídeo do YouTube, de um Shorts ou de um arquivo .mp4.</p>
+				<div class="actions">
+					<a class="pill" href="/add"><Icon name="link" size={20} /> Colar um link</a>
+					<a class="pill ghost" href="/c/new"><Icon name="folder-plus" size={20} /> Nova coleção</a>
+				</div>
+			</section>
 		{/if}
 	{:else}
 		<ul class="list">
@@ -226,7 +232,8 @@
 	.list,
 	.results,
 	.status,
-	.empty {
+	.empty,
+	.after-list {
 		max-width: var(--layout-content-max);
 		margin-inline: auto;
 	}
@@ -471,8 +478,9 @@
 		padding-top: 0;
 	}
 
-	.after-empty {
-		margin-top: var(--space-8);
+	.after-list {
+		margin-top: var(--space-5);
+		padding-inline: var(--space-1);
 	}
 
 	.spacer {
