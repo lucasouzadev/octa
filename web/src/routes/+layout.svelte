@@ -4,7 +4,9 @@
 	import '@fontsource-variable/newsreader';
 	import '../app.css';
 	import favicon from '#lib/assets/favicon.svg';
+	import { onMount } from 'svelte';
 	import { onNavigate } from '$app/navigation';
+	import { initTilt } from '#lib/tilt.svelte.ts';
 	import { page } from '$app/state';
 	import { themeColorFor } from '#lib/screen.ts';
 	import { theme } from '#lib/theme.svelte.ts';
@@ -12,6 +14,8 @@
 	import type { LayoutProps } from './$types';
 
 	let { children }: LayoutProps = $props();
+
+	onMount(initTilt);
 
 	// The color this screen paints, for the browser chrome.
 	const screenColor = $derived(theme.override ?? themeColorFor(page.route.id, page.params.id));

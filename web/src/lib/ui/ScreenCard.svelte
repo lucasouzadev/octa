@@ -70,7 +70,7 @@
 			3px 3px 0 var(--color-paper-edge3),
 			10px 16px 28px rgb(0 0 0 / 0.55),
 			inset 0 1px 0 rgb(255 255 255 / 0.7);
-		transform: rotateX(6deg) rotateY(var(--ry)) rotateZ(var(--rz)) translateX(var(--sx));
+		transform: rotateX(calc(6deg + var(--tilt-y) * -5deg)) rotateY(calc(var(--ry) + var(--tilt-x) * 8deg)) rotateZ(var(--rz)) translateX(var(--sx));
 		transform-origin: 50% 40%;
 	}
 
@@ -85,6 +85,11 @@
 		.screen {
 			transition: transform 240ms cubic-bezier(0.2, 0.8, 0.2, 1);
 		}
+	}
+
+	/* The sensor writes the pose every frame; a transition on top would only make it lag. */
+	:global(html[data-tilt]) .screen {
+		transition: none;
 	}
 
 	@media (hover: hover) and (prefers-reduced-motion: no-preference) {

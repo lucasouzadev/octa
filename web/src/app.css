@@ -1,5 +1,11 @@
 @import './lib/tokens.css';
 
+/* The phone's tilt (lib/tilt.svelte.ts) writes these; at rest, and everywhere without a sensor, they are 0. */
+:root {
+	--tilt-x: 0;
+	--tilt-y: 0;
+}
+
 *,
 *::before,
 *::after {

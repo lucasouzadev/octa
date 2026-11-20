@@ -10,7 +10,8 @@
 		position: fixed;
 		z-index: 120;
 		left: 50%;
-		bottom: calc(96px + env(safe-area-inset-bottom));
+		/* Like an in-app banner: just under the status bar, dropping in from above. */
+		top: calc(env(safe-area-inset-top) + var(--space-3));
 		width: max-content;
 		max-width: calc(100% - var(--space-5) * 2);
 		margin: 0;
@@ -27,7 +28,7 @@
 		pointer-events: none;
 		opacity: 0;
 		visibility: hidden;
-		translate: -50% 12px;
+		translate: -50% -16px;
 		transition:
 			opacity 180ms ease-out,
 			translate 180ms ease-out,

@@ -10,6 +10,7 @@
 	import CreateMenu from '#lib/ui/CreateMenu.svelte';
 	import FanStack from '#lib/ui/FanStack.svelte';
 	import Icon from '#lib/ui/Icon.svelte';
+	import TiltSwitch from '#lib/ui/TiltSwitch.svelte';
 	import Illustration from '#lib/ui/Illustration.svelte';
 
 	let videos = $state<Video[] | null>(null);
@@ -110,6 +111,7 @@
 		</header>
 	{:else}
 		<header>
+			<div class="side">
 			<button
 				class="icon-button"
 				type="button"
@@ -119,15 +121,19 @@
 			>
 				<Icon name="search" />
 			</button>
+			<TiltSwitch />
+			</div>
 			<div class="heading">
 				<h1>Minha coleção</h1>
 				{#if videos}<p>{summary}</p>{/if}
 			</div>
-			{#if videos && videos.length > 0}
-				<CreateMenu />
-			{:else}
-				<span class="spacer" aria-hidden="true"></span>
-			{/if}
+			<div class="side end">
+				{#if videos && videos.length > 0}
+					<CreateMenu />
+				{:else}
+					<span class="spacer" aria-hidden="true"></span>
+				{/if}
+			</div>
 		</header>
 	{/if}
 
@@ -242,13 +248,14 @@
 	}
 
 	header {
-		display: flex;
+		display: grid;
+		grid-template-columns: 1fr auto 1fr;
 		align-items: center;
-		justify-content: space-between;
 		padding: 0 var(--space-1) var(--space-6);
 	}
 
 	header.searchbar {
+		display: flex;
 		gap: var(--space-3);
 	}
 
@@ -368,6 +375,15 @@
 		line-clamp: 2;
 		-webkit-box-orient: vertical;
 		overflow: hidden;
+	}
+
+	.side {
+		display: flex;
+		gap: var(--space-2);
+	}
+
+	.side.end {
+		justify-content: flex-end;
 	}
 
 	.heading {
