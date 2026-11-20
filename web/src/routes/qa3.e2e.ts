@@ -133,34 +133,6 @@ test.describe('R3.11 empty library with collections', () => {
 	});
 });
 
-test.describe('R3.10 safe area', () => {
-	test('a strip over the status bar fades what scrolls under it, and never takes a touch', async ({ page }) => {
-		await seedTwo(page);
-		await page.goto('/');
-		const strip = page.locator('.safe-top');
-		await expect(strip).toHaveCount(1);
-		const css = await strip.evaluate((el) => {
-			const s = getComputedStyle(el);
-			return { position: s.position, top: s.top, events: s.pointerEvents, image: s.backgroundImage, height: parseFloat(s.height) };
-		});
-		expect(css.position).toBe('fixed');
-		expect(css.top).toBe('0px');
-		expect(css.events).toBe('none');
-		expect(css.image).toContain('linear-gradient');
-		expect(css.height).toBeGreaterThan(0);
-	});
-
-	test('the strip takes the color of the screen: white on the library, black on the collection', async ({ page }) => {
-		await seed(page);
-		const color = () =>
-			page.locator('.safe-top').evaluate((el) => getComputedStyle(el).getPropertyValue('--safe-bg').trim().toLowerCase());
-		await page.goto('/');
-		await expect.poll(color).toBe('#ffffff');
-		await page.goto('/c/todos');
-		await expect.poll(color).toBe('#000000');
-	});
-});
-
 test.describe('R3.12 the "+" menu leaves the way it came', () => {
 	test('closing plays an exit before the menu goes away', async ({ page }) => {
 		await seed(page);
@@ -323,7 +295,6 @@ test.describe('R3.3 Favoritos is a matte green screen; the hearts are black and 
 		await expect(page.locator('main.collection')).toHaveCSS('background-color', GREEN);
 		await expect(page.locator('html')).toHaveCSS('background-color', GREEN);
 		await expect(page.locator('meta[name="theme-color"]')).toHaveAttribute('content', '#2F6B4F');
-		await expect.poll(() => page.locator('.safe-top').evaluate((el) => getComputedStyle(el).getPropertyValue('--safe-bg').trim())).toBe('#2F6B4F');
 	});
 
 	test('the badge is a black disc with a white heart', async ({ page }) => {

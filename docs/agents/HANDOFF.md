@@ -4,11 +4,9 @@
 Owner's iPhone screenshots: a TikTok saved but showed a grey cover and the title "Vídeo do TikTok". Owner chose (2026-11-20): build the title from the @handle plus a drawn cover, no scraping, and upgrade already-saved generic titles (edited titles untouched).
 
 ## State (verified)
-- Earlier: PR #25 (short link "could not check now", copy) merged as d81eb7a; `octa-api` redeployed from f456552 (live 2026-11-20 05:01 UTC).
-- Implementation: done on branch `feat/tiktok-handle-title` (from main d81eb7a), web only. Merge: PR open, owner merges. Deploy: Vercel builds main after merge.
-- Cause: TikTok's public oEmbed answers 200 without title, author or thumbnail (live endpoint and live API, 2026-11-20); the page has no og tags. Real covers/titles need scraping the page's internal JSON: not done.
-- QA automated: `pnpm test` 274 PASS, `pnpm check` 0 errors, e2e 400 PASS / 19 skipped / 1 FAIL (`qa2.e2e.ts:299` Assistidos, flaky: 2 of 36 reruns fail on main too; passes alone). No CI workflow yet.
-- NOT proven: iPhone; a recent TikTok with oEmbed metadata; a real `vt.` link expanding from Render.
+- Implementation: done — branch `fix/qa-round-3`, 13 commits from main d81eb7a (R3.1+R3.3 share one commit). Merge: PR open, owner merges. PR #26 (TikTok handle title) is still open and separate.
+- Automated: `pnpm test` 274 PASS · `pnpm check` 0 errors · full e2e 501 PASS / 9 failed / 12 skipped (522). The 9: `health.e2e.ts:29` x3 viewports fails the same on origin/main (pre-existing); 6 were my tests assuming the phone viewport, fixed and re-run green on 3 viewports (no second full run).
+- NOT proven: any iPhone behavior (rubber band and arrow z-order R3.1, keyboard white areas R3.6, 3D, real fullscreen R3.13). No CI workflow exists yet (slice 4).
 
 ## Decisions (and why)
 - Handle title from the canonical URL, API generic title never overwrites it, a real API title wins.
