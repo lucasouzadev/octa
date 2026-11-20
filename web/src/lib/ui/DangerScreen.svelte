@@ -21,7 +21,7 @@
 		cancelLabel?: string;
 		busy?: boolean;
 		error?: string;
-		/** A faded, tilted cover of what is about to go. */
+		/** The cover of what is about to go, clear and tilted. */
 		thumb?: string;
 		onconfirm: () => void;
 		oncancel: () => void;
@@ -72,17 +72,17 @@
 		overflow: hidden;
 	}
 
+	/* The cover is shown as it is: clear, big, a little tilted. Nothing tints it. */
 	.thumb {
 		position: absolute;
-		top: 14%;
+		top: calc(12% + env(safe-area-inset-top));
 		left: 50%;
-		width: min(64%, 320px);
+		width: min(84%, 420px);
 		aspect-ratio: 16 / 9;
 		object-fit: cover;
-		border-radius: 16px;
-		opacity: 0.35;
-		filter: grayscale(1) contrast(0.9);
-		transform: translateX(-50%) rotate(-8deg);
+		border-radius: 18px;
+		box-shadow: 0 10px 30px rgb(0 0 0 / 0.28);
+		transform: translateX(-50%) rotate(-6deg);
 	}
 
 	.copy,
