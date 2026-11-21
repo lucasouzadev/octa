@@ -1,18 +1,25 @@
 # STATUS — what is actionable now
 
-Updated 2026-11-20. Progress only — the product is defined in `docs/product/SPEC.md`.
+Updated 2026-11-21 (checked against GitHub: every PR #1–#36 is merged). Progress only — the product is defined in `docs/product/SPEC.md`.
 
 | Slice | Scope (SPEC §8) | State |
 |---|---|---|
 | 0 | Docs, agent-kit, ADRs, design system | DONE 2026-11-19 |
 | 1 | Paste → resolve → card → player (YouTube long/Shorts, direct .mp4); `/v1/resolve`; URL parser + shared vectors; minimal library list | DONE 2026-11-19 — merged (PR #1, #3); API live on Render, PWA on Vercel; owner confirmed on iPhone |
-| 2 | Library + collections, Threlte fan/stack + CSS fallback, search, View Transitions (plan: `tasks/plan.md`) | 2a collections (2D) DONE (PR #6 merged, owner tested 2026-11-19); 2b search DONE (PR #7 merged, owner approved); 2c View Transitions DONE (PR #8 merged, owner tested); 2d-i CSS-3D fan and stack DONE (PR #9 merged, owner approved on iPhone); iOS findings fix DONE (PR #10 merged); 2d-ii WebGL fan DONE (PR #11 merged, owner approved); 2e-1 Library cards per the prototype DONE (PR #12 merged, owner approved); 2e-2 Collection screen as tilted 3D screens IN REVIEW — branch `feat/slice-2e2-collection-screens`; 2e-3 WebGL monitors IN REVIEW (branch `feat/slice-2e3-webgl-monitors`) |
-| 3 | Instagram, TikTok, HLS; `/v1/health`; health states; Dead link screen; resume | 3a sources DONE (PR #18/#20 merged); 3c cinema player DONE (PR #21 merged); 3b `/v1/health` + real dead-link check + resume IN REVIEW — branch `feat/slice-3b-health` (home card "Continuar assistindo" pending owner decision) |
-| 4 | PWA install, share target, export/import, offline shell, E2E 3 viewports, deploy (owner picks host) | — |
+| 2 | Library + collections, Threlte fan/stack + CSS fallback, search, View Transitions (plan: `tasks/plan.md`) | 2a collections (2D) DONE (PR #6 merged, owner tested 2026-11-19); 2b search DONE (PR #7 merged, owner approved); 2c View Transitions DONE (PR #8 merged, owner tested); 2d-i CSS-3D fan and stack DONE (PR #9 merged, owner approved on iPhone); iOS findings fix DONE (PR #10 merged); 2d-ii WebGL fan DONE (PR #11 merged, owner approved); 2e-1 Library cards per the prototype DONE (PR #12 merged, owner approved); 2e-2 Collection screen as tilted 3D screens DONE (PR #13/#14 merged); 2e-3 WebGL monitors DONE (PR #17 merged) |
+| 3 | Instagram, TikTok, HLS; `/v1/health`; health states; Dead link screen; resume | 3a sources DONE (PR #18/#20 merged); 3c cinema player DONE (PR #21 merged); 3b `/v1/health` + real dead-link check + resume DONE (PR #22 merged); 3c–3e player DONE (PR #21, #23, #24 merged); home card "Continuar assistindo" waits for the owner's decision |
+| 4 | PWA install, share target, export/import, offline shell, E2E 3 viewports, deploy (owner picks host) | IN MAIN: export/import (PR #34), PWA (PR #35), CI + CSP (PR #36), all merged 2026-11-20. Main CI went red after #36: the offline shell test (R7) failed because the merge dropped `serviceWorker` and `paths.relative` from `vite.config.ts`; fix on branch `fix/restore-pwa-config` |
 
 ## Slice 4 (owner approved 2026-11-20: 3 PRs, SvelteKit service worker without a new dependency, provisional icon, export/import in the Organizar sheet)
 - PR 1 `feat/export-import`: export/import JSON (with `rank`) — rules in `docs/design/DESIGN.md` § Export / import. NOT proven: iOS share sheet on a real iPhone.
 - PR 2 (next): installable PWA, share target, offline shell, provisional icon. PR 3: CI workflow + CSP. No `VITE_API_BASE` work (owner).
+
+## Pendências (2026-11-21)
+- Main CI: red until the fix on `fix/restore-pwa-config` is merged (R7 offline shell, 3 viewports). `qa2.e2e.ts:299` is a known flake on the same run.
+- Owner: final app icon (the current one is provisional); Render Health Check Path `/healthz`; `VITE_API_BASE` for Vercel previews (still unset, out of slice 4); home card "Continuar assistindo".
+- Still to prove: rate-limit client IP header from a 4G phone before fixing `CLIENT_IP_HEADER`; embeds of YouTube/TikTok/Instagram under the CSP; Vercel headers on a real deploy; install prompt and share target on Android; the service worker update across two real deploys; iPhone/iPad checks of slices 2c–3e and QA rounds 1–3.
+- Test debt: fixed `checkedAt` dates in `stacks` and `sources` fixtures; `enrich.e2e`, `transitions:46`, `monitors:104` flake under load.
+- Known iPhone gaps: Web Share Target does not exist on iOS Safari, so the iPhone entry stays "Colar um link".
 
 ## Organize collections (2026-11-20, branch `feat/organize-collections`, stacked on `feat/device-tilt`)
 - Header button Organizar (sheet: sort, Reordenar, tilt switch); drag the handle or use arrows; `Collection.rank` stored on the device; rules in `docs/design/DESIGN.md` § Organize the Library. NOT proven: finger drag on a real iPhone.
