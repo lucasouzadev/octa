@@ -235,6 +235,26 @@ export class Library {
 		await tx.done;
 	}
 
+	/** Several videos to one collection (null = out of any) in one write, in the order given. Deleted ones are skipped. */
+	async moveVideos(videoIds: readonly string[], collectionId: string | null): Promise<void> {
+		const tx = this.db.transaction(['videos', 'collections'], 'readwrite');
+		const videos = tx.objectStore('videos');
+		const collections = tx.objectStore('collections');
+		if (collectionId !== null && !(await collections.get(collectionId))) throw new CollectionError('not_found');
+		const moving: string[] = [];
+		for (const id of videoIds) if (await videos.get(id)) moving.push(id);
+		const gone = new Set(moving);
+		for (const c of await collections.getAll()) {
+			if (c.id === collectionId) {
+				const order = [...c.order.filter((x) => !gone.has(x)), ...moving];
+				if (order.join() !== c.order.join()) await collections.put({ ...c, order, updatedAt: stamp() });
+			} else if (c.order.some((x) => gone.has(x))) {
+				await collections.put({ ...c, order: c.order.filter((x) => !gone.has(x)), updatedAt: stamp() });
+			}
+		}
+		await tx.done;
+	}
+
 	async collectionOf(videoId: string): Promise<Collection | undefined> {
 		return (await this.db.getAll('collections')).find((c) => c.order.includes(videoId));
 	}
