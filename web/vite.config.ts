@@ -15,6 +15,10 @@ export default defineConfig({
 			// hashes for its own inline bootstrap; frame-ancestors lives in vercel.json (meta ignores it).
 			// connect-src allows https: only because hls.js fetches playlists from whatever host the
 			// user's .m3u8 lives on; scripts, frames and objects stay on an allowlist.
+			// Kit 3 does not register src/service-worker.ts on its own: ask for it.
+			serviceWorker: { register: true },
+			// Absolute asset URLs: the cached shell is served for every path offline (/c/new, /v/...).
+			paths: { relative: false },
 			csp: {
 				mode: 'hash',
 				directives: {

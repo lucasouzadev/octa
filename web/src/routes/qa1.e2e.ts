@@ -343,7 +343,8 @@ test.describe('R1.6 create menu, empty states, back to top', () => {
 		await page.keyboard.press('Escape');
 		await expect(menu).toBeHidden();
 		await page.getByRole('button', { name: 'Criar conteúdo' }).click();
-		await page.getByRole('heading', { name: 'Minha coleção' }).click();
+		// An outside tap, clear of the open panel: it is 224 px wide and can cover the heading on a phone.
+		await page.mouse.click(3, 3);
 		await expect(menu).toBeHidden();
 		await page.getByRole('button', { name: 'Criar conteúdo' }).click();
 		await menu.getByRole('menuitem', { name: 'Colar link' }).click();
