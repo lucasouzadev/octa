@@ -81,7 +81,7 @@ test.describe('R3.2 Editar: the options sit below the card', () => {
 		const list = await box(page.locator('.videos.editing'));
 		for (let i = 0; i < 2; i++) {
 			const card = await box(rows.nth(i).locator('.screen'));
-			const buttons = rows.nth(i).locator('.row-buttons .chip');
+			const buttons = rows.nth(i).locator('.row-buttons:not(.order) .chip'); // the selection and order row (R4.5) sits above these three
 			await expect(buttons).toHaveCount(3);
 			// The card is not squeezed by the buttons.
 			expect(card.width).toBeGreaterThan(list.width * 0.9);
