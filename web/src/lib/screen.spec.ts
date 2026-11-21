@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { themeColorFor } from './screen.ts';
+import { isLightColor, themeColorFor } from './screen.ts';
 
 // The browser chrome (status bar, bottom bar) takes the color of the screen so the
 // page feels endless. Blue action screens used to show white strips top and bottom.
@@ -29,5 +29,24 @@ describe('themeColorFor', () => {
 	it('falls back to black for unknown or missing routes', () => {
 		expect(themeColorFor(null)).toBe('#000000');
 		expect(themeColorFor('/qualquer')).toBe('#000000');
+	});
+});
+
+describe('isLightColor (R4.6)', () => {
+	it('is true for the white Library and false for the dark, blue and green screens', () => {
+		expect(isLightColor('#FFFFFF')).toBe(true);
+		expect(isLightColor('#ffffff')).toBe(true);
+		for (const c of ['#000000', '#1A3CFF', '#2F6B4F']) expect(isLightColor(c)).toBe(false);
+	});
+
+	it('follows every screen the app has', () => {
+		expect(isLightColor(themeColorFor('/'))).toBe(true);
+		expect(isLightColor(themeColorFor('/add'))).toBe(false);
+		expect(isLightColor(themeColorFor('/v/[id]'))).toBe(false);
+		expect(isLightColor(themeColorFor('/c/[id]', 'favoritos'))).toBe(false);
+	});
+
+	it('treats anything it cannot read as dark', () => {
+		expect(isLightColor('red')).toBe(false);
 	});
 });

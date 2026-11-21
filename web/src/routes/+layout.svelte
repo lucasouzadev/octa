@@ -8,7 +8,7 @@
 	import { onNavigate } from '$app/navigation';
 	import { initTilt } from '#lib/tilt.svelte.ts';
 	import { page } from '$app/state';
-	import { themeColorFor } from '#lib/screen.ts';
+	import { isLightColor, themeColorFor } from '#lib/screen.ts';
 	import { theme } from '#lib/theme.svelte.ts';
 	import { currentMode } from '#lib/transition.ts';
 	import type { LayoutProps } from './$types';
@@ -19,6 +19,11 @@
 
 	// The color this screen paints, for the browser chrome.
 	const screenColor = $derived(theme.override ?? themeColorFor(page.route.id, page.params.id));
+
+	// Light screens get a dark strip behind the (always white) status-bar text: see app.css.
+	$effect(() => {
+		document.documentElement.dataset.light = String(isLightColor(screenColor));
+	});
 
 	// Cross-fade the screen colors and morph the card thumbnail into the player
 	// frame. No-op without View Transitions; reduced motion gets a short fade.
