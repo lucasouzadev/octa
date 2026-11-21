@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 	import { library, type Video } from '#lib/db/index.ts';
 	import { ALL, playlistFor } from '#lib/db/scope.ts';
+	import { enrichVideo, needsEnrich } from '#lib/enrich.ts';
 	import { checkVideo, recheck } from '#lib/health.ts';
 	import DangerScreen from '#lib/ui/DangerScreen.svelte';
 	import EditVideoSheet from '#lib/ui/EditVideoSheet.svelte';
@@ -63,6 +64,20 @@
 			.then((lib) => checkVideo(lib, current))
 			.then((updated) => {
 				if (updated !== current) replace(updated);
+			});
+	});
+
+	// A link saved while the API was asleep still has the parser's title. The API is waking up
+	// now: ask again for this video and let the answer land on the screen (R4.1).
+	let enrichedOnOpen = '';
+	$effect(() => {
+		const current = video;
+		if (!current || enrichedOnOpen === current.id || !needsEnrich(current)) return;
+		enrichedOnOpen = current.id;
+		library()
+			.then((lib) => enrichVideo(lib, current))
+			.then((updated) => {
+				if (updated) replace(updated);
 			});
 	});
 

@@ -54,6 +54,45 @@ describe('needsEnrich', () => {
 	});
 });
 
+describe('needsEnrich after a health check (R4.1)', () => {
+	it('is true for a generic title whose health was checked but whose metadata never arrived', async () => {
+		const v = await savedOffline('dQw4w9WgXcQ');
+		// the viewer's health check ran: a date and a verdict, still the parser's title
+		const checked = await lib.update(v.id, { health: 'alive', checkedAt: new Date().toISOString() });
+		expect(checked.title).toBe('Vídeo do YouTube');
+		expect(needsEnrich(checked)).toBe(true);
+	});
+
+	it('is false once a resolve answered, even if that answer had no title', async () => {
+		const v = await savedOffline('dQw4w9WgXcQ');
+		const done = await enrichPending(lib, { resolve: async () => meta('dQw4w9WgXcQ', { title: '' }) });
+		expect(done).toBe(1);
+		const [after] = await lib.list();
+		expect(after.title).toBe('Vídeo do YouTube');
+		expect(after.metaAt).toBeDefined();
+		expect(needsEnrich(after)).toBe(false);
+		expect(after.id).toBe(v.id);
+	});
+
+	it('is false for a title the person or the API chose', async () => {
+		const v = await savedOffline('dQw4w9WgXcQ');
+		const checked = await lib.update(v.id, { title: 'Meu título', health: 'alive', checkedAt: new Date().toISOString() });
+		expect(needsEnrich(checked)).toBe(false);
+	});
+
+	it('is false for a TikTok handle title: that is the best it will ever get', async () => {
+		const { video } = await addLink('https://www.tiktok.com/@nota.solta/video/7300000000000000001', {
+			library: lib,
+			resolve: async () => {
+				throw new ApiError(503);
+			}
+		});
+		const checked = await lib.update(video.id, { health: 'alive', checkedAt: new Date().toISOString() });
+		expect(checked.title).toBe('Vídeo de @nota.solta');
+		expect(needsEnrich(checked)).toBe(false);
+	});
+});
+
 describe('enrichPending', () => {
 	it('fills title, author, thumbnail and health of videos saved offline', async () => {
 		const v = await savedOffline('dQw4w9WgXcQ');

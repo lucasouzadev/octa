@@ -19,6 +19,8 @@ export interface Video {
 	durationSec?: number;
 	health: Health;
 	checkedAt?: string;
+	/** When the API last described this link (title, author, cover). A health check alone never sets it. */
+	metaAt?: string;
 	deadStreak: number;
 	favorite: boolean;
 	/** Marked as watched by the person (or when a native video ends). */

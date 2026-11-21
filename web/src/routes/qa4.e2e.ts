@@ -177,3 +177,63 @@ test.describe('R4.7 Desfazer after deleting a video', () => {
 		await expect(page.getByRole('button', { name: 'Desfazer' })).toHaveCount(0, { timeout: 4000 });
 	});
 });
+
+// R4.1: the API sleeps (Render free ≈ 50 s). The paste gives up after 4 s and saves a generic
+// title; it used to stay generic for good. Now the viewer keeps asking and shows the answer.
+test.describe('R4.1 slow capture', () => {
+	test('opening the paste screen knocks on the API once', async ({ page }) => {
+		const knocks: string[] = [];
+		await mockNetwork(page);
+		await page.route('**/api/healthz', (route) => {
+			knocks.push(route.request().url());
+			return route.fulfill({ status: 200, body: 'ok' });
+		});
+		await page.goto('/add');
+		await expect.poll(() => knocks.length).toBe(1);
+		await page.waitForTimeout(300);
+		expect(knocks.length, 'one knock per open (the minute-long limit is unit-tested)').toBe(1);
+	});
+
+	test('a resolve slower than the paste timeout: saved at once, real title lands in the viewer', async ({ page }) => {
+		await mockNetwork(page);
+		let calls = 0;
+		await page.route('**/api/v1/resolve', async (route) => {
+			calls += 1;
+			if (calls === 1) await new Promise((r) => setTimeout(r, 6500)); // asleep: the client gives up at 4 s
+			const id = 'dQw4w9WgXcQ';
+			await route
+				.fulfill({
+					json: {
+						source: 'youtube',
+						kind: 'video',
+						id,
+						canonicalUrl: `https://www.youtube.com/watch?v=${id}`,
+						embed: { type: 'iframe', src: `https://www.youtube-nocookie.com/embed/${id}?playsinline=1&rel=0`, aspect: '16:9' },
+						title: 'Título que chegou depois',
+						author: 'Casa Aberta',
+						thumbnail: `https://i.ytimg.com/vi/${id}/hqdefault.jpg`,
+						durationSec: null,
+						health: 'alive',
+						checkedAt: new Date().toISOString()
+					}
+				})
+				.catch(() => {}); // the first request was already abandoned by the client
+		});
+		await paste(page, 'https://youtu.be/dQw4w9WgXcQ');
+		await expect(page).toHaveURL(/\/v\//, { timeout: 8000 });
+		// the second answer arrives without leaving the screen
+		await expect(page.locator('.info h1')).toHaveText('Título que chegou depois', { timeout: 10_000 });
+		expect(calls).toBe(2);
+	});
+
+	test('a long wait says why instead of a bare "Gerando…"', async ({ page }) => {
+		await mockNetwork(page);
+		await page.route('**/api/v1/resolve', () => new Promise(() => {})); // never answers: the 4 s timer ends it
+		await page.goto('/add');
+		await page.getByLabel('Link do vídeo').fill('https://youtu.be/dQw4w9WgXcQ');
+		await page.getByLabel('Link do vídeo').blur();
+		await page.getByRole('button', { name: 'Gerar player' }).click();
+		await expect(page.getByRole('button', { name: 'Gerando…' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Acordando o servidor…' })).toBeVisible({ timeout: 3800 });
+	});
+});
