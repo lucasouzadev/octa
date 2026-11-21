@@ -29,6 +29,12 @@ export interface Video {
 	updatedAt: string;
 }
 
+/** What `deleteVideo` hands back so the delete can be undone. */
+export interface RemovedVideo {
+	video: Video;
+	placements: { collectionId: string; index: number }[];
+}
+
 /** A user collection. "Todos" is virtual (every video) and never stored. */
 export interface Collection {
 	id: string;
@@ -137,14 +143,35 @@ export class Library {
 		return next;
 	}
 
-	/** Removes the video for good and takes it out of its collection. */
-	async deleteVideo(id: string): Promise<void> {
+	/** Removes the video and takes it out of its collection. The snapshot lets `restoreVideo` undo it. */
+	async deleteVideo(id: string): Promise<RemovedVideo> {
 		const tx = this.db.transaction(['videos', 'collections'], 'readwrite');
-		if (!(await tx.objectStore('videos').get(id))) throw new CollectionError('not_found');
+		const video = await tx.objectStore('videos').get(id);
+		if (!video) throw new CollectionError('not_found');
 		await tx.objectStore('videos').delete(id);
 		const collections = tx.objectStore('collections');
+		const placements: RemovedVideo['placements'] = [];
 		for (const c of await collections.getAll()) {
-			if (c.order.includes(id)) await collections.put({ ...c, order: c.order.filter((x) => x !== id), updatedAt: stamp() });
+			const index = c.order.indexOf(id);
+			if (index === -1) continue;
+			placements.push({ collectionId: c.id, index });
+			await collections.put({ ...c, order: c.order.filter((x) => x !== id), updatedAt: stamp() });
+		}
+		await tx.done;
+		return { video, placements };
+	}
+
+	/** Undo of `deleteVideo`: the video returns as it was, to the same place in each collection that still exists. */
+	async restoreVideo(removed: RemovedVideo): Promise<void> {
+		const tx = this.db.transaction(['videos', 'collections'], 'readwrite');
+		await tx.objectStore('videos').put(removed.video);
+		const collections = tx.objectStore('collections');
+		for (const { collectionId, index } of removed.placements) {
+			const c = await collections.get(collectionId);
+			if (!c || c.order.includes(removed.video.id)) continue;
+			const order = [...c.order];
+			order.splice(Math.min(index, order.length), 0, removed.video.id);
+			await collections.put({ ...c, order, updatedAt: stamp() });
 		}
 		await tx.done;
 	}

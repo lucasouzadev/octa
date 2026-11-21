@@ -2,11 +2,19 @@
 	import { toast } from '#lib/toast.svelte.ts';
 </script>
 
-<!-- Always mounted so screen readers pick the text up when it changes. Never takes a tap. -->
-<p class="toast" class:shown={toast.text !== ''} role="status" aria-live="polite">{toast.text}</p>
+<!-- Always mounted so screen readers pick the text up when it changes. Takes a tap only while it carries a button. -->
+<div class="box" class:shown={toast.text !== ''} class:tappable={toast.action !== undefined}>
+	<p class="toast" class:shown={toast.text !== ''} role="status" aria-live="polite">{toast.text}</p>
+	{#if toast.action}
+		<button type="button" class="act" onclick={() => toast.act()}>{toast.action.label}</button>
+	{/if}
+</div>
 
 <style>
-	.toast {
+	.box {
+		display: flex;
+		align-items: center;
+		gap: var(--space-4);
 		position: fixed;
 		z-index: 120;
 		left: 50%;
@@ -35,7 +43,26 @@
 			visibility 0s linear 180ms;
 	}
 
-	.toast.shown {
+	.box.tappable.shown {
+		pointer-events: auto;
+	}
+
+	.toast {
+		margin: 0;
+	}
+
+	.act {
+		min-height: 32px;
+		padding: 0 var(--space-3);
+		border: 0;
+		border-radius: var(--radius-pill);
+		background: var(--color-text-dark);
+		color: var(--color-text-light);
+		font: inherit;
+		cursor: pointer;
+	}
+
+	.box.shown {
 		opacity: 1;
 		visibility: visible;
 		translate: -50% 0;
@@ -43,7 +70,7 @@
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.toast {
+		.box {
 			transition: none;
 		}
 	}

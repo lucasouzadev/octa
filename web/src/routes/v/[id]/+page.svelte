@@ -122,9 +122,17 @@
 		try {
 			const gone = video.id;
 			const rest = all.filter((v) => v.id !== gone);
-			await (await library()).deleteVideo(gone);
+			const lib = await library();
+			const removed = await lib.deleteVideo(gone);
+			const back = at(gone);
 			removing = false;
-			toast.show('Vídeo apagado');
+			toast.show('Vídeo apagado', {
+				label: 'Desfazer',
+				run: async () => {
+					await lib.restoreVideo(removed);
+					await goto(back, { replaceState: true });
+				}
+			});
 			if (rest.length === 0) await goto(scope === ALL ? '/' : `/c/${scope}`, { replaceState: true });
 			else await goto(at(rest[Math.min(index, rest.length - 1)].id), { replaceState: true });
 		} catch {

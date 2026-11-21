@@ -144,9 +144,16 @@
 		if (!removingVideo || dangerBusy) return;
 		dangerBusy = true;
 		try {
-			await (await library()).deleteVideo(removingVideo.id);
+			const lib = await library();
+			const removed = await lib.deleteVideo(removingVideo.id);
 			removingVideo = null;
-			toast.show('Vídeo apagado');
+			toast.show('Vídeo apagado', {
+				label: 'Desfazer',
+				run: async () => {
+					await lib.restoreVideo(removed);
+					await load();
+				}
+			});
 			await load();
 		} catch {
 			error = 'Não deu para apagar agora. Tente de novo.';

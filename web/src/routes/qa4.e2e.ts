@@ -130,3 +130,50 @@ test.describe('R4.2 every control answers a press', () => {
 		expect(cta.during).not.toBe(cta.before);
 	});
 });
+
+// R4.7: a delete used to be final the moment it was confirmed.
+test.describe('R4.7 Desfazer after deleting a video', () => {
+	const toast = (page: Page) => page.locator('p.toast.shown[role="status"]');
+
+	async function seedTwo(page: Page) {
+		await seed(page);
+		await paste(page, SHORT);
+		await expect(page).toHaveURL(/\/v\//);
+	}
+
+	test('from the viewer: Desfazer brings the video back and opens it', async ({ page }) => {
+		await seedTwo(page);
+		const title = (await page.locator('.info h1').textContent())!;
+		await page.getByRole('button', { name: 'Mais ações' }).click();
+		await page.getByRole('button', { name: 'Apagar da biblioteca' }).click();
+		await page.getByRole('button', { name: 'Apagar vídeo' }).click();
+		await expect(toast(page)).toHaveText('Vídeo apagado');
+		await page.getByRole('button', { name: 'Desfazer' }).click();
+		await expect(page.locator('.info h1')).toHaveText(title);
+		await page.goto('/c/todos');
+		await expect(page.locator('ul.videos li')).toHaveCount(2);
+	});
+
+	test('from the collection list: Desfazer puts the row back', async ({ page }) => {
+		await seedTwo(page);
+		await page.goto('/c/todos');
+		await expect(page.locator('ul.videos li')).toHaveCount(2);
+		await page.getByRole('button', { name: 'Editar', exact: true }).click();
+		await page.getByRole('button', { name: /^Apagar/ }).first().click();
+		await page.getByRole('button', { name: 'Apagar vídeo' }).click();
+		await expect(page.locator('ul.videos li')).toHaveCount(1);
+		await page.getByRole('button', { name: 'Desfazer' }).click();
+		await expect(page.locator('ul.videos li')).toHaveCount(2);
+	});
+
+	test('the notice stays about 6 s, longer than a plain one, then Desfazer is gone', async ({ page }) => {
+		await seed(page);
+		await page.getByRole('button', { name: 'Mais ações' }).click();
+		await page.getByRole('button', { name: 'Apagar da biblioteca' }).click();
+		await page.getByRole('button', { name: 'Apagar vídeo' }).click();
+		await expect(page.getByRole('button', { name: 'Desfazer' })).toBeVisible();
+		await page.waitForTimeout(4500);
+		await expect(page.getByRole('button', { name: 'Desfazer' })).toBeVisible();
+		await expect(page.getByRole('button', { name: 'Desfazer' })).toHaveCount(0, { timeout: 4000 });
+	});
+});

@@ -32,4 +32,30 @@ describe('toast', () => {
 		toast.clear();
 		expect(toast.text).toBe('');
 	});
+
+	it('an action keeps the notice for 6 s and runs once when tapped', () => {
+		let ran = 0;
+		toast.show('Vídeo apagado', { label: 'Desfazer', run: () => void ran++ });
+		expect(toast.action?.label).toBe('Desfazer');
+		vi.advanceTimersByTime(5500);
+		expect(toast.text).toBe('Vídeo apagado');
+		toast.act();
+		toast.act();
+		expect(ran).toBe(1);
+		expect(toast.text).toBe('');
+		expect(toast.action).toBeUndefined();
+	});
+
+	it('a notice without action has none left from the one before', () => {
+		toast.show('Vídeo apagado', { label: 'Desfazer', run: () => {} });
+		toast.show('Link copiado');
+		expect(toast.action).toBeUndefined();
+	});
+
+	it('the action is gone when the time is up', () => {
+		toast.show('Vídeo apagado', { label: 'Desfazer', run: () => {} });
+		vi.advanceTimersByTime(6100);
+		expect(toast.text).toBe('');
+		expect(toast.action).toBeUndefined();
+	});
 });
