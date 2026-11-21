@@ -6,6 +6,7 @@
 	import { CollectionError, COLLECTION_NAME_MAX, library, type Collection, type Video } from '#lib/db/index.ts';
 	import { ALL, FAVORITES, WATCHED, isVirtual, videosIn } from '#lib/db/scope.ts';
 	import { shelfSummary } from '#lib/shelf.ts';
+	import { moveBy, sortVideos, VIDEO_SORTS, type VideoSort } from '#lib/organize.ts';
 	import BackToTop from '#lib/ui/BackToTop.svelte';
 	import DangerScreen from '#lib/ui/DangerScreen.svelte';
 	import EditVideoSheet from '#lib/ui/EditVideoSheet.svelte';
@@ -32,6 +33,10 @@
 	// One or two covers are small in a fan; five fill the width already.
 	const fanZoom = (n: number) => (n <= 2 ? 1.6 : n === 3 ? 1.35 : 1.05);
 	let moving = $state<Video | null>(null);
+	// Several at once (R4.5): the ids ticked in Editar, and the videos handed to the Mover sheet.
+	let picked = $state<string[]>([]);
+	let movingMany = $state<Video[]>([]);
+	let live = $state('');
 	let editingVideo = $state<Video | null>(null);
 	let removingVideo = $state<Video | null>(null);
 	let dangerBusy = $state(false);
@@ -55,6 +60,8 @@
 		void scope;
 		editing = renaming = confirmingDelete = false;
 		moving = null;
+		picked = [];
+		movingMany = [];
 		error = '';
 		load();
 	});
@@ -92,6 +99,44 @@
 
 	const count = $derived(videos ? shelfSummary(videos) : '');
 
+	// --- Organizar os vídeos (R4.5): only a collection of the person's own has an order of its own.
+	const canOrder = $derived(!virtual && !!collection);
+	const pickedVideos = $derived((videos ?? []).filter((v) => picked.includes(v.id)));
+
+	function togglePick(id: string) {
+		picked = picked.includes(id) ? picked.filter((x) => x !== id) : [...picked, id];
+	}
+
+	async function saveOrder(ids: string[]) {
+		if (!collection) return;
+		// reorder() wants every id the collection holds; ids whose video is gone stay at the end.
+		const shown = new Set(ids);
+		const stale = collection.order.filter((id) => !shown.has(id));
+		try {
+			await (await library()).reorder(collection.id, [...ids, ...stale]);
+			error = '';
+			await load();
+		} catch {
+			error = 'Não deu para salvar a ordem agora.';
+		}
+	}
+
+	async function sortBy(mode: VideoSort) {
+		if (!videos) return;
+		await saveOrder(sortVideos(videos, mode).map((v) => v.id));
+		const label = VIDEO_SORTS.find((s) => s.mode === mode)!.label.toLowerCase();
+		if (!error) toast.show(`Ordenado por ${label}`);
+	}
+
+	async function shift(id: string, delta: -1 | 1) {
+		if (!videos) return;
+		const ids = videos.map((v) => v.id);
+		const next = moveBy(ids, id, delta);
+		if (next.join() === ids.join()) return;
+		await saveOrder(next);
+		live = `${next.indexOf(id) + 1} de ${next.length}`;
+	}
+
 	const messages: Record<string, string> = {
 		empty_name: 'Dê um nome à coleção.',
 		name_too_long: `Use até ${COLLECTION_NAME_MAX} caracteres.`,
@@ -102,6 +147,7 @@
 
 	function toggleEdit() {
 		editing = !editing;
+		picked = [];
 		renaming = confirmingDelete = false;
 		error = '';
 	}
@@ -225,7 +271,15 @@
 					<button class="chip" type="button" onclick={() => (confirmingDelete = true)}>Excluir</button>
 				</div>
 			{/if}
+			{#if editing && canOrder && videos.length > 1}
+				<div class="row-buttons" role="group" aria-label="Ordenar vídeos por">
+					{#each VIDEO_SORTS as s (s.mode)}
+						<button class="chip" type="button" onclick={() => sortBy(s.mode)}>{s.label}</button>
+					{/each}
+				</div>
+			{/if}
 			{#if error}<p class="error" role="alert">{error}</p>{/if}
+			<p class="sr-only" role="status" aria-live="polite">{live}</p>
 		</section>
 
 		{#if videos.length === 0}
@@ -260,9 +314,31 @@
 			{/if}
 			<ul class="videos" class:editing class:gl={glReady && wantGl} bind:this={list}>
 				{#each videos as v, i (v.id)}
-					<li style={`z-index: ${i + 1}`} data-id={v.id} class:gl-off={glOff.has(v.id)}>
+					<li style={`z-index: ${i + 1}`} data-id={v.id} class:gl-off={glOff.has(v.id)} class:picked={picked.includes(v.id)}>
 						<ScreenCard video={v} index={i} href={`/v/${v.id}?c=${scope}`} flat={editing} heart={scope === FAVORITES} />
 						{#if editing}
+							<div class="row-buttons order">
+								<button
+									class="chip pick"
+									type="button"
+									role="checkbox"
+									aria-checked={picked.includes(v.id)}
+									aria-label={`Selecionar “${v.title}”`}
+									onclick={() => togglePick(v.id)}
+								>
+									{picked.includes(v.id) ? '✓ Selecionado' : 'Selecionar'}
+								</button>
+								{#if canOrder}
+									<button class="chip" type="button" aria-label={`Subir “${v.title}”`} disabled={i === 0} onclick={() => shift(v.id, -1)}>↑</button>
+									<button
+										class="chip"
+										type="button"
+										aria-label={`Descer “${v.title}”`}
+										disabled={i === videos.length - 1}
+										onclick={() => shift(v.id, 1)}>↓</button
+									>
+								{/if}
+							</div>
 							<div class="row-buttons">
 								<button class="chip" type="button" onclick={() => (editingVideo = v)} aria-label={`Editar “${v.title}”`}>Editar</button>
 								<button class="chip" type="button" onclick={() => (moving = v)} aria-label={`Mover “${v.title}”`}>Mover</button>
@@ -272,6 +348,14 @@
 					</li>
 				{/each}
 			</ul>
+
+			{#if editing && picked.length}
+				<footer>
+					<button class="cta" type="button" onclick={() => (movingMany = pickedVideos)}>
+						Mover {picked.length} {picked.length === 1 ? 'vídeo' : 'vídeos'}
+					</button>
+				</footer>
+			{/if}
 
 			{#if !editing}
 				<footer>
@@ -323,7 +407,18 @@
 
 <EditVideoSheet video={editingVideo} onclose={() => (editingVideo = null)} onsaved={() => load()} />
 
-<MoveSheet video={moving} onclose={() => (moving = null)} onmoved={() => load()} />
+<MoveSheet
+	video={moving}
+	many={movingMany}
+	onclose={() => {
+		moving = null;
+		movingMany = [];
+	}}
+	onmoved={() => {
+		picked = [];
+		load();
+	}}
+/>
 
 <style>
 	/* The fan is built for a Library card; here it is the picture of the screen, so it is bigger. */
@@ -408,6 +503,16 @@
 		gap: var(--space-2);
 		flex-wrap: wrap;
 		justify-content: center;
+	}
+
+	.videos.editing li.picked {
+		outline: 2px solid var(--color-text-dark);
+		outline-offset: 4px;
+		border-radius: var(--radius-thumb, 14px);
+	}
+
+	.chip:disabled {
+		opacity: 0.35;
 	}
 
 	.chip {
