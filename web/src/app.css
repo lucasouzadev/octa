@@ -64,6 +64,20 @@ html {
 	touch-action: manipulation;
 }
 
+/* R4.6 experiment: the installed iPhone app draws under a translucent status bar whose clock is
+   always white. On a white screen it needs something dark behind it. Only when installed. */
+@media (display-mode: standalone) {
+	html[data-light='true']::before {
+		content: '';
+		position: fixed;
+		inset: 0 0 auto 0;
+		height: env(safe-area-inset-top);
+		background: #000;
+		z-index: 130;
+		pointer-events: none;
+	}
+}
+
 input,
 textarea {
 	-webkit-user-select: text;
@@ -119,6 +133,14 @@ img {
 
 .icon-button:active {
 	transform: scale(0.97);
+}
+
+/* R4.2: every control answers a press, even one that has no style of its own. The
+   rule is low in specificity (:where) so a component's own pressed look wins, and it
+   only changes opacity: 3D screens keep their transform. Entering is instant. */
+:where(button, [role='button'], [role='radio'], [role='switch'], a[href]):where(:not(:disabled, [aria-disabled='true'])):active {
+	opacity: 0.6;
+	transition-duration: 0s;
 }
 
 .on-dark .icon-button {

@@ -72,10 +72,12 @@ export async function enableTilt(): Promise<boolean> {
 			const answer = await (globalThis.DeviceOrientationEvent as IOSOrientation).requestPermission!();
 			if (answer !== 'granted') {
 				tilt.denied = true;
+				save(false); // a "no" sticks: nothing asks again by surprise
 				return false;
 			}
 		} catch {
 			tilt.denied = true;
+			save(false);
 			return false;
 		}
 	}
@@ -110,10 +112,6 @@ export function initTilt() {
 	const wantsOn = saved === null ? !needsPermission() : saved === '1';
 	if (!wantsOn) return;
 	if (!needsPermission()) return turnOn();
-	// iOS asks again after a reload, and only from a tap: take the first one anywhere.
-	const first = () => {
-		window.removeEventListener('pointerup', first, true);
-		void enableTilt();
-	};
-	window.addEventListener('pointerup', first, true);
+	// iOS asks again after the app is closed, and only from a tap. A random tap must never open
+	// that question (R4.3): the person turns it back on from the "Organizar" switch.
 }

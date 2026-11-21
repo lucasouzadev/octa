@@ -4,6 +4,7 @@
 	import { page } from '$app/state';
 	import { library, type Video } from '#lib/db/index.ts';
 	import { ALL, playlistFor } from '#lib/db/scope.ts';
+	import { enrichVideo, needsEnrich } from '#lib/enrich.ts';
 	import { checkVideo, recheck } from '#lib/health.ts';
 	import DangerScreen from '#lib/ui/DangerScreen.svelte';
 	import EditVideoSheet from '#lib/ui/EditVideoSheet.svelte';
@@ -66,6 +67,20 @@
 			});
 	});
 
+	// A link saved while the API was asleep still has the parser's title. The API is waking up
+	// now: ask again for this video and let the answer land on the screen (R4.1).
+	let enrichedOnOpen = '';
+	$effect(() => {
+		const current = video;
+		if (!current || enrichedOnOpen === current.id || !needsEnrich(current)) return;
+		enrichedOnOpen = current.id;
+		library()
+			.then((lib) => enrichVideo(lib, current))
+			.then((updated) => {
+				if (updated) replace(updated);
+			});
+	});
+
 	const sourceLabel = (v: Video) => (v.source === 'direct' ? 'Arquivo' : cardLabel(v));
 
 	function next() {
@@ -122,9 +137,17 @@
 		try {
 			const gone = video.id;
 			const rest = all.filter((v) => v.id !== gone);
-			await (await library()).deleteVideo(gone);
+			const lib = await library();
+			const removed = await lib.deleteVideo(gone);
+			const back = at(gone);
 			removing = false;
-			toast.show('Vídeo apagado');
+			toast.show('Vídeo apagado', {
+				label: 'Desfazer',
+				run: async () => {
+					await lib.restoreVideo(removed);
+					await goto(back, { replaceState: true });
+				}
+			});
 			if (rest.length === 0) await goto(scope === ALL ? '/' : `/c/${scope}`, { replaceState: true });
 			else await goto(at(rest[Math.min(index, rest.length - 1)].id), { replaceState: true });
 		} catch {

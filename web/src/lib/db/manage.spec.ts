@@ -53,6 +53,47 @@ describe('deleteVideo', () => {
 	});
 });
 
+describe('restoreVideo (R4.7 undo)', () => {
+	it('puts the video back in the same collection at the same place', async () => {
+		for (const id of ['a', 'bb', 'ccc']) await lib.put(video(id));
+		const c = await lib.createCollection('Música');
+		for (const id of ['a', 'bb', 'ccc']) await lib.moveVideo(id, c.id);
+		const gone = await lib.deleteVideo('bb');
+		expect((await lib.getCollection(c.id))!.order).toEqual(['a', 'ccc']);
+		await lib.restoreVideo(gone);
+		expect((await lib.getCollection(c.id))!.order).toEqual(['a', 'bb', 'ccc']);
+		expect((await lib.get('bb'))!.title).toBe('bb');
+	});
+
+	it('keeps what the person had set on the video', async () => {
+		await lib.put(video('a', { favorite: true, watched: true, positionSec: 42 }));
+		const gone = await lib.deleteVideo('a');
+		await lib.restoreVideo(gone);
+		const back = (await lib.get('a'))!;
+		expect([back.favorite, back.watched, back.positionSec]).toEqual([true, true, 42]);
+	});
+
+	it('still restores the video when its collection was deleted meanwhile', async () => {
+		await lib.put(video('a'));
+		const c = await lib.createCollection('Música');
+		await lib.moveVideo('a', c.id);
+		const gone = await lib.deleteVideo('a');
+		await lib.deleteCollection(c.id);
+		await lib.restoreVideo(gone);
+		expect(await lib.get('a')).toBeDefined();
+	});
+
+	it('does not duplicate a video that is already back', async () => {
+		await lib.put(video('a'));
+		const c = await lib.createCollection('Música');
+		await lib.moveVideo('a', c.id);
+		const gone = await lib.deleteVideo('a');
+		await lib.restoreVideo(gone);
+		await lib.restoreVideo(gone);
+		expect((await lib.getCollection(c.id))!.order).toEqual(['a']);
+	});
+});
+
 describe('reserved names', () => {
 	it('keeps the virtual collection names for itself, accents and case aside', async () => {
 		for (const name of ['Assistidos', 'assistidos', 'FAVORITOS', 'Favoritos', 'todos']) {
@@ -91,5 +132,40 @@ describe('watched flag', () => {
 		expect((await lib.update('a', { watched: true })).watched).toBe(true);
 		expect((await lib.get('a'))!.watched).toBe(true);
 		expect((await lib.update('a', { watched: false })).watched).toBe(false);
+	});
+});
+
+describe('moveVideos (R4.5 several at once)', () => {
+	it('moves them all in one write, keeping the order they were given', async () => {
+		for (const id of ['a', 'bb', 'ccc']) await lib.put(video(id));
+		const c = await lib.createCollection('Aulas');
+		await lib.moveVideos(['ccc', 'a'], c.id);
+		expect((await lib.getCollection(c.id))!.order).toEqual(['ccc', 'a']);
+	});
+
+	it('takes them out of the collection they were in', async () => {
+		for (const id of ['a', 'bb']) await lib.put(video(id));
+		const from = await lib.createCollection('Antes');
+		const to = await lib.createCollection('Depois');
+		await lib.moveVideos(['a', 'bb'], from.id);
+		await lib.moveVideos(['a'], to.id);
+		expect((await lib.getCollection(from.id))!.order).toEqual(['bb']);
+		expect((await lib.getCollection(to.id))!.order).toEqual(['a']);
+	});
+
+	it('null takes them out of every collection', async () => {
+		await lib.put(video('a'));
+		const c = await lib.createCollection('Aulas');
+		await lib.moveVideos(['a'], c.id);
+		await lib.moveVideos(['a'], null);
+		expect((await lib.getCollection(c.id))!.order).toEqual([]);
+	});
+
+	it('skips a video deleted meanwhile and fails on a missing collection', async () => {
+		await lib.put(video('a'));
+		const c = await lib.createCollection('Aulas');
+		await lib.moveVideos(['a', 'gone'], c.id);
+		expect((await lib.getCollection(c.id))!.order).toEqual(['a']);
+		await expect(lib.moveVideos(['a'], 'nope')).rejects.toBeInstanceOf(CollectionError);
 	});
 });

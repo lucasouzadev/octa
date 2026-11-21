@@ -108,6 +108,7 @@ function cleanVideo(raw: unknown, now: string): Video | undefined {
 	const positionSec = num(raw.positionSec);
 	if (positionSec !== undefined) video.positionSec = positionSec;
 	if (typeof raw.checkedAt === 'string') video.checkedAt = isoOr(raw.checkedAt, now);
+	if (typeof raw.metaAt === 'string') video.metaAt = isoOr(raw.metaAt, now);
 	if (typeof raw.lastOpenedAt === 'string') video.lastOpenedAt = isoOr(raw.lastOpenedAt, now);
 	return video;
 }

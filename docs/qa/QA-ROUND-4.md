@@ -25,6 +25,22 @@ Nothing was changed by this review. Frames were kept in a scratch folder and del
 | R4.8 | low | **Grey cover flash on cold open.** Library fans draw grey cards with only "SHORTS/YOUTUBE" for ~1–2 s after the app is launched (covers are not cached offline by design). | SEEN A-13, B 30 s. |
 | R4.9 | low | **Double exposure in screen transitions.** For ~0.3 s two screens overlap semi-transparent (Collection over player, danger screen over the monitor, "BIZARRO" twice). | SEEN A-04, B-08. CODE `app.css:161` (cross-fade 320 ms). |
 
+## Status after the fixes (PR #37 and PR B, 2026-11-21)
+
+| ID | State | Proof | Still needs the iPhone |
+|---|---|---|---|
+| R4.0 | fixed in #37 | CI green on the branch (run 44885258605) | no |
+| R4.1 | fixed in PR B | unit (`needsEnrich`, `warmUp`) + `qa4.e2e.ts` (slow resolve, one knock, wait copy) | yes: real Render cold start (~50 s) |
+| R4.2 | fixed in PR B | `qa4.e2e.ts` press tests, 3 viewports | yes: feel on a finger |
+| R4.3 | fixed in PR B | `qa4.e2e.ts` (a saved "on" never asks from a tap; the switch asks once; a "no" sticks) | yes: the real iOS question |
+| R4.4 | fixed in PR B | `qa4.e2e.ts` geometry (above vs below within 24 px, horizontal and vertical video) | yes |
+| R4.5 | fixed in PR B | `qa4-organize.e2e.ts`: sort, up/down, several at once | yes |
+| R4.6 | experiment in PR B (own commit) | wiring only (`qa4-top.e2e.ts`); the white fade itself is NOT proven to be this | **yes: the owner judges it; revert that commit alone if worse** |
+| R4.7 | fixed in PR B | unit (`restoreVideo`, toast action) + `qa4.e2e.ts` | no |
+| R4.8, R4.9 | not done | outside the approved scope | — |
+
+Choices made: reorder is Subir/Descer buttons per video (no drag); sorting is a one-time sort that rewrites the saved order; Desfazer restores a snapshot (the delete is immediate, undo puts the video back in the same place of its collection).
+
 ## Proposed order
 1. R4.0 (main red) — own PR, already prepared.
 2. Quick batch, one test run: R4.4, R4.3, R4.2 (all XS/S, no open decision).

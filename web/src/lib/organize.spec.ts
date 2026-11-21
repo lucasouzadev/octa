@@ -71,3 +71,41 @@ describe('slotAt', () => {
 		expect(slotAt(9999, tops, 80)).toBe(3);
 	});
 });
+
+describe('sortVideos (R4.5)', () => {
+	const v = (id: string, title: string, source: 'youtube' | 'tiktok' | 'instagram' | 'direct', createdAt: string) => ({
+		id,
+		title,
+		source,
+		kind: 'video' as const,
+		createdAt
+	});
+	const list = [
+		v('1', 'beta', 'tiktok', '2026-11-01T10:00:00Z'),
+		v('2', 'Álbum', 'youtube', '2026-11-03T10:00:00Z'),
+		v('3', 'cedro', 'youtube', '2026-11-02T10:00:00Z'),
+		v('4', 'Alfa', 'direct', '2026-11-04T10:00:00Z')
+	];
+
+	it('date: newest first, like the Library', async () => {
+		const { sortVideos } = await import('#lib/organize.ts');
+		expect(sortVideos(list, 'date').map((x) => x.id)).toEqual(['4', '2', '3', '1']);
+	});
+
+	it('title: A to Z, accents and case aside', async () => {
+		const { sortVideos } = await import('#lib/organize.ts');
+		expect(sortVideos(list, 'title').map((x) => x.id)).toEqual(['2', '4', '1', '3']);
+	});
+
+	it('source: grouped by platform name, newest first inside a group', async () => {
+		const { sortVideos } = await import('#lib/organize.ts');
+		expect(sortVideos(list, 'source').map((x) => x.id)).toEqual(['4', '1', '2', '3']);
+	});
+
+	it('does not change the list it was given', async () => {
+		const { sortVideos } = await import('#lib/organize.ts');
+		const before = list.map((x) => x.id);
+		sortVideos(list, 'title');
+		expect(list.map((x) => x.id)).toEqual(before);
+	});
+});

@@ -19,6 +19,19 @@ export class ApiError extends Error {
 
 export const API_BASE: string = import.meta.env.VITE_API_BASE ?? '/api';
 
+let lastWarm = 0;
+/**
+ * The free-tier API sleeps and takes ~50 s to wake. Opening the paste screen is the first
+ * sign of a link coming: knock once now, so it is up by the time the link is pasted (R4.1).
+ * Fire and forget: no-cors means no preflight and no reading of the answer, and it fails silently.
+ */
+export function warmUp(opts: { fetch?: typeof fetch; base?: string; now?: number } = {}): void {
+	const now = opts.now ?? Date.now();
+	if (now - lastWarm < 60_000) return;
+	lastWarm = now;
+	(opts.fetch ?? fetch)(`${opts.base ?? API_BASE}/healthz`, { mode: 'no-cors', cache: 'no-store' }).catch(() => {});
+}
+
 export async function resolveLink(
 	url: string,
 	opts: { fetch?: typeof fetch; base?: string; signal?: AbortSignal } = {}

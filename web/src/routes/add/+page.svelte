@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { library } from '#lib/db/index.ts';
+	import { warmUp } from '#lib/api.ts';
 	import { addLink } from '#lib/links.ts';
 	import { sharedLink } from '#lib/share.ts';
 	import { LinkError } from '#lib/providers/parse.ts';
@@ -12,6 +14,9 @@
 	let value = $state(sharedLink(page.url.searchParams));
 	let error = $state('');
 	let busy = $state(false);
+	let slow = $state(false); // still waiting after a few seconds: say why
+
+	onMount(() => warmUp());
 
 	const messages = {
 		invalid_url: 'Isso não parece um link. Confira e tente de novo.',
@@ -36,12 +41,15 @@
 		if (busy) return;
 		error = '';
 		busy = true;
+		const timer = setTimeout(() => (slow = true), 3000);
 		try {
 			const { video } = await addLink(value, { library: await library() });
 			await goto(`/v/${video.id}`);
 		} catch (e) {
 			error = e instanceof LinkError ? messages[e.code] : 'Não deu para salvar agora. Tente de novo.';
 		} finally {
+			clearTimeout(timer);
+			slow = false;
 			busy = false;
 		}
 	}
@@ -74,7 +82,7 @@
 			onpaste={pasteFromClipboard}
 		/>
 		<button class="cta" type="submit" disabled={busy || !value.trim()}>
-			{busy ? 'Gerando…' : 'Gerar player'}
+			{busy ? (slow ? 'Acordando o servidor…' : 'Gerando…') : 'Gerar player'}
 			<Icon name="arrow" />
 		</button>
 	</form>

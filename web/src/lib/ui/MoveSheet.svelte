@@ -9,10 +9,13 @@
 	// navigation abort the IndexedDB transaction and lose the move.
 	let {
 		video,
+		many = [],
 		onclose,
 		onmoved
 	}: {
 		video: Video | null;
+		/** Several videos at once (R4.5): when given, they are moved together and `video` is ignored. */
+		many?: Video[];
 		onclose: () => void;
 		/** Called after the write is committed, with the new collection id (null = none). */
 		onmoved: (target: string | null) => void;
@@ -22,21 +25,32 @@
 	let error = $state('');
 	let busy = false;
 
+	const targets = $derived(many.length ? many : video ? [video] : []);
+
 	$effect(() => {
-		if (!video) return;
+		if (!targets.length) return;
 		error = '';
 		library().then(async (lib) => (collections = sortCollections(await lib.listCollections(), loadMode())));
 	});
 
-	const here = $derived(video ? collections.find((c) => c.order.includes(video.id)) : undefined);
+	const here = $derived(targets.length === 1 ? collections.find((c) => c.order.includes(targets[0].id)) : undefined);
 
 	async function moveTo(target: string | null) {
-		if (!video || busy) return;
+		if (!targets.length || busy) return;
 		busy = true;
 		try {
-			await (await library()).moveVideo(video.id, target);
+			const lib = await library();
 			const name = collections.find((c) => c.id === target)?.name;
-			toast.show(name ? `Movido para ${name}` : 'Tirado da coleção');
+			if (targets.length === 1) {
+				await lib.moveVideo(targets[0].id, target);
+				toast.show(name ? `Movido para ${name}` : 'Tirado da coleção');
+			} else {
+				await lib.moveVideos(
+					targets.map((v) => v.id),
+					target
+				);
+				toast.show(name ? `${targets.length} vídeos movidos para ${name}` : `${targets.length} vídeos tirados da coleção`);
+			}
 			onclose();
 			onmoved(target);
 		} catch (e) {
@@ -47,25 +61,25 @@
 	}
 </script>
 
-<Sheet open={video !== null} title="Mover para" {onclose}>
+<Sheet open={targets.length > 0} title="Mover para" {onclose}>
 	{#snippet crown()}
-		{#if video}
+		{#if targets.length}
 			<div class="preview">
-				{#if video.thumbnail}
-					<img src={video.thumbnail} alt={video.title} referrerpolicy="no-referrer" />
+				{#if targets[0].thumbnail}
+					<img src={targets[0].thumbnail} alt={targets[0].title} referrerpolicy="no-referrer" />
 				{:else}
 					<span class="blank"></span>
 				{/if}
 			</div>
 		{/if}
 	{/snippet}
-	{#if video}
+	{#if targets.length}
 		{#each collections as c (c.id)}
 			<button class="option" type="button" disabled={here?.id === c.id} onclick={() => moveTo(c.id)}>
 				{c.name}{here?.id === c.id ? ' · está aqui' : ''}
 			</button>
 		{/each}
-		{#if here}
+		{#if here || targets.length > 1}
 			<button class="option" type="button" onclick={() => moveTo(null)}>Tirar da coleção</button>
 		{/if}
 		{#if collections.length === 0}

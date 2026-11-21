@@ -1,4 +1,5 @@
-// Order of the user's collections on the Library. Pure: the page only draws what these say.
+// Order of the user's collections on the Library, and of the videos inside one. Pure: the page only draws what these say.
+import { cardLabel } from '#lib/fan.ts';
 
 export type SortMode = 'manual' | 'az' | 'recent' | 'count';
 
@@ -80,5 +81,35 @@ export function saveMode(mode: SortMode): void {
 		localStorage.setItem(KEY, mode);
 	} catch {
 		/* private mode: the choice lasts until the page closes */
+	}
+}
+
+export type VideoSort = 'date' | 'title' | 'source';
+
+export const VIDEO_SORTS: { mode: VideoSort; label: string }[] = [
+	{ mode: 'date', label: 'Data' },
+	{ mode: 'title', label: 'Título' },
+	{ mode: 'source', label: 'Origem' }
+];
+
+interface Sortable {
+	title: string;
+	createdAt: string;
+	source: Parameters<typeof cardLabel>[0]['source'];
+	kind: Parameters<typeof cardLabel>[0]['kind'];
+}
+
+const newestFirst = (a: Sortable, b: Sortable) => b.createdAt.localeCompare(a.createdAt);
+
+/** A one-time sort of a collection's videos (the caller writes the result as the new order). */
+export function sortVideos<T extends Sortable>(list: readonly T[], mode: VideoSort): T[] {
+	const out = [...list];
+	switch (mode) {
+		case 'title':
+			return out.sort((a, b) => fold(a.title).localeCompare(fold(b.title), 'pt-BR') || newestFirst(a, b));
+		case 'source':
+			return out.sort((a, b) => cardLabel(a).localeCompare(cardLabel(b), 'pt-BR') || newestFirst(a, b));
+		default:
+			return out.sort(newestFirst);
 	}
 }

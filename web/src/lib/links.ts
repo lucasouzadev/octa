@@ -104,7 +104,7 @@ export async function addLink(raw: string, deps: AddDeps): Promise<{ video: Vide
  * embed) never comes from here: the client parser owns it.
  */
 export function metaPatch(meta: Meta): Partial<Video> {
-	const patch: Partial<Video> = { health: meta.health, checkedAt: meta.checkedAt };
+	const patch: Partial<Video> = { health: meta.health, checkedAt: meta.checkedAt, metaAt: meta.checkedAt };
 	const title = text(meta.title, 300);
 	// Never let the API's generic TikTok title replace the handle title.
 	if (title && !(meta.source === 'tiktok' && title === GENERIC_TIKTOK_TITLE)) patch.title = title;
@@ -131,6 +131,10 @@ export async function tryResolve(
 		clearTimeout(timer);
 	}
 }
+
+/** The parser's stand-in titles: a video that still has one has not been described by the API. */
+const GENERIC_TITLES = new Set(['Vídeo do YouTube', 'Reel do Instagram', 'Vídeo do Instagram', 'Vídeo']);
+export const hasGenericTitle = (v: Pick<Video, 'title' | 'source'>): boolean => v.source !== 'tiktok' && GENERIC_TITLES.has(v.title);
 
 function fallbackTitle(ref: Ref): string {
 	if (ref.title) return ref.title;

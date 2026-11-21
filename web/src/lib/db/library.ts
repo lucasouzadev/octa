@@ -19,6 +19,8 @@ export interface Video {
 	durationSec?: number;
 	health: Health;
 	checkedAt?: string;
+	/** When the API last described this link (title, author, cover). A health check alone never sets it. */
+	metaAt?: string;
 	deadStreak: number;
 	favorite: boolean;
 	/** Marked as watched by the person (or when a native video ends). */
@@ -27,6 +29,12 @@ export interface Video {
 	lastOpenedAt?: string;
 	createdAt: string;
 	updatedAt: string;
+}
+
+/** What `deleteVideo` hands back so the delete can be undone. */
+export interface RemovedVideo {
+	video: Video;
+	placements: { collectionId: string; index: number }[];
 }
 
 /** A user collection. "Todos" is virtual (every video) and never stored. */
@@ -137,14 +145,35 @@ export class Library {
 		return next;
 	}
 
-	/** Removes the video for good and takes it out of its collection. */
-	async deleteVideo(id: string): Promise<void> {
+	/** Removes the video and takes it out of its collection. The snapshot lets `restoreVideo` undo it. */
+	async deleteVideo(id: string): Promise<RemovedVideo> {
 		const tx = this.db.transaction(['videos', 'collections'], 'readwrite');
-		if (!(await tx.objectStore('videos').get(id))) throw new CollectionError('not_found');
+		const video = await tx.objectStore('videos').get(id);
+		if (!video) throw new CollectionError('not_found');
 		await tx.objectStore('videos').delete(id);
 		const collections = tx.objectStore('collections');
+		const placements: RemovedVideo['placements'] = [];
 		for (const c of await collections.getAll()) {
-			if (c.order.includes(id)) await collections.put({ ...c, order: c.order.filter((x) => x !== id), updatedAt: stamp() });
+			const index = c.order.indexOf(id);
+			if (index === -1) continue;
+			placements.push({ collectionId: c.id, index });
+			await collections.put({ ...c, order: c.order.filter((x) => x !== id), updatedAt: stamp() });
+		}
+		await tx.done;
+		return { video, placements };
+	}
+
+	/** Undo of `deleteVideo`: the video returns as it was, to the same place in each collection that still exists. */
+	async restoreVideo(removed: RemovedVideo): Promise<void> {
+		const tx = this.db.transaction(['videos', 'collections'], 'readwrite');
+		await tx.objectStore('videos').put(removed.video);
+		const collections = tx.objectStore('collections');
+		for (const { collectionId, index } of removed.placements) {
+			const c = await collections.get(collectionId);
+			if (!c || c.order.includes(removed.video.id)) continue;
+			const order = [...c.order];
+			order.splice(Math.min(index, order.length), 0, removed.video.id);
+			await collections.put({ ...c, order, updatedAt: stamp() });
 		}
 		await tx.done;
 	}
@@ -201,6 +230,26 @@ export class Library {
 				if (!has) await collections.put({ ...c, order: [...c.order, videoId], updatedAt: stamp() });
 			} else if (has) {
 				await collections.put({ ...c, order: c.order.filter((x) => x !== videoId), updatedAt: stamp() });
+			}
+		}
+		await tx.done;
+	}
+
+	/** Several videos to one collection (null = out of any) in one write, in the order given. Deleted ones are skipped. */
+	async moveVideos(videoIds: readonly string[], collectionId: string | null): Promise<void> {
+		const tx = this.db.transaction(['videos', 'collections'], 'readwrite');
+		const videos = tx.objectStore('videos');
+		const collections = tx.objectStore('collections');
+		if (collectionId !== null && !(await collections.get(collectionId))) throw new CollectionError('not_found');
+		const moving: string[] = [];
+		for (const id of videoIds) if (await videos.get(id)) moving.push(id);
+		const gone = new Set(moving);
+		for (const c of await collections.getAll()) {
+			if (c.id === collectionId) {
+				const order = [...c.order.filter((x) => !gone.has(x)), ...moving];
+				if (order.join() !== c.order.join()) await collections.put({ ...c, order, updatedAt: stamp() });
+			} else if (c.order.some((x) => gone.has(x))) {
+				await collections.put({ ...c, order: c.order.filter((x) => !gone.has(x)), updatedAt: stamp() });
 			}
 		}
 		await tx.done;
