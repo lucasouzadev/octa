@@ -304,6 +304,8 @@ test.describe('R2.7 edit, rename, Assistidos, Favoritos', () => {
 		await page.locator('a.row').first().click();
 		await page.getByRole('button', { name: 'Mais ações' }).click();
 		await page.getByRole('button', { name: 'Marcar como assistido' }).click();
+		await expect(page.getByRole('button', { name: 'Marcar como assistido' })).toHaveCount(0); // the write follows the sheet closing
+		await page.waitForTimeout(300);
 		await page.goto('/');
 		const card = page.locator('a.card[data-collection="assistidos"]');
 		await expect(card).toBeVisible();
@@ -319,6 +321,8 @@ test.describe('R2.7 edit, rename, Assistidos, Favoritos', () => {
 		await page.locator('a.row').first().click();
 		await page.getByRole('button', { name: 'Mais ações' }).click();
 		await page.getByRole('button', { name: 'Desmarcar como assistido' }).click();
+		await expect(page.getByRole('button', { name: 'Desmarcar como assistido' })).toHaveCount(0);
+		await page.waitForTimeout(300);
 		await page.goto('/');
 		await expect(page.locator('a.card[data-collection="assistidos"]')).toHaveCount(0);
 	});
