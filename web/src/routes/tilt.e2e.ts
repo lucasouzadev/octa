@@ -50,15 +50,6 @@ async function turnOn(page: Page) {
 	await closeSheet(page);
 }
 
-/** After a full reload iOS asks again, and only from a tap: the first tap anywhere does it. */
-async function retap(page: Page) {
-	// The page may still be hydrating: tap until the app has taken the tap.
-	await expect(async () => {
-		await page.mouse.click(2, 2);
-		await expect(page.locator('html')).toHaveAttribute('data-tilt', 'on', { timeout: 500 });
-	}).toPass({ timeout: 8000 });
-}
-
 // The switch lives in the "Organizar" sheet: open it first (the sheet stays open until closed).
 const sw = (page: Page) => page.getByRole('switch', { name: 'Mover com o celular' });
 async function openSw(page: Page) {
@@ -98,8 +89,9 @@ test.describe('R4 tilt follows the phone', () => {
 
 	test('the CSS screens on the collection lean with it', async ({ page }) => {
 		await turnOn(page);
-		await page.goto('/c/todos');
-		await retap(page);
+		// A client-side hop keeps the choice alive: after a full reload only the switch asks again (R4.3).
+		await page.locator('a[href="/c/todos"]').first().click();
+		await expect(page).toHaveURL(/\/c\/todos/);
 		const screen = page.locator('.videos li a').first();
 		await expect(screen).toBeVisible();
 		const at = (b: number, g: number) => lean(page, b, g).then(() => screen.evaluate((el) => getComputedStyle(el).transform));

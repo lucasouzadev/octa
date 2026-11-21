@@ -393,8 +393,8 @@
 		min-height: 0;
 		container-type: size;
 		display: grid;
-		/* The picture rests on the control bar; spare height goes above it. */
-		place-items: end center;
+		/* Spare height is split above and below, so the picture sits in the middle. */
+		place-items: center;
 	}
 
 	/* Sized from the box the page gives it (a size container), so it always fits. */

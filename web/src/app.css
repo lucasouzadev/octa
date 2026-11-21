@@ -121,6 +121,14 @@ img {
 	transform: scale(0.97);
 }
 
+/* R4.2: every control answers a press, even one that has no style of its own. The
+   rule is low in specificity (:where) so a component's own pressed look wins, and it
+   only changes opacity: 3D screens keep their transform. Entering is instant. */
+:where(button, [role='button'], [role='radio'], [role='switch'], a[href]):where(:not(:disabled, [aria-disabled='true'])):active {
+	opacity: 0.6;
+	transition-duration: 0s;
+}
+
 .on-dark .icon-button {
 	background: var(--color-surface-dark);
 	color: var(--color-text-dark);
