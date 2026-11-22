@@ -43,6 +43,21 @@ export function sortCollections<T extends Ranked>(list: readonly T[], mode: Sort
 	}
 }
 
+/**
+ * The Library's cards: the collections plus the default ones (Todos, Favoritos, Assistidos), in one order.
+ * By hand, each default sits at the place saved for it on this device (index in the final list; unsaved ones
+ * keep their usual order on top). Any other sort treats the defaults like collections.
+ */
+export function arrange<T extends Ranked>(collections: readonly T[], defaults: readonly T[], mode: SortMode, slots: DefaultSlots): T[] {
+	if (mode !== 'manual') return sortCollections([...collections, ...defaults], mode);
+	const out = sortCollections(collections, 'manual');
+	const placed = defaults
+		.map((d, i) => ({ d, at: slots[d.id] ?? i }))
+		.sort((a, b) => a.at - b.at);
+	for (const { d, at } of placed) out.splice(Math.min(at, out.length), 0, d);
+	return out;
+}
+
 /** A copy of `ids` with the item at `from` placed at `to` (both clamped). */
 export function moveTo<T>(ids: readonly T[], from: number, to: number): T[] {
 	const out = [...ids];
@@ -142,5 +157,34 @@ export function saveVideoSort(collectionId: string, mode: VideoSort): void {
 		localStorage.setItem(videoSortKey(collectionId), mode);
 	} catch {
 		/* storage blocked: the sort still applies, it just is not remembered */
+	}
+}
+
+// R6.1: where Todos, Favoritos and Assistidos sit in the Library. They are not stored collections, so
+// their places live on this device only (index in the visible list).
+export type DefaultSlots = Record<string, number>;
+
+const DEFAULTS_KEY = 'octa.order.defaults';
+const DEFAULT_IDS = ['todos', 'favoritos', 'assistidos'];
+
+export function loadDefaultSlots(): DefaultSlots {
+	try {
+		const raw = JSON.parse(localStorage.getItem(DEFAULTS_KEY) ?? '{}') as Record<string, unknown>;
+		const out: DefaultSlots = {};
+		for (const id of DEFAULT_IDS) {
+			const v = Object.hasOwn(raw, id) ? raw[id] : undefined;
+			if (typeof v === 'number' && Number.isInteger(v) && v >= 0) out[id] = v;
+		}
+		return out;
+	} catch {
+		return {};
+	}
+}
+
+export function saveDefaultSlots(slots: DefaultSlots): void {
+	try {
+		localStorage.setItem(DEFAULTS_KEY, JSON.stringify(slots));
+	} catch {
+		/* storage blocked: the places last until the page closes */
 	}
 }

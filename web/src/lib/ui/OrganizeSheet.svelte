@@ -65,7 +65,7 @@
 				</div>
 				<button class="option solid" type="button" onclick={onreorder}>Reordenar coleções</button>
 			{:else}
-				<p class="note">Crie duas coleções para ordená-las.</p>
+				<p class="note">Precisa de pelo menos duas telas para ordenar.</p>
 			{/if}
 		{:else}
 			<button class="option" type="button" onclick={onexport}>Exportar biblioteca</button>

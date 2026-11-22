@@ -14,8 +14,26 @@
 		index,
 		href,
 		flat = false,
-		heart = false
-	}: { video: Video; index: number; href: string; flat?: boolean; heart?: boolean } = $props();
+		heart = false,
+		onpick
+	}: {
+		video: Video;
+		index: number;
+		href: string;
+		flat?: boolean;
+		heart?: boolean;
+		/** Selection mode (R6.2): a tap selects the card and never opens the video. */
+		onpick?: () => void;
+	} = $props();
+
+	function open(e: MouseEvent) {
+		if (onpick) {
+			e.preventDefault();
+			onpick();
+			return;
+		}
+		markSource(e, '.thumb');
+	}
 
 	const tilt = $derived(screenTilt(index));
 	const duration = $derived(formatDuration(video.durationSec));
@@ -29,7 +47,7 @@
 	class:dead={status?.tone === 'dead'}
 	{href}
 	style={`--rz: ${tilt.rotZ}deg; --ry: ${tilt.rotY}deg; --sx: ${tilt.shiftX}%`}
-	onclick={(e) => markSource(e, '.thumb')}
+	onclick={open}
 >
 	<span class="name">{video.title}</span>
 	<span class="meta">

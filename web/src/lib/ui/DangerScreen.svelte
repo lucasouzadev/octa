@@ -78,8 +78,12 @@
 			calc(var(--space-7) + env(safe-area-inset-bottom));
 		background: var(--color-action-alert);
 		color: var(--color-text-light);
-		animation: rise 220ms ease-out;
 		overflow: hidden;
+	}
+
+	/* The orange surface never moves: it must own the safe areas from the first frame. Only the content rises. */
+	.danger > :not(.thumb) {
+		animation: rise 220ms ease-out;
 	}
 
 	/* The cover is shown as it is: clear, big, a little tilted. Nothing tints it. */
@@ -181,7 +185,7 @@
 	}
 
 	@media (prefers-reduced-motion: reduce) {
-		.danger {
+		.danger > :not(.thumb) {
 			animation: none;
 		}
 	}

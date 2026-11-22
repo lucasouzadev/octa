@@ -440,7 +440,7 @@
 						data-id={v.id} class:gl-off={glOff.has(v.id)}
 						class:picked={picked.includes(v.id)}
 					>
-						<ScreenCard video={v} index={i} href={`/v/${v.id}?c=${scope}`} flat={editing} heart={scope === FAVORITES} />
+						<ScreenCard video={v} index={i} href={`/v/${v.id}?c=${scope}`} flat={editing} heart={scope === FAVORITES} onpick={editing ? () => togglePick(v.id) : undefined} />
 						{#if editing}
 							<div class="row-buttons order">
 								<button
