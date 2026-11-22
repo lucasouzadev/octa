@@ -3,7 +3,7 @@
 | ID | Finding | Cause | Status |
 | --- | --- | --- | --- |
 | R5.1 | Color bar at the top of the Library, worse in the installed PWA | R4.6 experiment: fixed black strip over white screens | Fixed (3242932), device test pending |
-| R5.2 | Organizar mixes data tools with organization; needs sort/move/drag on Library and collections | Design | Open: 2 pages + sort + drag, next PR |
+| R5.2 | Organizar mixes data tools with organization; needs sort/move/drag on Library and collections | Design | Fixed: 2 pages (part A, #41); drag handle for videos in a collection (part B). Device: NOT RUN |
 | R5.3 | Motion permission asked again at every launch | `initTilt` did not resume a grant | Fixed (db43ec7). "+ menu asks" NOT reproduced: test passes on main |
 | R5.4 | Feedback should be top banners, not pills | Toast styling | Fixed (03fcf79) |
 | R5.5 | Safe areas lose the screen color during navigation | Page color came from the mounted page via `:has()` | Fixed (3242932), device test pending |

@@ -1,25 +1,23 @@
-# HANDOFF — 2026-11-22 — QA round 5, R5.2 part A
+# HANDOFF — 2026-11-22 — QA round 5, R5.2 part B
 
 ## Goal
-Owner 2026-11-22: six iPhone findings (R5.1-R5.6). Approved: batches A+B, then R5.2 option B (Organizar in 2 pages, sort per screen, move, drag by handle), 2 PRs.
+Owner 2026-11-22: six iPhone findings (R5.1-R5.6). Approved: batches A+B, R5.2 option B (2 pages, sort, move, drag by handle), 2 PRs.
 
 ## State
-- PR #40 `claude/qa-round-5` (R5.1, R5.3-R5.6 + test updates f9fbc0e): CI of f9fbc0e pending; run 44980512464 (old head) failed on 2 stale tests, fixed.
-- PR #41 `claude/r52-organize-pages` (base main; CI only runs on PRs to main; includes #40 commits, merge #40 first): sheet in 2 pages Organizar | Dados, sort saved per screen. CI watcher running.
-- PR #39 (test debt): CI PASS.
-- Owner merges; the agent never merges.
+- PR #39 test debt: CI PASS. PR #40 (R5.1, R5.3-R5.6). PR #41 (R5.2 part A, CI PASS at 32cbcca).
+- Branch `claude/r52-organize-drag` (part B): drag handle for videos inside a collection (pointer events, rows shift visually, order written on release; ArrowUp/Down on the handle). Home already had sort/reorder/drag; collections already had sorts, up/down, multi-select Move.
+- Merge order (owner): #39, #40, #41, then part B. The agent never merges.
 
-## Evidence (6225be2 + merge 4274f88)
+## Evidence
 - vitest 351/351 PASS; svelte-check 0 errors PASS.
-- Targeted e2e (backup, organize-pages, qa4, tilt, qa5, organize), 3 viewports: 154 passed, 14 skipped PASS.
-- Full e2e NOT RUN locally (CI). Physical NOT RUN.
+- e2e qa5-drag + qa4-organize 39 passed; organize, backup, qa5, tilt 97 passed, 11 skipped (3 viewports) PASS.
+- Full e2e on CI. Drag on iPhone/iPad NOT RUN.
 
 ## Next
-1. R5.2 part B (separate PR, tests first; `routes/+page.svelte` is a hotspot): sort date/name/manual on home and collections (per-screen preference), move items, drag by reorder handle (pointer events). Check how the R4.5 collection "Editar" mode relates first.
-2. Report `CI: <state> <url>` for #40 and #41.
-3. Update `docs/qa/QA-ROUND-5.md` and `docs/STATUS.md` for R5.2 when done.
+1. Report `CI: <state> <url>` for the part B PR.
+2. Owner decision: collection video sorts stay one-time actions (no saved per-screen preference).
 
 ## Risks / not proven
-- R5.3 "+ menu asks" not reproduced; R5.1/R5.5 proven in code, not on device.
+- Touch drag on real devices; R5.1/R5.5 only proven in code.
 - Pending owner decisions: final icon, Render /healthz, home card "Continuar assistindo", "Correções da 2e-3" details.
 - Flaky tests unchanged: enrich, transitions:46, monitors:104.
