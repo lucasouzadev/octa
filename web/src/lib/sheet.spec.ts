@@ -9,14 +9,12 @@ describe('dragOffset', () => {
 		expect(dragOffset(400)).toBe(400);
 	});
 
-	it('resists when pulling up and never goes past a small stretch', () => {
-		const a = dragOffset(-20);
-		const b = dragOffset(-200);
-		const c = dragOffset(-5000);
-		expect(a).toBeLessThan(0);
-		expect(Math.abs(a)).toBeLessThan(20);
-		expect(Math.abs(b)).toBeGreaterThan(Math.abs(a));
-		expect(Math.abs(c)).toBeLessThanOrEqual(56);
+	// R5.6: a sheet pulled up left a colored stripe under it. It never leaves its bottom edge.
+	it('never lifts the sheet off the bottom edge when pulling up', () => {
+		expect(dragOffset(-1)).toBe(0);
+		expect(dragOffset(-20)).toBe(0);
+		expect(dragOffset(-200)).toBe(0);
+		expect(dragOffset(-5000)).toBe(0);
 	});
 });
 

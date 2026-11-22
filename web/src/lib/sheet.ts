@@ -1,16 +1,14 @@
-// Gesture rules shared by every bottom sheet. The drag follows the finger down, resists
-// going up (rubber band) and closes on distance or on a quick flick.
+// Gesture rules shared by every bottom sheet. The drag follows the finger down, ignores
+// going up and closes on distance or on a quick flick.
 
-const STRETCH = 56; // the most a sheet may be pulled up, in px
 const FLICK_SPEED = 0.6; // px per ms
 const FLICK_MIN = 24; // a twitch shorter than this is not a flick
 const CLOSE_RATIO = 1 / 3;
 
-/** Translate for a finger that moved `dy` px from where it landed (down is positive). */
+/** Translate for a finger that moved `dy` px from where it landed (down is positive).
+ * Pulling up does nothing (R5.6): lifting the sheet exposes a stripe of the page under it. */
 export function dragOffset(dy: number): number {
-	if (dy >= 0) return dy;
-	// Asymptotic: gets harder the further it goes, never beyond STRETCH.
-	return -STRETCH * (1 - 1 / (1 + -dy / STRETCH));
+	return dy > 0 ? dy : 0;
 }
 
 /** Decide on release. `velocity` is px/ms, positive when moving down. */
