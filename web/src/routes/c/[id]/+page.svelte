@@ -6,7 +6,16 @@
 	import { CollectionError, COLLECTION_NAME_MAX, library, type Collection, type Video } from '#lib/db/index.ts';
 	import { ALL, FAVORITES, WATCHED, isVirtual, videosIn } from '#lib/db/scope.ts';
 	import { shelfSummary } from '#lib/shelf.ts';
-	import { moveBy, moveTo, slotAt, sortVideos, VIDEO_SORTS, type VideoSort } from '#lib/organize.ts';
+	import {
+		loadVideoSort,
+		moveBy,
+		moveTo,
+		saveVideoSort,
+		slotAt,
+		sortVideos,
+		VIDEO_SORTS,
+		type VideoSort
+	} from '#lib/organize.ts';
 	import BackToTop from '#lib/ui/BackToTop.svelte';
 	import DangerScreen from '#lib/ui/DangerScreen.svelte';
 	import EditVideoSheet from '#lib/ui/EditVideoSheet.svelte';
@@ -121,8 +130,15 @@
 		}
 	}
 
+	let chosenSort = $state<VideoSort | null>(null);
+	$effect(() => {
+		chosenSort = loadVideoSort(scope);
+	});
+
 	async function sortBy(mode: VideoSort) {
 		if (!videos) return;
+		saveVideoSort(scope, mode);
+		chosenSort = mode;
 		await saveOrder(sortVideos(videos, mode).map((v) => v.id));
 		const label = VIDEO_SORTS.find((s) => s.mode === mode)!.label.toLowerCase();
 		if (!error) toast.show(`Ordenado por ${label}`);
@@ -357,7 +373,12 @@
 			{#if editing && canOrder && videos.length > 1}
 				<div class="row-buttons" role="group" aria-label="Ordenar vídeos por">
 					{#each VIDEO_SORTS as s (s.mode)}
-						<button class="chip" type="button" onclick={() => sortBy(s.mode)}>{s.label}</button>
+						<button
+							class="chip"
+							type="button"
+							aria-pressed={chosenSort === s.mode}
+							onclick={() => sortBy(s.mode)}>{s.label}</button
+						>
 					{/each}
 				</div>
 			{/if}
