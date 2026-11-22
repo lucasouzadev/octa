@@ -1,23 +1,18 @@
-# HANDOFF — 2026-11-21 — test debt
+# HANDOFF — 2026-11-22 — QA round 5
 
 ## Goal
-Owner (Juice) chose "Test debt" after slice 4 was found already on main. Scope: remove fixed fixture dates; stabilise flakes listed in STATUS.
+Owner 2026-11-22: six iPhone findings (R5.1-R5.6). Approved: batches A (R5.1, R5.5, R5.6) + B (R5.3, R5.4), tests first; R5.2 option B (Organizar in 2 pages, sort, drag by handle).
 
-## State (verified 2026-11-21)
-- Slice 4 on main: #34 export/import, #35 PWA, #36 CI+CSP, #37/#38 QA round 4. Main CI green at e3904f2 (run 44898993651).
-- PR #24 (slice 3e) merged 2026-11-19.
-- Branch `claude/ecstatic-fermat-61ytp7` @ 3f9b709, pushed, NO PR. Replaces fixed `checkedAt` 2026-11-19 in web/src/routes/stacks.e2e.ts and sources.e2e.ts with `new Date().toISOString()`.
-- Evidence: vitest 350/350; pnpm check 0 errors; playwright stacks+sources 47 passed / 4 skipped (before and after); enrich+transitions+monitors 33 passed.
-- Local browser: project Playwright 1.65.1 wants chromium 1255 (absent); ran via scratchpad wrapper config using /opt/pw-browsers/chromium-1243. Repo unchanged.
-- This handoff file is written locally only. Its commit and push were denied by the auto-mode classifier; not committed.
+## State
+- Branch `claude/qa-round-5`, pushed: 03fcf79 R5.4, db43ec7 R5.3, cc23648 R5.6, 3242932 R5.1+R5.5. PR open to main; owner merges.
+- PR #39 (test debt) open, CI watcher running.
+- Evidence: vitest 347/347, check 0 errors, targeted e2e phone 18 passed. Full e2e and CI NOT RUN here.
 
 ## Next
-1. Owner decides whether to open a PR for 3f9b709. CI workflow runs only on PR and push to main, so the feature branch has no CI run until a PR exists.
-2. Owner decisions pending: final app icon; Render Health Check Path /healthz; home card "Continuar assistindo".
-3. Flakes enrich.e2e, transitions.e2e:46, monitors.e2e:104: NOT changed. Need a reproduction under load before any change.
+1. R5.2: OrganizeSheet in 2 pages (Organizar | Dados), sort by date/name/manual per screen, move items, drag handle (pointer events). 2 PRs.
+2. Owner device tests: R5.1, R5.3 relaunch, R5.5, R5.6.
 
-## Risks / NOT proven
-- Fixed-date fixtures were a latent bug: no red reproduced, so no TDD red step.
-- Fixed-date unit specs (health.spec, enrich.spec) use deliberate times; left as is.
-- Full E2E suite (392) not run in this change; only touched and flaky-listed specs.
-- Physical checks (iPhone Safari PWA, iPad, desktop): NOT RUN.
+## Risks / not proven
+- R5.3 "+ menu asks" not reproduced; may be iOS relaunch behavior.
+- R5.1/R5.5 causes proven in code, not on device.
+- Pending owner decisions: final icon, Render /healthz, home card "Continuar assistindo".

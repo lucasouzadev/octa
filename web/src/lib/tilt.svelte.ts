@@ -112,6 +112,12 @@ export function initTilt() {
 	const wantsOn = saved === null ? !needsPermission() : saved === '1';
 	if (!wantsOn) return;
 	if (!needsPermission()) return turnOn();
-	// iOS asks again after the app is closed, and only from a tap. A random tap must never open
-	// that question (R4.3): the person turns it back on from the "Organizar" switch.
+	// R5.3: iOS may still hold the grant from the last launch. Listening costs no question: if a
+	// reading arrives the grant is alive and the objects lean again; if none does, it stays off. The
+	// question itself only ever comes from the "Organizar" switch (R4.3), never from here.
+	const probe = () => {
+		window.removeEventListener('deviceorientation', probe);
+		if (!tilt.enabled) turnOn();
+	};
+	window.addEventListener('deviceorientation', probe);
 }

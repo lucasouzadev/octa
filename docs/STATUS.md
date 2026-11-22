@@ -176,3 +176,6 @@ Updated 2026-11-21 (checked against GitHub: every PR #1–#36 is merged). Progre
 - NOT RUN: the workflow itself on GitHub (first run happens on this PR); a real YouTube/Instagram/TikTok embed under the policy (sandbox has no access to those hosts; the allowlist is checked by probes, not by a live player); `vercel.json` headers on a real deploy; Vercel preview toolbar script under the policy.
 - Other e2e fixtures still carry fixed 2026-11-19 `checkedAt` dates (`stacks`, `sources`); they pass today but are the same time bomb.
 
+
+## QA round 5 (2026-11-22)
+R5.1, R5.3, R5.4, R5.5, R5.6 fixed on `claude/qa-round-5`; R5.2 pending. See `docs/qa/QA-ROUND-5.md`.

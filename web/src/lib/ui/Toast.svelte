@@ -3,7 +3,7 @@
 </script>
 
 <!-- Always mounted so screen readers pick the text up when it changes. Takes a tap only while it carries a button. -->
-<div class="box" class:shown={toast.text !== ''} class:tappable={toast.action !== undefined}>
+<div class="box banner" class:shown={toast.text !== ''} class:tappable={toast.action !== undefined}>
 	<p class="toast" class:shown={toast.text !== ''} role="status" aria-live="polite">{toast.text}</p>
 	{#if toast.action}
 		<button type="button" class="act" onclick={() => toast.act()}>{toast.action.label}</button>
@@ -11,20 +11,20 @@
 </div>
 
 <style>
+	/* R5.4: an in-app notification banner, full width under the status bar, not a pill. */
 	.box {
 		display: flex;
 		align-items: center;
+		justify-content: space-between;
 		gap: var(--space-4);
 		position: fixed;
 		z-index: 120;
-		left: 50%;
-		/* Like an in-app banner: just under the status bar, dropping in from above. */
-		top: calc(env(safe-area-inset-top) + var(--space-3));
-		width: max-content;
-		max-width: calc(100% - var(--space-5) * 2);
+		top: calc(env(safe-area-inset-top) + var(--space-2));
+		left: var(--space-3);
+		right: var(--space-3);
 		margin: 0;
-		padding: var(--space-3) var(--space-5);
-		border-radius: var(--radius-pill);
+		padding: var(--space-3) var(--space-4);
+		border-radius: 16px;
 		/* Black with a light edge: it reads on the white Library and on the dark screens alike. */
 		background: var(--color-text-light);
 		color: var(--color-text-dark);
@@ -32,11 +32,11 @@
 		box-shadow: 0 8px 24px rgb(0 0 0 / 0.35);
 		font-size: var(--size-body);
 		font-weight: 600;
-		text-align: center;
+		text-align: left;
 		pointer-events: none;
 		opacity: 0;
 		visibility: hidden;
-		translate: -50% -16px;
+		translate: 0 -24px;
 		transition:
 			opacity 180ms ease-out,
 			translate 180ms ease-out,
@@ -65,7 +65,7 @@
 	.box.shown {
 		opacity: 1;
 		visibility: visible;
-		translate: -50% 0;
+		translate: 0 0;
 		transition-delay: 0s;
 	}
 
