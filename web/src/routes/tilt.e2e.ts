@@ -55,6 +55,7 @@ const sw = (page: Page) => page.getByRole('switch', { name: 'Mover com o celular
 async function openSw(page: Page) {
 	if (!(await sw(page).isVisible())) {
 		await page.getByRole('button', { name: 'Organizar', exact: true }).click();
+		await page.getByRole('tab', { name: 'Dados', exact: true }).click();
 		await expect(sw(page)).toBeVisible();
 	}
 	return sw(page);

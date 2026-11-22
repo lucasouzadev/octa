@@ -3,9 +3,9 @@
 	import { disableTilt, enableTilt, tilt } from '#lib/tilt.svelte.ts';
 	import Sheet from '#lib/ui/Sheet.svelte';
 
-	// "Organizar": how the Library lists the collections, plus the switch that makes the 3D
-	// objects follow the phone. Reordering by hand happens on the Library itself (the sheet
-	// only starts it).
+	// Two pages (R5.2). "Organizar": how the Library lists the collections and a way to reorder
+	// them by hand (the sheet only starts it). "Dados": export, import and the switch that makes
+	// the 3D objects follow the phone.
 	let {
 		open,
 		mode,
@@ -28,6 +28,13 @@
 	} = $props();
 
 	let picker = $state<HTMLInputElement>();
+	type Page = 'organize' | 'data';
+	let page = $state<Page>('organize');
+
+	// Every opening starts on the first page.
+	$effect(() => {
+		if (!open) page = 'organize';
+	});
 
 	function picked(e: Event & { currentTarget: HTMLInputElement }) {
 		const file = e.currentTarget.files?.[0];
@@ -42,36 +49,83 @@
 </script>
 
 <Sheet {open} title="Organizar" {onclose}>
-	{#if canOrder}
-		<div class="group" role="radiogroup" aria-label="Ordenar coleções por">
-			{#each SORT_MODES as m (m.mode)}
-				<button class="option" type="button" role="radio" aria-checked={mode === m.mode} onclick={() => onmode(m.mode)}>
-					{m.label}
+	<div class="tabs" role="tablist" aria-label="Páginas">
+		<button class="tab" type="button" role="tab" id="org-tab-organize" aria-selected={page === 'organize'} aria-controls="org-page" onclick={() => (page = 'organize')}>Organizar</button>
+		<button class="tab" type="button" role="tab" id="org-tab-data" aria-selected={page === 'data'} aria-controls="org-page" onclick={() => (page = 'data')}>Dados</button>
+	</div>
+	<div id="org-page" class="page" role="tabpanel" aria-labelledby={page === 'organize' ? 'org-tab-organize' : 'org-tab-data'}>
+		{#if page === 'organize'}
+			{#if canOrder}
+				<div class="group" role="radiogroup" aria-label="Ordenar coleções por">
+					{#each SORT_MODES as m (m.mode)}
+						<button class="option" type="button" role="radio" aria-checked={mode === m.mode} onclick={() => onmode(m.mode)}>
+							{m.label}
+						</button>
+					{/each}
+				</div>
+				<button class="option solid" type="button" onclick={onreorder}>Reordenar coleções</button>
+			{:else}
+				<p class="note">Crie duas coleções para ordená-las.</p>
+			{/if}
+		{:else}
+			<button class="option" type="button" onclick={onexport}>Exportar biblioteca</button>
+			<button class="option" type="button" onclick={() => picker?.click()}>Importar arquivo</button>
+			<input bind:this={picker} class="file" type="file" accept="application/json,.json" aria-label="Arquivo da biblioteca" onchange={picked} />
+			{#if tilt.supported}
+				<button
+					class="option"
+					type="button"
+					role="switch"
+					aria-checked={tilt.enabled}
+					aria-label="Mover com o celular"
+					title={tilt.denied ? 'Sem permissão do sensor de movimento' : undefined}
+					onclick={toggleTilt}
+				>
+					<span>Mover com o celular</span>
+					<span class="state" aria-hidden="true">{tilt.enabled ? 'Ligado' : 'Desligado'}</span>
 				</button>
-			{/each}
-		</div>
-		<button class="option solid" type="button" onclick={onreorder}>Reordenar coleções</button>
-	{/if}
-	<button class="option" type="button" onclick={onexport}>Exportar biblioteca</button>
-	<button class="option" type="button" onclick={() => picker?.click()}>Importar arquivo</button>
-	<input bind:this={picker} class="file" type="file" accept="application/json,.json" aria-label="Arquivo da biblioteca" onchange={picked} />
-	{#if tilt.supported}
-		<button
-			class="option"
-			type="button"
-			role="switch"
-			aria-checked={tilt.enabled}
-			aria-label="Mover com o celular"
-			title={tilt.denied ? 'Sem permissão do sensor de movimento' : undefined}
-			onclick={toggleTilt}
-		>
-			<span>Mover com o celular</span>
-			<span class="state" aria-hidden="true">{tilt.enabled ? 'Ligado' : 'Desligado'}</span>
-		</button>
-	{/if}
+			{/if}
+		{/if}
+	</div>
 </Sheet>
 
 <style>
+	.tabs {
+		display: flex;
+		gap: var(--space-2);
+		padding: var(--space-1);
+		border-radius: var(--radius-pill);
+		background: var(--color-surface-dark-raised);
+	}
+
+	.tab {
+		flex: 1;
+		min-height: 44px;
+		border: 0;
+		border-radius: var(--radius-pill);
+		background: transparent;
+		color: var(--color-muted-on-dark);
+		font-size: var(--size-body);
+		font-weight: 600;
+	}
+
+	.tab[aria-selected='true'] {
+		background: var(--color-text-dark);
+		color: var(--color-text-light);
+	}
+
+	.page {
+		display: flex;
+		flex-direction: column;
+		gap: var(--space-2);
+	}
+
+	.note {
+		margin: 0;
+		color: var(--color-muted-on-dark);
+		font-size: var(--size-meta);
+	}
+
 	.group {
 		display: flex;
 		flex-direction: column;

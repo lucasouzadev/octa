@@ -15,6 +15,7 @@ async function createCollection(page: Page, name: string) {
 
 async function openSheet(page: Page) {
 	await page.getByRole('button', { name: 'Organizar', exact: true }).click();
+	await page.getByRole('tab', { name: 'Dados', exact: true }).click();
 	await expect(page.locator('dialog.sheet[data-state="open"]')).toBeVisible();
 }
 
@@ -52,7 +53,7 @@ test.describe('R6 export and import', () => {
 		await createCollection(page, 'Beta');
 		await createCollection(page, 'Alfa');
 		await page.goto('/');
-		await openSheet(page);
+		await page.getByRole('button', { name: 'Organizar', exact: true }).click();
 		await page.getByRole('radio', { name: 'A–Z' }).click();
 		await page.getByRole('button', { name: 'Reordenar coleções' }).click();
 		await expect(page.locator('dialog.sheet[open]')).toHaveCount(0);
