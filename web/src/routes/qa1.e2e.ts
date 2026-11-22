@@ -123,17 +123,16 @@ test.describe('R1.3 native sheet', () => {
 		await expect(page.getByRole('button', { name: 'Concluído' })).toBeVisible();
 	});
 
-	test('pulling up resists and springs back', async ({ page }) => {
+	// R5.6 replaces the old rubber band: lifting the sheet exposed a stripe of the page under it.
+	test('pulling up never lifts the sheet off the bottom edge', async ({ page }) => {
 		const sheet = await openMove(page);
 		const panel = sheet.locator('.rise');
 		const box = (await sheet.locator('.handle').boundingBox())!;
 		const release = await drag(page, { x: box.x + box.width / 2, y: box.y + box.height / 2 }, -300);
 		const y = await panel.evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m42);
-		expect(y).toBeLessThan(0);
-		expect(y).toBeGreaterThan(-60);
+		expect(y).toBeGreaterThan(-1);
 		await release();
 		await expect(sheet).toBeVisible();
-		await expect.poll(() => panel.evaluate((el) => new DOMMatrix(getComputedStyle(el).transform).m42)).toBeGreaterThan(-1);
 	});
 
 	test('Escape and a tap on the backdrop close it', async ({ page }) => {
