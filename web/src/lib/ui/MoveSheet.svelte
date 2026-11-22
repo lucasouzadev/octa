@@ -25,6 +25,7 @@
 	let error = $state('');
 	let busy = false;
 
+	const MAX_COVERS = 5;
 	const targets = $derived(many.length ? many : video ? [video] : []);
 
 	$effect(() => {
@@ -64,11 +65,18 @@
 <Sheet open={targets.length > 0} title="Mover para" {onclose}>
 	{#snippet crown()}
 		{#if targets.length}
-			<div class="preview">
-				{#if targets[0].thumbnail}
-					<img src={targets[0].thumbnail} alt={targets[0].title} referrerpolicy="no-referrer" />
-				{:else}
-					<span class="blank"></span>
+			<div class="covers" class:many={targets.length > 1}>
+				{#each targets.slice(0, MAX_COVERS) as t, i (t.id)}
+					<div class="preview" style={`--i: ${i}; --n: ${Math.min(targets.length, MAX_COVERS)}`}>
+						{#if t.thumbnail}
+							<img src={t.thumbnail} alt={t.title} referrerpolicy="no-referrer" />
+						{:else}
+							<span class="blank"></span>
+						{/if}
+					</div>
+				{/each}
+				{#if targets.length > MAX_COVERS}
+					<span class="more" aria-label={`mais ${targets.length - MAX_COVERS}`}>+{targets.length - MAX_COVERS}</span>
 				{/if}
 			</div>
 		{/if}
@@ -92,7 +100,35 @@
 
 <style>
 	/* The cover of the video being moved, tilted like the screens in the Library. */
+	.covers {
+		display: flex;
+		align-items: center;
+		justify-content: center;
+	}
+
+	/* Several videos: smaller covers, overlapped like the pile in the Library. */
+	.covers.many .preview {
+		width: 112px;
+		height: 63px;
+		border-width: 1.5px;
+		margin-left: -28px;
+		rotate: calc((var(--i) - (var(--n) - 1) / 2) * 4deg);
+		translate: 0 calc(var(--i) * 2px);
+	}
+
+	.covers.many .preview:first-child {
+		margin-left: 0;
+	}
+
+	.more {
+		margin-left: var(--space-2);
+		font-size: var(--size-meta);
+		font-weight: 600;
+		color: var(--color-muted-on-dark);
+	}
+
 	.preview {
+		flex: none;
 		width: 200px;
 		height: 112px;
 		border-radius: var(--radius-thumb, 14px);
