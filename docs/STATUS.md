@@ -178,4 +178,4 @@ Updated 2026-11-21 (checked against GitHub: every PR #1–#36 is merged). Progre
 
 
 ## QA round 5 (2026-11-22)
-R5.1, R5.3, R5.4, R5.5, R5.6 fixed on `claude/qa-round-5`; R5.2 pending. See `docs/qa/QA-ROUND-5.md`.
+R5.1, R5.3, R5.4, R5.5, R5.6 fixed on `claude/qa-round-5`; R5.2 part A on `claude/r52-organize-pages`, part B (drag handle in a collection) on `claude/r52-organize-drag`. See `docs/qa/QA-ROUND-5.md`.

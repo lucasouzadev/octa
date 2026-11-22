@@ -6,7 +6,7 @@
 	import { CollectionError, COLLECTION_NAME_MAX, library, type Collection, type Video } from '#lib/db/index.ts';
 	import { ALL, FAVORITES, WATCHED, isVirtual, videosIn } from '#lib/db/scope.ts';
 	import { shelfSummary } from '#lib/shelf.ts';
-	import { moveBy, sortVideos, VIDEO_SORTS, type VideoSort } from '#lib/organize.ts';
+	import { moveBy, moveTo, slotAt, sortVideos, VIDEO_SORTS, type VideoSort } from '#lib/organize.ts';
 	import BackToTop from '#lib/ui/BackToTop.svelte';
 	import DangerScreen from '#lib/ui/DangerScreen.svelte';
 	import EditVideoSheet from '#lib/ui/EditVideoSheet.svelte';
@@ -135,6 +135,89 @@
 		if (next.join() === ids.join()) return;
 		await saveOrder(next);
 		live = `${next.indexOf(id) + 1} de ${next.length}`;
+	}
+
+	// Drag by the handle (R5.2): pointer events, so a finger works. The row follows the pointer
+	// and the order is written once, on release.
+	interface Drag {
+		id: string;
+		from: number;
+		to: number;
+		grab: number;
+		tops: number[];
+		height: number;
+		dy: number;
+	}
+	let drag = $state<Drag | null>(null);
+	let pointerY = 0;
+	let frame = 0;
+	// The DOM order never changes while dragging (moving the grabbed row's node would drop the
+	// pointer capture); rows are only shifted visually, then the order is written on release.
+	function offset(i: number): number {
+		if (!drag) return 0;
+		if (i === drag.from) return drag.dy;
+		const step = drag.tops.length > 1 ? drag.tops[1] - drag.tops[0] : drag.height;
+		if (drag.from < drag.to && i > drag.from && i <= drag.to) return -step;
+		if (drag.to < drag.from && i >= drag.to && i < drag.from) return step;
+		return 0;
+	}
+
+	function place() {
+		if (!drag) return;
+		const pg = pointerY + scrollY;
+		const to = slotAt(pg - drag.grab + drag.height / 2, drag.tops, drag.height);
+		drag = { ...drag, to, dy: pg - drag.grab - drag.tops[drag.from] };
+	}
+
+	// While the finger is near an edge the page keeps scrolling under it.
+	function follow() {
+		if (!drag) return;
+		const edge = 88;
+		if (pointerY < edge) scrollBy(0, -Math.ceil((edge - pointerY) / 6));
+		else if (pointerY > innerHeight - edge) scrollBy(0, Math.ceil((pointerY - (innerHeight - edge)) / 6));
+		place();
+		frame = requestAnimationFrame(follow);
+	}
+
+	function startDrag(e: PointerEvent, id: string) {
+		if (drag || !list || (e.pointerType === 'mouse' && e.button !== 0)) return;
+		const items = [...list.querySelectorAll<HTMLElement>(':scope > li[data-id]')];
+		const from = items.findIndex((el) => el.dataset.id === id);
+		if (from < 0) return;
+		const rects = items.map((el) => el.getBoundingClientRect());
+		const tops = rects.map((r) => r.top + scrollY);
+		(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+		pointerY = e.clientY;
+		drag = { id, from, to: from, grab: e.clientY + scrollY - tops[from], tops, height: rects[from].height, dy: 0 };
+		cancelAnimationFrame(frame);
+		frame = requestAnimationFrame(follow);
+	}
+
+	function moveDrag(e: PointerEvent) {
+		if (!drag) return;
+		pointerY = e.clientY;
+		place();
+	}
+
+	async function endDrag() {
+		if (!drag || !videos) return;
+		cancelAnimationFrame(frame);
+		const { id, from, to } = drag;
+		drag = null;
+		if (from === to) return;
+		const next = moveTo(
+			videos.map((v) => v.id),
+			from,
+			to
+		);
+		await saveOrder(next);
+		live = `${next.indexOf(id) + 1} de ${next.length}`;
+	}
+
+	function handleKey(e: KeyboardEvent, id: string) {
+		if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+		e.preventDefault();
+		shift(id, e.key === 'ArrowUp' ? -1 : 1);
 	}
 
 	const messages: Record<string, string> = {
@@ -314,7 +397,12 @@
 			{/if}
 			<ul class="videos" class:editing class:gl={glReady && wantGl} bind:this={list}>
 				{#each videos as v, i (v.id)}
-					<li style={`z-index: ${i + 1}`} data-id={v.id} class:gl-off={glOff.has(v.id)} class:picked={picked.includes(v.id)}>
+					<li
+						style={`z-index: ${i + 1}${drag ? `; transform: translateY(${offset(i)}px)` : ''}`}
+						class:lifted={drag?.id === v.id}
+						data-id={v.id} class:gl-off={glOff.has(v.id)}
+						class:picked={picked.includes(v.id)}
+					>
 						<ScreenCard video={v} index={i} href={`/v/${v.id}?c=${scope}`} flat={editing} heart={scope === FAVORITES} />
 						{#if editing}
 							<div class="row-buttons order">
@@ -337,6 +425,18 @@
 										disabled={i === videos.length - 1}
 										onclick={() => shift(v.id, 1)}>↓</button
 									>
+									<button
+										class="chip handle"
+										type="button"
+										aria-label={`Arrastar “${v.title}”`}
+										onpointerdown={(e) => startDrag(e, v.id)}
+										onpointermove={moveDrag}
+										onpointerup={endDrag}
+										onpointercancel={endDrag}
+										onkeydown={(e) => handleKey(e, v.id)}
+									>
+										<Icon name="grip" />
+									</button>
 								{/if}
 							</div>
 							<div class="row-buttons">
@@ -656,6 +756,17 @@
 
 	.videos.editing li :global(.screen) {
 		min-width: 0;
+	}
+
+	.videos.editing li.lifted {
+		position: relative;
+		z-index: 200 !important;
+		box-shadow: 0 12px 32px rgb(0 0 0 / 0.35);
+	}
+
+	.chip.handle {
+		touch-action: none; /* the drag must not scroll the page */
+		cursor: grab;
 	}
 
 	.videos.editing .row-buttons .chip {
