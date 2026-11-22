@@ -147,3 +147,32 @@ describe('loadMode / saveMode per screen (R5.2)', () => {
 		expect(loadMode('home')).toBe('manual');
 	});
 });
+
+// R5.2 follow-up: the video sort is remembered per collection, on this device.
+describe('loadVideoSort / saveVideoSort per collection', () => {
+	const store = new Map<string, string>();
+	const fake = {
+		getItem: (k: string) => store.get(k) ?? null,
+		setItem: (k: string, v: string) => void store.set(k, v),
+		removeItem: (k: string) => void store.delete(k)
+	};
+	beforeEach(() => {
+		store.clear();
+		vi.stubGlobal('localStorage', fake);
+	});
+	afterEach(() => vi.unstubAllGlobals());
+
+	it('remembers each collection on its own and defaults to none', async () => {
+		const { loadVideoSort, saveVideoSort } = await import('#lib/organize.ts');
+		expect(loadVideoSort('aulas')).toBeNull();
+		saveVideoSort('aulas', 'title');
+		expect(loadVideoSort('aulas')).toBe('title');
+		expect(loadVideoSort('outra')).toBeNull();
+	});
+
+	it('ignores a stored value that is not a known sort', async () => {
+		const { loadVideoSort } = await import('#lib/organize.ts');
+		localStorage.setItem('octa.vsort.aulas', 'lixo');
+		expect(loadVideoSort('aulas')).toBeNull();
+	});
+});

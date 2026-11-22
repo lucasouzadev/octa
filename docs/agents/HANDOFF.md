@@ -1,23 +1,28 @@
-# HANDOFF — 2026-11-22 — QA round 5, R5.2 part B
+# HANDOFF — 2026-11-22 — QA round 5, R5.2 part C (collection sort memory)
 
 ## Goal
-Owner 2026-11-22: six iPhone findings (R5.1-R5.6). Approved: batches A+B, R5.2 option B (2 pages, sort, move, drag by handle), 2 PRs.
+Owner 2026-11-22: "salvar preferência de ordenação por tela na coleção". Approved: "Por coleção, no aparelho (Recomendado)".
+Each collection remembers the video sort last chosen (Data / Título / Origem), device-only (localStorage `octa.vsort.<collectionId>`). Saved order behavior unchanged: the order is still written on the press.
+Owner 2026-11-22 (AskUserQuestion): "Aplicar ao abrir". Reopening a collection re-applies the remembered sort once (order written silently).
 
 ## State
 - PR #39 test debt: CI PASS. PR #40 (R5.1, R5.3-R5.6). PR #41 (R5.2 part A, CI PASS at 32cbcca).
-- Branch `claude/r52-organize-drag` (part B): drag handle for videos inside a collection (pointer events, rows shift visually, order written on release; ArrowUp/Down on the handle). Home already had sort/reorder/drag; collections already had sorts, up/down, multi-select Move.
-- Merge order (owner): #39, #40, #41, then part B. The agent never merges.
+- Branch `claude/r52-organize-drag` (part B, 3cddbff): drag handle for videos in a collection.
+- Branch `claude/r52-collection-sort` (part C, stacked on part B): remembered sort chip (`aria-pressed`) per collection.
+- No PR opened for part C (owner did not ask). Merge order (owner): #39, #40, #41, then part B, then part C. The agent never merges.
 
 ## Evidence
-- vitest 351/351 PASS; svelte-check 0 errors PASS.
-- e2e qa5-drag + qa4-organize 39 passed; organize, backup, qa5, tilt 97 passed, 11 skipped (3 viewports) PASS.
-- Full e2e on CI. Drag on iPhone/iPad NOT RUN.
+- Red first: qa5-sort e2e 2 failed (no `aria-pressed` on chip), 1 passed as regression guard; organize.spec 2 failed (no loadVideoSort/saveVideoSort). Auto-apply e2e red: order not applied on open.
+- Green: vitest 353/353 PASS; svelte-check 0 errors PASS.
+- e2e qa5-sort + qa5-drag + qa4-organize + organize: 78 passed (phone, tablet, desktop) PASS.
+- Not run here: full e2e suite, CI for claude/r52-collection-sort (not pushed to CI watch yet).
 
 ## Next
-1. Report `CI: <state> <url>` for the part B PR.
-2. Owner decision: collection video sorts stay one-time actions (no saved per-screen preference).
+1. Physical test on iPhone/iPad: touch drag (part B) and remembered chip (part C).
 
 ## Risks / not proven
-- Touch drag on real devices; R5.1/R5.5 only proven in code.
+- Touch drag on real devices NOT RUN; R5.1/R5.5 only proven in code.
+- Remembered sort is device-only: another device shows chip unpressed until chosen.
+- Auto-apply overwrites a manual drag order on open (owner's choice). Drag order is kept until the collection is reopened.
 - Pending owner decisions: final icon, Render /healthz, home card "Continuar assistindo", "Correções da 2e-3" details.
 - Flaky tests unchanged: enrich, transitions:46, monitors:104.

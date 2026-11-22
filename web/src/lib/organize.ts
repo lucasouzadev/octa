@@ -123,3 +123,24 @@ export function sortVideos<T extends Sortable>(list: readonly T[], mode: VideoSo
 			return out.sort(newestFirst);
 	}
 }
+
+// R5.2 follow-up: the video sort last chosen in a collection is remembered on this device, per collection.
+// It only remembers the choice (shown as pressed); the saved order is written on the press, as before.
+const videoSortKey = (collectionId: string) => `octa.vsort.${collectionId}`;
+
+export function loadVideoSort(collectionId: string): VideoSort | null {
+	try {
+		const raw = localStorage.getItem(videoSortKey(collectionId));
+		return VIDEO_SORTS.some((s) => s.mode === raw) ? (raw as VideoSort) : null;
+	} catch {
+		return null;
+	}
+}
+
+export function saveVideoSort(collectionId: string, mode: VideoSort): void {
+	try {
+		localStorage.setItem(videoSortKey(collectionId), mode);
+	} catch {
+		/* storage blocked: the sort still applies, it just is not remembered */
+	}
+}
