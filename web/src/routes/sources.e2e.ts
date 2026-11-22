@@ -42,7 +42,7 @@ test('TikTok video: player v1 without its chrome, 9:16, API title wins', async (
 		author: 'Chef U',
 		durationSec: null,
 		health: 'alive',
-		checkedAt: '2026-11-19T12:00:00Z'
+		checkedAt: new Date().toISOString()
 	}));
 	await paste(page, 'https://www.tiktok.com/@user.name/video/7234567890123456789?is_from_webapp=1');
 	await expect(page).toHaveURL(/\/v\//);
@@ -62,7 +62,7 @@ test('TikTok without title or cover from the API: titled by @handle, drawn cover
 		title: 'Vídeo do TikTok',
 		durationSec: null,
 		health: 'alive',
-		checkedAt: '2026-11-19T12:00:00Z'
+		checkedAt: new Date().toISOString()
 	}));
 	await paste(page, 'https://www.tiktok.com/@user.name/video/7234567890123456789');
 	await expect(page).toHaveURL(/\/v\//);
@@ -84,7 +84,7 @@ test('TikTok short link is expanded by the API; with the API down it says it cou
 					title: 'Curto',
 					durationSec: null,
 					health: 'alive',
-					checkedAt: '2026-11-19T12:00:00Z'
+					checkedAt: new Date().toISOString()
 				}
 			: null
 	);

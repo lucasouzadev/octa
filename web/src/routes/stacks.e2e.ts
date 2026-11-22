@@ -107,7 +107,7 @@ test('with many videos the Assistir em sequência button stays in front of the p
 				embed: { type: 'iframe', src: `https://www.youtube-nocookie.com/embed/${id}`, aspect: '16:9' },
 				title: `Vídeo ${id}`,
 				health: 'alive',
-				checkedAt: '2026-11-19T12:00:00Z'
+				checkedAt: new Date().toISOString()
 			}
 		});
 	});
@@ -145,7 +145,7 @@ test('a link known to be dead says FORA DO AR and the header counts it', async (
 				title: 'Link caído',
 				durationSec: 3723,
 				health: 'dead',
-				checkedAt: '2026-11-19T12:00:00Z'
+				checkedAt: new Date().toISOString()
 			}
 		});
 	});
