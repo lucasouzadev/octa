@@ -5,7 +5,7 @@ Owner 2026-11-22: six iPhone findings (R5.1-R5.6). Approved: batches A+B, then R
 
 ## State
 - PR #40 `claude/qa-round-5` (R5.1, R5.3-R5.6 + test updates f9fbc0e): CI of f9fbc0e pending; run 44980512464 (old head) failed on 2 stale tests, fixed.
-- PR #41 `claude/r52-organize-pages` (base qa-round-5): sheet in 2 pages Organizar | Dados, sort saved per screen. CI watcher running.
+- PR #41 `claude/r52-organize-pages` (base main; CI only runs on PRs to main; includes #40 commits, merge #40 first): sheet in 2 pages Organizar | Dados, sort saved per screen. CI watcher running.
 - PR #39 (test debt): CI PASS.
 - Owner merges; the agent never merges.
 
