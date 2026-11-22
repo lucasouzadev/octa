@@ -8,7 +8,7 @@
 	import { onNavigate } from '$app/navigation';
 	import { initTilt } from '#lib/tilt.svelte.ts';
 	import { page } from '$app/state';
-	import { isLightColor, themeColorFor } from '#lib/screen.ts';
+	import { themeColorFor } from '#lib/screen.ts';
 	import { theme } from '#lib/theme.svelte.ts';
 	import { currentMode } from '#lib/transition.ts';
 	import type { LayoutProps } from './$types';
@@ -20,9 +20,11 @@
 	// The color this screen paints, for the browser chrome.
 	const screenColor = $derived(theme.override ?? themeColorFor(page.route.id, page.params.id));
 
-	// Light screens get a dark strip behind the (always white) status-bar text: see app.css.
-	$effect(() => {
-		document.documentElement.dataset.light = String(isLightColor(screenColor));
+	// R5.5: the page behind the status bar and the home bar takes the screen color from here, one
+	// source for every screen, so a navigation or a sheet never lets the phone's black/white show.
+	$effect.pre(() => {
+		document.documentElement.style.backgroundColor = screenColor;
+		document.body.style.backgroundColor = screenColor;
 	});
 
 	// Cross-fade the screen colors and morph the card thumbnail into the player

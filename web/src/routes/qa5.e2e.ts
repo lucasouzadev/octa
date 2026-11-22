@@ -66,3 +66,49 @@ test.describe('R5.4 feedback is a banner at the top, not a pill', () => {
 		expect(radius, 'a card corner, not a pill').toBeLessThan(24);
 	});
 });
+
+// R5.1 / R5.5: the page behind the status bar and the home bar always carries the color of the
+// screen it is on, set by the layout itself (not by whichever page happens to be mounted), so a
+// navigation or a sheet can never flash the phone's black/white behind the safe areas.
+const paint = (page: Page) =>
+	page.evaluate(() => ({
+		html: getComputedStyle(document.documentElement).backgroundColor,
+		body: getComputedStyle(document.body).backgroundColor,
+		meta: document.querySelector('meta[name="theme-color"]')?.getAttribute('content') ?? '',
+		inline: document.documentElement.style.backgroundColor
+	}));
+
+const rgb = (hex: string) => {
+	const n = parseInt(hex.slice(1), 16);
+	return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
+};
+
+test.describe('R5.5 the safe areas keep the screen color', () => {
+	test('the layout paints html with the theme color on every screen and on the way back', async ({ page }) => {
+		await seed(page);
+		for (const path of ['/', '/add', '/c/favoritos', '/']) {
+			await page.goto(path);
+			await page.waitForLoadState('networkidle');
+			const p = await paint(page);
+			expect(p.inline, `${path}: set by the layout`).toBe(rgb(p.meta));
+			expect(p.html, `${path}: html`).toBe(rgb(p.meta));
+			expect(p.body, `${path}: body`).toBe(rgb(p.meta));
+		}
+	});
+
+	test('opening a sheet on the Library keeps the page white behind it', async ({ page }) => {
+		await seed(page);
+		await page.goto('/');
+		await page.getByRole('button', { name: 'Organizar', exact: true }).click();
+		const p = await paint(page);
+		expect(p.html).toBe(rgb('#FFFFFF'));
+		expect(p.inline).toBe(rgb('#FFFFFF'));
+	});
+});
+
+test.describe('R5.1 no color bar over the top of the Library', () => {
+	test('app.css draws no fixed strip above the page', async () => {
+		const css = (await import('node:fs')).readFileSync(new URL('../app.css', import.meta.url), 'utf8');
+		expect(css, 'the R4.6 black strip experiment is gone').not.toMatch(/html\[data-light[^{]*::before/);
+	});
+});
