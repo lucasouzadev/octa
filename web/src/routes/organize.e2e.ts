@@ -43,32 +43,39 @@ test.describe('R5 organize the Library', () => {
 		expect(await names(page)).toEqual(['Todos', 'Beta', 'Alfa', 'Zulu']);
 	});
 
-	test('the sheet sorts A–Z, and the choice survives a reload; "Todos" stays first', async ({ page }) => {
+	test('the sheet sorts A–Z with Todos in the mix, and the choice survives a reload', async ({ page }) => {
 		await seed(page, ['Beta', 'Alfa', 'Zulu']);
 		await openSheet(page);
 		await page.getByRole('radio', { name: 'A–Z' }).click();
 		await expect(page.getByRole('radio', { name: 'A–Z' })).toHaveAttribute('aria-checked', 'true');
 		await page.keyboard.press('Escape');
-		await expect.poll(() => names(page)).toEqual(['Todos', 'Alfa', 'Beta', 'Zulu']);
+		await expect.poll(() => names(page)).toEqual(['Alfa', 'Beta', 'Todos', 'Zulu']);
 		await page.reload();
-		await expect.poll(() => names(page)).toEqual(['Todos', 'Alfa', 'Beta', 'Zulu']);
+		await expect.poll(() => names(page)).toEqual(['Alfa', 'Beta', 'Todos', 'Zulu']);
 	});
 
-	test('with fewer than two collections there is nothing to sort', async ({ page }) => {
-		await seed(page, ['Solo']);
+	test('with a single card there is nothing to sort', async ({ page }) => {
+		await seed(page, []);
 		await openSheet(page);
 		await expect(page.getByRole('button', { name: 'Reordenar coleções' })).toHaveCount(0);
 		await expect(page.getByRole('radiogroup')).toHaveCount(0);
 	});
 
+	test('Todos plus one collection already can be ordered (R6.1)', async ({ page }) => {
+		await seed(page, ['Solo']);
+		await openSheet(page);
+		await expect(page.getByRole('radiogroup')).toHaveCount(1);
+		await expect(page.getByRole('button', { name: 'Reordenar coleções' })).toBeVisible();
+	});
+
 	test('the arrow keys on the handle move a collection and it stays after a reload', async ({ page }) => {
 		await seed(page, ['Beta', 'Alfa', 'Zulu']);
 		await startReorder(page);
-		expect(await rows(page).allInnerTexts()).toEqual(['Beta', 'Alfa', 'Zulu']);
+		expect(await rows(page).allInnerTexts()).toEqual(['Todos', 'Beta', 'Alfa', 'Zulu']);
 		await page.getByRole('button', { name: 'Mover Zulu' }).focus();
 		await page.keyboard.press('ArrowUp');
 		await page.keyboard.press('ArrowUp');
-		expect(await rows(page).allInnerTexts()).toEqual(['Zulu', 'Beta', 'Alfa']);
+		expect(await rows(page).allInnerTexts()).toEqual(['Todos', 'Zulu', 'Beta', 'Alfa']);
 		await expect(page.getByRole('button', { name: 'Mover Zulu' })).toBeFocused();
 		await page.getByRole('button', { name: 'Concluir' }).click();
 		await expect(page.locator('p.toast.shown[role="status"]')).toHaveText('Ordem salva');
@@ -89,20 +96,42 @@ test.describe('R5 organize the Library', () => {
 		await page.mouse.move(target.x + target.width / 2, target.y + target.height / 2 + 10, { steps: 10 });
 		await expect(page.locator('li.lifted')).toHaveCount(1);
 		await page.mouse.up();
-		await expect.poll(() => rows(page).allInnerTexts()).toEqual(['Alfa', 'Zulu', 'Beta']);
+		await expect.poll(() => rows(page).allInnerTexts()).toEqual(['Todos', 'Alfa', 'Zulu', 'Beta']);
 		await expect(page.locator('li.lifted')).toHaveCount(0);
 		await page.getByRole('button', { name: 'Concluir' }).click();
 		await page.reload();
 		await expect.poll(() => names(page)).toEqual(['Todos', 'Alfa', 'Zulu', 'Beta']);
 	});
 
-	test('the virtual collections have no handle and stay on top', async ({ page }) => {
+	test('Todos has a handle like any collection and starts on top (R6.1)', async ({ page }) => {
 		await seed(page, ['Beta', 'Alfa']);
 		await startReorder(page);
-		await expect(page.locator('li.rrow.fixed')).toHaveCount(1);
-		await expect(page.locator('li.rrow.fixed .handle')).toHaveCount(0);
-		const first = await page.locator('ul.reorder > li').first().getAttribute('class');
-		expect(first).toContain('fixed');
+		await expect(page.getByRole('button', { name: 'Mover Todos' })).toBeVisible();
+		await expect(page.locator('li.rrow.fixed')).toHaveCount(0);
+		expect(await rows(page).allInnerTexts()).toEqual(['Todos', 'Beta', 'Alfa']);
+	});
+
+	test('Todos moves down between collections and stays there after a reload (R6.1)', async ({ page }) => {
+		await seed(page, ['Beta', 'Alfa']);
+		await startReorder(page);
+		await page.getByRole('button', { name: 'Mover Todos' }).focus();
+		await page.keyboard.press('ArrowDown');
+		expect(await rows(page).allInnerTexts()).toEqual(['Beta', 'Todos', 'Alfa']);
+		await page.getByRole('button', { name: 'Concluir' }).click();
+		await expect.poll(() => names(page)).toEqual(['Beta', 'Todos', 'Alfa']);
+		await page.reload();
+		await expect.poll(() => names(page)).toEqual(['Beta', 'Todos', 'Alfa']);
+	});
+
+	test('a collection can go above Todos by hand, and the choice is the saved order (R6.1)', async ({ page }) => {
+		await seed(page, ['Beta', 'Alfa']);
+		await startReorder(page);
+		await page.getByRole('button', { name: 'Mover Alfa' }).focus();
+		await page.keyboard.press('ArrowUp');
+		await page.keyboard.press('ArrowUp');
+		await page.getByRole('button', { name: 'Concluir' }).click();
+		await page.reload();
+		await expect.poll(() => names(page)).toEqual(['Alfa', 'Todos', 'Beta']);
 	});
 
 	test('Concluir leaves the mode; the header shows search, Organizar and +', async ({ page }) => {

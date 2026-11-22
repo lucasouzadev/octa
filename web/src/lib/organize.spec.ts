@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { loadMode, moveBy, moveTo, saveMode, slotAt, sortCollections, type Ranked } from '#lib/organize.ts';
+import { arrange, loadDefaultSlots, loadMode, moveBy, moveTo, saveDefaultSlots, saveMode, slotAt, sortCollections, type Ranked } from '#lib/organize.ts';
 
 const c = (id: string, name: string, createdAt: string, count = 0, rank?: number, updatedAt = createdAt): Ranked => ({
 	id,
@@ -174,5 +174,75 @@ describe('loadVideoSort / saveVideoSort per collection', () => {
 		const { loadVideoSort } = await import('#lib/organize.ts');
 		localStorage.setItem('octa.vsort.aulas', 'lixo');
 		expect(loadVideoSort('aulas')).toBeNull();
+	});
+});
+
+// R6.1: Todos, Favoritos and Assistidos are ordered together with the collections; their places live on this device.
+describe('arrange (R6.1)', () => {
+	const T = c('todos', 'Todos', '', 9);
+	const F = c('favoritos', 'Favoritos', '', 1);
+	const W = c('assistidos', 'Assistidos', '', 3);
+	const defaults = [T, F, W];
+	const mine = [A, B, C];
+	const slots = { todos: 0, favoritos: 1, assistidos: 2 };
+
+	it('manual with the default places keeps them on top, as before', () => {
+		expect(ids(arrange(mine, defaults, 'manual', slots))).toEqual(['todos', 'favoritos', 'assistidos', 'a', 'b', 'c']);
+	});
+	it('manual with no saved places puts them on top in their usual order', () => {
+		expect(ids(arrange(mine, defaults, 'manual', {}))).toEqual(['todos', 'favoritos', 'assistidos', 'a', 'b', 'c']);
+	});
+	it('manual honours a saved place between collections', () => {
+		expect(ids(arrange(mine, defaults, 'manual', { todos: 2, favoritos: 0, assistidos: 5 }))).toEqual([
+			'favoritos',
+			'a',
+			'todos',
+			'b',
+			'c',
+			'assistidos'
+		]);
+	});
+	it('a place past the end lands last', () => {
+		expect(ids(arrange(mine, [T], 'manual', { todos: 99 }))).toEqual(['a', 'b', 'c', 'todos']);
+	});
+	it('A–Z sorts the defaults together with the collections', () => {
+		expect(ids(arrange(mine, defaults, 'az', slots))).toEqual(['b', 'assistidos', 'a', 'favoritos', 'todos', 'c']);
+	});
+	it('count sorts the defaults together with the collections', () => {
+		expect(ids(arrange(mine, defaults, 'count', slots))).toEqual(['todos', 'b', 'assistidos', 'a', 'favoritos', 'c']);
+	});
+	it('works with defaults only', () => {
+		expect(ids(arrange([], [F, T], 'manual', slots))).toEqual(['todos', 'favoritos']);
+	});
+	it('does not mutate its inputs', () => {
+		const m = [C, A];
+		arrange(m, [W, T], 'manual', slots);
+		expect(ids(m)).toEqual(['c', 'a']);
+	});
+});
+
+describe('loadDefaultSlots / saveDefaultSlots (R6.1)', () => {
+	const store = new Map<string, string>();
+	const fake = {
+		getItem: (k: string) => store.get(k) ?? null,
+		setItem: (k: string, v: string) => void store.set(k, v),
+		removeItem: (k: string) => void store.delete(k)
+	};
+	beforeEach(() => {
+		store.clear();
+		vi.stubGlobal('localStorage', fake);
+	});
+	afterEach(() => vi.unstubAllGlobals());
+
+	it('starts empty and remembers what was saved', () => {
+		expect(loadDefaultSlots()).toEqual({});
+		saveDefaultSlots({ todos: 2, favoritos: 0 });
+		expect(loadDefaultSlots()).toEqual({ todos: 2, favoritos: 0 });
+	});
+	it('ignores junk: bad JSON, non-numbers, negatives, unknown ids', () => {
+		store.set('octa.order.defaults', '{nope');
+		expect(loadDefaultSlots()).toEqual({});
+		store.set('octa.order.defaults', JSON.stringify({ todos: 'x', favoritos: -1, assistidos: 1.5, other: 3, __proto__: 2 }));
+		expect(loadDefaultSlots()).toEqual({});
 	});
 });

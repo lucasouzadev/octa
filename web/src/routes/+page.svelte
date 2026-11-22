@@ -11,7 +11,19 @@
 	import FanStack from '#lib/ui/FanStack.svelte';
 	import Icon from '#lib/ui/Icon.svelte';
 	import OrganizeSheet from '#lib/ui/OrganizeSheet.svelte';
-	import { loadMode, moveBy, moveTo, saveMode, slotAt, sortCollections, type SortMode } from '#lib/organize.ts';
+	import {
+		arrange,
+		loadDefaultSlots,
+		loadMode,
+		moveBy,
+		moveTo,
+		saveDefaultSlots,
+		saveMode,
+		slotAt,
+		type DefaultSlots,
+		type Ranked,
+		type SortMode
+	} from '#lib/organize.ts';
 	import { BACKUP_ERROR_TEXT, exportLibrary, importLibrary, importMessage } from '#lib/backup-io.ts';
 	import { toast } from '#lib/toast.svelte.ts';
 	import Illustration from '#lib/ui/Illustration.svelte';
@@ -49,6 +61,7 @@
 	$effect(() => {
 		library().then(async (lib) => {
 			mode = loadMode();
+			slots = loadDefaultSlots();
 			[videos, collections] = await Promise.all([lib.list(), lib.listCollections()]);
 			// TikToks saved with the generic title get their @handle title (edited titles stay).
 			if (await upgradeGenericTitles(lib)) videos = await lib.list();
@@ -59,6 +72,8 @@
 		});
 	});
 
+	const DEFAULT_KEYS = [ALL, FAVORITES, WATCHED];
+
 	interface Card {
 		key: string;
 		href: string;
@@ -66,29 +81,44 @@
 		items: Video[];
 	}
 
-	// The person's own collections, in the order they chose (default: oldest first).
-	const mine = $derived(collections ? sortCollections(collections, mode) : []);
+	let slots = $state<DefaultSlots>({});
 
-	// "Todos" is virtual and always first; user collections follow.
+	// Todos, Favoritos, Assistidos and the person's collections share one order (R6.1): by hand, the
+	// defaults sit where the person put them; any other sort treats them like collections.
 	const cards = $derived.by<Card[] | null>(() => {
 		if (!videos || !collections) return null;
-		const byId = new Map(videos.map((v) => [v.id, v]));
-		return [
-			...(videos.length > 0 ? [{ key: ALL, href: `/c/${ALL}`, name: 'Todos', items: videos }] : []),
+		const byVideo = new Map(videos.map((v) => [v.id, v]));
+		const entry = (key: string, name: string, items: Video[], rank?: number): Ranked & Card => ({
+			id: key,
+			key,
+			href: `/c/${key}`,
+			name,
+			items,
+			order: items.map((v) => v.id),
+			createdAt: '',
+			updatedAt: items.reduce((m, v) => (v.createdAt > m ? v.createdAt : m), ''),
+			rank
+		});
+		const defaults = [
+			...(videos.length > 0 ? [entry(ALL, 'Todos', videos)] : []),
 			// Marks the person makes, shown only once there is something in them.
 			...[
-				{ key: FAVORITES, name: 'Favoritos', items: videos.filter((v) => v.favorite) },
-				{ key: WATCHED, name: 'Assistidos', items: videos.filter((v) => v.watched) }
-			]
-				.filter((c) => c.items.length > 0)
-				.map((c) => ({ ...c, href: `/c/${c.key}` })),
-			...mine.map((c) => ({
-				key: c.id,
-				href: `/c/${c.id}`,
-				name: c.name,
-				items: c.order.map((id) => byId.get(id)).filter((v): v is Video => v !== undefined)
-			}))
+				entry(FAVORITES, 'Favoritos', videos.filter((v) => v.favorite)),
+				entry(WATCHED, 'Assistidos', videos.filter((v) => v.watched))
+			].filter((c) => c.items.length > 0)
 		];
+		const own = collections.map((c) => ({
+			...entry(
+				c.id,
+				c.name,
+				c.order.map((id) => byVideo.get(id)).filter((v): v is Video => v !== undefined),
+				c.rank
+			),
+			createdAt: c.createdAt,
+			updatedAt: c.updatedAt,
+			order: c.order
+		}));
+		return arrange(own, defaults, mode, slots);
 	});
 
 	const count = (n: number) => (n === 1 ? '1 vídeo' : `${n} vídeos`);
@@ -120,7 +150,7 @@
 	// --- Organizar / Reordenar -------------------------------------------------------------
 	let organizeOpen = $state(false);
 	let reordering = $state(false);
-	/** Ids of the person's collections while reordering (the saved order is written on each move). */
+	/** Keys of every card while reordering (the saved order is written on each move). */
 	let draft = $state<string[]>([]);
 	let live = $state('');
 	let listEl = $state<HTMLElement>();
@@ -140,7 +170,7 @@
 	let frame = 0;
 
 	const rows = $derived(drag ? moveTo(draft, drag.from, drag.to) : draft);
-	const byId = $derived(new Map((collections ?? []).map((c) => [c.id, c])));
+	const byKey = $derived(new Map((cards ?? []).map((c) => [c.key, c])));
 
 	function chooseMode(next: SortMode) {
 		mode = next;
@@ -149,7 +179,7 @@
 
 	function startReorder() {
 		organizeOpen = false;
-		draft = mine.map((c) => c.id);
+		draft = (cards ?? []).map((c) => c.key);
 		reordering = true;
 		closeSearch();
 		scrollTo({ top: 0 });
@@ -158,17 +188,20 @@
 	async function save(ids: string[]) {
 		draft = ids;
 		// What the screen shows is the saved order: switch to "Minha ordem" with it.
-		collections = (collections ?? []).map((c) => ({ ...c, rank: ids.indexOf(c.id) }));
+		const own = ids.filter((id) => collections?.some((c) => c.id === id));
+		collections = (collections ?? []).map((c) => ({ ...c, rank: own.indexOf(c.id) }));
+		slots = Object.fromEntries(ids.flatMap((id, i) => (DEFAULT_KEYS.includes(id) ? [[id, i]] : [])));
+		saveDefaultSlots(slots);
 		chooseMode('manual');
 		try {
-			await (await library()).setCollectionRanks(ids);
+			await (await library()).setCollectionRanks(own);
 		} catch {
 			toast.show('Não deu para salvar a ordem');
 		}
 	}
 
 	function announce(id: string, ids: string[]) {
-		live = `${byId.get(id)?.name ?? ''}: posição ${ids.indexOf(id) + 1} de ${ids.length}`;
+		live = `${byKey.get(id)?.name ?? ''}: posição ${ids.indexOf(id) + 1} de ${ids.length}`;
 	}
 
 	function handleKey(e: KeyboardEvent, id: string) {
@@ -301,16 +334,8 @@
 
 	{#if reordering}
 		<ul class="reorder" bind:this={listEl} aria-label="Coleções">
-			{#each cards ?? [] as c (c.key)}
-				{#if !byId.has(c.key)}
-					<li class="rrow fixed">
-						<span class="rname">{c.name}</span>
-						<span class="rcount">{count(c.items.length)}</span>
-					</li>
-				{/if}
-			{/each}
 			{#each rows as id (id)}
-				{@const c = byId.get(id)}
+				{@const c = byKey.get(id)}
 				{#if c}
 					<li
 						class="rrow"
@@ -319,7 +344,7 @@
 						style:transform={drag?.id === id ? `translateY(${drag.dy}px)` : undefined}
 					>
 						<span class="rname">{c.name}</span>
-						<span class="rcount">{count(c.order.length)}</span>
+						<span class="rcount">{count(c.items.length)}</span>
 						<button
 							class="handle"
 							type="button"
@@ -430,7 +455,7 @@
 <OrganizeSheet
 	open={organizeOpen}
 	{mode}
-	canOrder={(collections?.length ?? 0) >= 2}
+	canOrder={(cards?.length ?? 0) >= 2}
 	onmode={chooseMode}
 	onreorder={startReorder}
 	onexport={doExport}
@@ -499,9 +524,6 @@
 		background: var(--color-surface-light);
 	}
 
-	.rrow.fixed {
-		opacity: 0.55;
-	}
 
 	.rrow.lifted {
 		position: relative;
