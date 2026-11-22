@@ -1,28 +1,30 @@
-# HANDOFF — 2026-11-22 — QA round 5, R5.2 part C (collection sort memory)
+# HANDOFF — 2026-11-22 — QA round 6 (owner iPhone screenshots)
 
 ## Goal
-Owner 2026-11-22: "salvar preferência de ordenação por tela na coleção". Approved: "Por coleção, no aparelho (Recomendado)".
-Each collection remembers the video sort last chosen (Data / Título / Origem), device-only (localStorage `octa.vsort.<collectionId>`). Saved order behavior unchanged: the order is still written on the press.
-Owner 2026-11-22 (AskUserQuestion): "Aplicar ao abrir". Reopening a collection re-applies the remembered sort once (order written silently).
+Owner QA round 6, four items. All built on branch `claude/r52-collection-sort` (PR #44 targets `main`).
 
 ## State
-- PR #39 test debt: CI PASS. PR #40 (R5.1, R5.3-R5.6). PR #41 (R5.2 part A, CI PASS at 32cbcca).
-- Branch `claude/r52-organize-drag` (part B, 3cddbff): drag handle for videos in a collection.
-- Branch `claude/r52-collection-sort` (part C, stacked on part B): remembered sort chip (`aria-pressed`) per collection.
-- No PR opened for part C (owner did not ask). Merge order (owner): #39, #40, #41, then part B, then part C. The agent never merges.
+- R6.1 Organizar sheet orders Todos/Favoritos/Assistidos with the collections (`764e76d`): device-only slots in `octa.order.defaults`.
+- R6.2 selection mode: a card tap selects, never opens the video (`a754f5a`).
+- R6.3 "Mover para" shows every selected cover, smaller and fanned (`e11d703`).
+- R6.4 delete-video screen in a collection: safe areas. Owner scoped it to "Apagar este vídeo?" in `/c/[id]`.
+  - Root cause (proven by probe): the `rise` animation moved the whole orange `.danger` surface down 24px for 220ms, so the black page showed in the top safe area. html, body and meta theme-color were already orange.
+  - Fix: the surface is static; only its content rises (`DangerScreen.svelte`). Also covers `/v/[id]`, which uses the same component.
+  - Not done on purpose: recreating the `meta theme-color` (no evidence it was needed).
+- Merge order (owner): #39, #40, #41, part B, #44. The agent never merges. Branch is behind `main`; expect conflicts.
 
 ## Evidence
-- Red first: qa5-sort e2e 2 failed (no `aria-pressed` on chip), 1 passed as regression guard; organize.spec 2 failed (no loadVideoSort/saveVideoSort). Auto-apply e2e red: order not applied on open.
-- Green: vitest 353/353 PASS; svelte-check 0 errors PASS.
-- e2e qa5-sort + qa5-drag + qa4-organize + organize: 78 passed (phone, tablet, desktop) PASS.
-- Not run here: full e2e suite, CI for claude/r52-collection-sort (not pushed to CI watch yet).
+- R6.4 red first: `qa6-danger.e2e.ts` "edge and corner" failed on phone, tablet, desktop; green after the fix (9/9).
+- vitest 363/363 PASS; svelte-check 0 errors PASS.
+- e2e qa5 + qa2 + qa3 + qa6-danger: 207 passed; `qa2.e2e.ts:68` failed under load, 3/3 PASS alone (known flake).
+- CI for `764e76d` (run 45077689774): web and api succeeded; e2e verdict not confirmed at last check.
 
 ## Next
-1. Physical test on iPhone/iPad: touch drag (part B) and remembered chip (part C).
+1. Watch CI for the R6.4 commit.
+2. Physical test on iPhone Safari PWA, iPad, desktop: items R6.1 to R6.4, plus earlier parts B and C.
 
 ## Risks / not proven
-- Touch drag on real devices NOT RUN; R5.1/R5.5 only proven in code.
-- Remembered sort is device-only: another device shows chip unpressed until chosen.
-- Auto-apply overwrites a manual drag order on open (owner's choice). Drag order is kept until the collection is reopened.
-- Pending owner decisions: final icon, Render /healthz, home card "Continuar assistindo", "Correções da 2e-3" details.
-- Flaky tests unchanged: enrich, transitions:46, monitors:104.
+- iPhone not run: R6.4 is proven in Chromium only; the 24px slide is a plausible cause of what the owner saw, not confirmed on device.
+- Touch drag (part B) and remembered sort (part C) only proven in code.
+- Open owner decisions: final icon, Render /healthz, home card "Continuar assistindo", "Correções da 2e-3".
+- Flaky tests: enrich, transitions:46, monitors:104, qa1:308, qa2:68.
