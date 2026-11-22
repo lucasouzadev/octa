@@ -410,9 +410,10 @@ test.describe('R3.8 every action in the sheets answers with a short notice', () 
 		expect(b.y).toBeGreaterThanOrEqual(0);
 		expect(b.x).toBeGreaterThanOrEqual(0);
 		expect(b.x + b.width).toBeLessThanOrEqual(vp.width);
-		// Centered on the screen.
-		expect(Math.abs(b.x + b.width / 2 - vp.width / 2)).toBeLessThanOrEqual(2);
-		await expect(t).toHaveCSS('pointer-events', 'none');
+		// R5.4: the banner (the notice's box) is centred on the screen.
+		const banner = await box(page.locator('.banner.shown'));
+		expect(Math.abs(banner.x + banner.width / 2 - vp.width / 2)).toBeLessThanOrEqual(2);
+		await expect(page.locator('.banner.shown')).toHaveCSS('pointer-events', 'none');
 	});
 });
 
