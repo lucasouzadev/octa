@@ -119,3 +119,23 @@ test.describe('R5.2 the collection remembers its video sort, per collection', ()
 		expect(shown).toEqual(['Dois', 'Três', 'Um']);
 	});
 });
+
+// Owner 2026-11-22: "Aplicar ao abrir". Reopening a collection re-applies its remembered sort, once.
+test.describe('R5.2 the remembered sort is applied when the collection opens', () => {
+	test('a collection opens already sorted by the remembered choice', async ({ page }) => {
+		await seedLibrary(page, [{ title: 'Um' }, { title: 'Dois' }, { title: 'Três' }], 3);
+		await page.evaluate(() => localStorage.setItem('octa.vsort.aulas', 'title'));
+		await edit(page, '/c/aulas');
+		await expect.poll(() => titles(page)).toEqual(['Dois', 'Três', 'Um']);
+	});
+
+	test('the applied order is kept on the next visit', async ({ page }) => {
+		await seedLibrary(page, [{ title: 'Um' }, { title: 'Dois' }, { title: 'Três' }], 3);
+		await page.evaluate(() => localStorage.setItem('octa.vsort.aulas', 'title'));
+		await edit(page, '/c/aulas');
+		await expect.poll(() => titles(page)).toEqual(['Dois', 'Três', 'Um']);
+		await page.goto('/');
+		await edit(page, '/c/aulas');
+		await expect.poll(() => titles(page)).toEqual(['Dois', 'Três', 'Um']);
+	});
+});

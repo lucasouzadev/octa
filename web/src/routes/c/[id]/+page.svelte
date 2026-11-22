@@ -63,6 +63,21 @@
 			missing = !collection;
 		}
 		videos = missing ? [] : await videosIn(lib, scope);
+		if (applyOnOpen) {
+			applyOnOpen = false;
+			await applyRememberedSort();
+		}
+	}
+
+	// Owner 2026-11-22: reopening a collection re-applies its remembered sort, once per visit.
+	let applyOnOpen = false;
+	async function applyRememberedSort() {
+		const mode = loadVideoSort(scope);
+		if (!mode || !collection || !videos || videos.length < 2) return;
+		const current = videos.map((v) => v.id);
+		const next = sortVideos(videos, mode).map((v) => v.id);
+		if (next.join() === current.join()) return;
+		await saveOrder(next);
 	}
 
 	$effect(() => {
@@ -72,6 +87,7 @@
 		picked = [];
 		movingMany = [];
 		error = '';
+		applyOnOpen = true;
 		load();
 	});
 
