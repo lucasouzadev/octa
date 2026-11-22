@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { moveBy, moveTo, slotAt, sortCollections, type Ranked } from '#lib/organize.ts';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { loadMode, moveBy, moveTo, saveMode, slotAt, sortCollections, type Ranked } from '#lib/organize.ts';
 
 const c = (id: string, name: string, createdAt: string, count = 0, rank?: number, updatedAt = createdAt): Ranked => ({
 	id,
@@ -107,5 +107,43 @@ describe('sortVideos (R4.5)', () => {
 		const before = list.map((x) => x.id);
 		sortVideos(list, 'title');
 		expect(list.map((x) => x.id)).toEqual(before);
+	});
+});
+
+// R5.2: the way to sort is remembered per screen, so the Library and a collection do not share one choice.
+describe('loadMode / saveMode per screen (R5.2)', () => {
+	const store = new Map<string, string>();
+	const fake = {
+		getItem: (k: string) => store.get(k) ?? null,
+		setItem: (k: string, v: string) => void store.set(k, v),
+		removeItem: (k: string) => void store.delete(k)
+	};
+	beforeEach(() => {
+		store.clear();
+		vi.stubGlobal('localStorage', fake);
+	});
+	afterEach(() => vi.unstubAllGlobals());
+
+	it('starts on the manual order for every screen', () => {
+		expect(loadMode('home')).toBe('manual');
+		expect(loadMode('move')).toBe('manual');
+	});
+
+	it('keeps one choice per screen', () => {
+		saveMode('az', 'home');
+		saveMode('count', 'move');
+		expect(loadMode('home')).toBe('az');
+		expect(loadMode('move')).toBe('count');
+	});
+
+	it('the Library still reads the single choice saved before screens had their own', () => {
+		store.set('octa.sort', 'recent');
+		expect(loadMode('home')).toBe('recent');
+		expect(loadMode()).toBe('recent');
+	});
+
+	it('ignores a stored value that is not a mode', () => {
+		store.set('octa.sort.home', 'nonsense');
+		expect(loadMode('home')).toBe('manual');
 	});
 });

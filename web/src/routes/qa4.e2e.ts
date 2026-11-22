@@ -66,6 +66,7 @@ test.describe('R4.3 the motion question is asked only from its own switch', () =
 		await seed(page);
 		await page.goto('/');
 		await page.getByRole('button', { name: 'Organizar', exact: true }).click();
+		await page.getByRole('tab', { name: 'Dados', exact: true }).click();
 		await page.getByRole('switch', { name: 'Mover com o celular' }).click();
 		await expect(page.getByRole('switch', { name: 'Mover com o celular' })).toHaveAttribute('aria-checked', 'true');
 		expect(await asked(page)).toBe(1);
@@ -76,6 +77,7 @@ test.describe('R4.3 the motion question is asked only from its own switch', () =
 		await seed(page);
 		await page.goto('/');
 		await page.getByRole('button', { name: 'Organizar', exact: true }).click();
+		await page.getByRole('tab', { name: 'Dados', exact: true }).click();
 		await page.getByRole('switch', { name: 'Mover com o celular' }).click();
 		await expect(page.getByRole('switch', { name: 'Mover com o celular' })).toHaveAttribute('aria-checked', 'false');
 		await page.reload();
@@ -118,6 +120,7 @@ test.describe('R4.2 every control answers a press', () => {
 		const plus = await pressed(page, 'button[aria-label="Criar conteúdo"]');
 		expect(plus.during).not.toBe(plus.before);
 		await page.getByRole('button', { name: 'Organizar', exact: true }).click();
+		await page.getByRole('tab', { name: 'Dados', exact: true }).click();
 		const opt = await pressed(page, 'dialog.sheet[data-state="open"] .option');
 		expect(opt.during).not.toBe(opt.before);
 	});

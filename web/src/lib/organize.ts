@@ -65,20 +65,30 @@ export function slotAt(pageY: number, tops: readonly number[], height: number): 
 	return 0;
 }
 
-const KEY = 'octa.sort';
+/** Screens that remember how they sort. The Library is "home"; the collection picker is "move". */
+export type SortScreen = 'home' | 'move';
 
-export function loadMode(): SortMode {
+const LEGACY_KEY = 'octa.sort'; // one choice for every screen, before R5.2
+const keyFor = (screen: SortScreen) => `octa.sort.${screen}`;
+const isMode = (v: string | null): v is SortMode => SORT_MODES.some((m) => m.mode === v);
+
+export function loadMode(screen: SortScreen = 'home'): SortMode {
 	try {
-		const v = localStorage.getItem(KEY);
-		return SORT_MODES.some((m) => m.mode === v) ? (v as SortMode) : 'manual';
+		const own = localStorage.getItem(keyFor(screen));
+		if (isMode(own)) return own;
+		if (own === null) {
+			const old = localStorage.getItem(LEGACY_KEY);
+			if (isMode(old)) return old;
+		}
+		return 'manual';
 	} catch {
 		return 'manual';
 	}
 }
 
-export function saveMode(mode: SortMode): void {
+export function saveMode(mode: SortMode, screen: SortScreen = 'home'): void {
 	try {
-		localStorage.setItem(KEY, mode);
+		localStorage.setItem(keyFor(screen), mode);
 	} catch {
 		/* private mode: the choice lasts until the page closes */
 	}

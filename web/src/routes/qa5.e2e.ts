@@ -30,6 +30,7 @@ test.describe('R5.3 the motion permission is remembered', () => {
 		await seed(page);
 		await page.goto('/');
 		await page.getByRole('button', { name: 'Organizar', exact: true }).click();
+		await page.getByRole('tab', { name: 'Dados', exact: true }).click();
 		await page.getByRole('switch', { name: 'Mover com o celular' }).click();
 		await expect(page.getByRole('switch', { name: 'Mover com o celular' })).toHaveAttribute('aria-checked', 'true');
 		expect(await asked(page)).toBe(1);
@@ -55,6 +56,7 @@ test.describe('R5.4 feedback is a banner at the top, not a pill', () => {
 		await seed(page);
 		await page.goto('/');
 		await page.getByRole('button', { name: 'Organizar', exact: true }).click();
+		await page.getByRole('tab', { name: 'Dados', exact: true }).click();
 		await page.getByLabel('Arquivo da biblioteca').setInputFiles({ name: 'x.json', mimeType: 'application/json', buffer: Buffer.from('not json') });
 		const note = page.locator('.banner.shown');
 		await expect(note).toBeVisible();
