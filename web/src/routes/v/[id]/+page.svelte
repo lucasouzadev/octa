@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { platformOf } from '#lib/platform.ts';
 	import { cardLabel } from '#lib/fan.ts';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
@@ -82,6 +83,10 @@
 	});
 
 	const sourceLabel = (v: Video) => (v.source === 'direct' ? 'Arquivo' : cardLabel(v));
+	const theme = $derived(video ? platformOf(video) : null);
+	// R7.3b: for a moment after liking, the heart is the platform's icon.
+	let morph = $state(false);
+	let morphTimer = 0;
 
 	function next() {
 		if (!all || all.length < 2) return;
@@ -93,7 +98,12 @@
 		const liking = !video.favorite;
 		const updated = await (await library()).update(video.id, { favorite: liking });
 		all[index] = updated;
-		if (liking) likes += 1; // hearts only go up when liking, not when taking it back
+		if (liking) {
+			likes += 1; // hearts only go up when liking, not when taking it back
+			morph = true;
+			clearTimeout(morphTimer);
+			morphTimer = window.setTimeout(() => (morph = false), 800);
+		}
 	}
 
 	// Everything below keeps the list the player walks in step with what was saved.
@@ -184,11 +194,11 @@
 	}
 </script>
 
-<main class="player on-dark">
+<main class="player on-dark" data-platform={theme?.key} style={theme ? `--platform: ${theme.color}` : undefined}>
 	<header>
 		<a class="icon-button" href={scope === ALL && !requestedScope ? '/' : `/c/${scope}`} aria-label="Fechar"><Icon name="close" /></a>
 		{#if video}
-			<span class="label source">{sourceLabel(video)}</span>
+			<span class="label source"><Icon name={theme!.icon} size={16} />{sourceLabel(video)}</span>
 			<button class="icon-button" type="button" aria-label="Mais ações" onclick={() => (more = video)}>
 				<Icon name="more" />
 			</button>
@@ -222,9 +232,9 @@
 				<button type="button" aria-label="Mover" onclick={() => (moving = video)}>
 					<Icon name="move" size={22} />
 				</button>
-				<button type="button" class="like" aria-label="Curtir" aria-pressed={video.favorite} onclick={toggleFavorite}>
-					<Icon name="heart" size={22} filled={video.favorite} />
-					<HeartBurst fire={likes} />
+				<button type="button" class="like" aria-label="Curtir" aria-pressed={video.favorite} data-glyph={morph ? theme!.key : 'heart'} onclick={toggleFavorite}>
+					<Icon name={morph ? theme!.icon : 'heart'} size={22} filled={video.favorite && !morph} />
+					<HeartBurst fire={likes} icon={theme!.icon} color={theme!.color} platform={theme!.key} />
 				</button>
 				<button type="button" aria-label="Próximo vídeo" onclick={next} disabled={all!.length < 2}>
 					<Icon name="next" size={22} />
@@ -317,10 +327,13 @@
 	}
 
 	.source {
-		color: var(--color-muted-on-dark);
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		color: var(--platform, var(--color-muted-on-dark));
 	}
 
-.stage,
+	.stage,
 	.missing {
 		flex: 1;
 		min-height: 0;
@@ -407,6 +420,10 @@
 		align-items: center;
 		justify-content: center;
 		transition: transform var(--motion-press);
+	}
+
+	.actions .like[data-glyph]:not([data-glyph='heart']) {
+		color: var(--platform);
 	}
 
 	.actions button:active:not(:disabled) {
