@@ -1,30 +1,33 @@
-# HANDOFF — 2026-11-22 — QA round 6 (owner iPhone screenshots)
+# HANDOFF — 2026-11-23 — QA round 7 (owner iPhone screenshots)
 
 ## Goal
-Owner QA round 6, four items. All built on branch `claude/r52-collection-sort` (PR #44 targets `main`).
+Owner QA round 7, three items, on branch `claude/r52-collection-sort` (PR #44 targets `main`).
+Owner approved triage and order on 2026-11-23: R7.1, R7.2, R7.3. Test first, one commit per logical change.
 
 ## State
-- R6.1 Organizar sheet orders Todos/Favoritos/Assistidos with the collections (`764e76d`): device-only slots in `octa.order.defaults`.
-- R6.2 selection mode: a card tap selects, never opens the video (`a754f5a`).
-- R6.3 "Mover para" shows every selected cover, smaller and fanned (`e11d703`).
-- R6.4 delete-video screen in a collection: safe areas. Owner scoped it to "Apagar este vídeo?" in `/c/[id]`.
-  - Root cause (proven by probe): the `rise` animation moved the whole orange `.danger` surface down 24px for 220ms, so the black page showed in the top safe area. html, body and meta theme-color were already orange.
-  - Fix: the surface is static; only its content rises (`DangerScreen.svelte`). Also covers `/v/[id]`, which uses the same component.
-  - Not done on purpose: recreating the `meta theme-color` (no evidence it was needed).
-- Merge order (owner): #39, #40, #41, part B, #44. The agent never merges. Branch is behind `main`; expect conflicts.
+- R7.1 Reordenar drag stalls mid-way: DONE `6354d49`. Rows keep their DOM place while dragging; others slide by transform.
+- R7.3a platform name shown once on the player screen: DONE `3ee355c`.
+- R7.2 native player ("Nativo híbrido", approved): DONE (commit after 3ee355c). Evidence: svelte-check 0, vitest 363, Go PASS, e2e cinema/resume/paste/health/sources/qa3 PASS on 3 projects. YouTube params + fullscreen under sandbox UNVERIFIED on iPhone.
+  - Remove our cover, big play and custom bar. YouTube: its own controls and fullscreen. TikTok/Instagram: pure embed. `<video controls>`.
+  - Keep resume ("Continuar assistindo") and "assistido" through the platform API where it exists.
+  - Consequence for the owner: the "Continuar de X" label on the cover goes away; resume still happens (YouTube `start`, native `currentTime`, TikTok seek).
+  - TikTok embed loses the hide-chrome params (Go `social.go`, web `parse.ts`, specs, docs change together).
+- R7.3b per-platform theme (player + library cards) and heart that morphs into the platform icon and rises: NOT STARTED, approved scope "Player + cartões".
+  - Conflict to report: per-platform colour/logo vs "black/white by default, colour only on action screens" (`docs/design/DESIGN.md`) and the approved visual direction of 2026-11-19. Owner's current instruction wins; keep simple icons, no brand impersonation.
+- Merge order (owner): #39, #40, #41, part B, #44. The agent never merges.
 
 ## Evidence
-- R6.4 red first: `qa6-danger.e2e.ts` "edge and corner" failed on phone, tablet, desktop; green after the fix (9/9).
-- vitest 363/363 PASS; svelte-check 0 errors PASS.
-- e2e qa5 + qa2 + qa3 + qa6-danger: 207 passed; `qa2.e2e.ts:68` failed under load, 3/3 PASS alone (known flake).
-- CI for `764e76d` (run 45077689774): web and api succeeded; e2e verdict not confirmed at last check.
+- R7.1 red first, then green (`qa7-drag.e2e.ts`). Root cause NOT proven on WebKit; Chromium could not reproduce the stall.
+- svelte-check 0 errors; e2e qa7-drag + organize + qa4/qa5: 81 passed; qa7-title + cinema + paste-to-player + sources: 91 passed, 2 skipped.
+- Full vitest and full e2e NOT RUN in this round.
 
 ## Next
-1. Watch CI for the R6.4 commit.
-2. Physical test on iPhone Safari PWA, iPad, desktop: items R6.1 to R6.4, plus earlier parts B and C.
+1. R7.2 tests red, then Cinema + adapters, then docs (DESIGN, STATUS, ADR-0004, PROVIDERS).
+2. R7.3b tests red, then theme + heart morph.
+3. Push, watch CI, physical test list.
 
 ## Risks / not proven
-- iPhone not run: R6.4 is proven in Chromium only; the 24px slide is a plausible cause of what the owner saw, not confirmed on device.
-- Touch drag (part B) and remembered sort (part C) only proven in code.
+- YouTube IFrame params (`controls`, `fs`, `playsinline`) known from memory, not re-read in the docs this round.
+- iPhone not run: R6.1-R6.4, R7.1 (drag), R7.2 (native fullscreen) need a physical test.
 - Open owner decisions: final icon, Render /healthz, home card "Continuar assistindo", "Correções da 2e-3".
 - Flaky tests: enrich, transitions:46, monitors:104, qa1:308, qa2:68.

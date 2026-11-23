@@ -1,7 +1,7 @@
-// Adapters between octa's one control bar and each real player (slice 3c). Every
-// adapter takes a callback for state and returns the same small remote control.
-// Official players only (ADR-0002): YouTube IFrame Player API, TikTok embed player v1
-// (postMessage), and the browser's own <video>.
+// Adapters that only LISTEN to each platform's own player (R7.2): the platform draws its
+// controls and its fullscreen; we read position and state to save "continuar assistindo"
+// and "assistido". Official players only (ADR-0002): YouTube IFrame Player API, TikTok
+// embed player v1 (postMessage), and the browser's own <video>.
 import { tiktokCommand, tiktokEvent, ytPhase, type Phase } from './core.ts';
 
 export interface MediaState {
@@ -84,7 +84,6 @@ export function youtubeRemote(host: HTMLElement, id: string, start: number, titl
 	let player: YTPlayer | null = null;
 	let gone = false;
 	let poll = 0;
-	let wantPlay = false; // set by the person's tap on the cover
 
 	const tick = () => {
 		if (player) emit({ time: player.getCurrentTime(), duration: player.getDuration() });
@@ -105,21 +104,25 @@ export function youtubeRemote(host: HTMLElement, id: string, start: number, titl
 			player = new YT.Player(slot, {
 				videoId: id,
 				host: 'https://www.youtube-nocookie.com',
-				playerVars: { controls: 0, playsinline: 1, rel: 0, disablekb: 1, fs: 0, iv_load_policy: 3, start },
+				// The platform's own bar and fullscreen (R7.2): nothing of ours on top.
+				playerVars: { controls: 1, playsinline: 1, rel: 0, fs: 1, iv_load_policy: 3, start },
 				events: {
 					onReady: (e: { target: HTMLElement & { getIframe?: () => HTMLIFrameElement } }) => {
 						if (gone) return;
 						const frame = (e.target as unknown as { getIframe?: () => HTMLIFrameElement }).getIframe?.();
 						frame?.setAttribute('title', title);
+						// The platform's own fullscreen must be allowed on the iframe it builds (R7.2).
+						const allow = frame?.getAttribute('allow') ?? '';
+						if (frame && !/\bfullscreen\b/.test(allow)) frame.setAttribute('allow', `${allow}${allow ? '; ' : ''}fullscreen`);
+						frame?.setAttribute('allowfullscreen', '');
 						emit({ ready: true, duration: player!.getDuration() });
-						if (wantPlay) player!.playVideo();
 					},
 					onStateChange: (e: { data: number }) => {
 						const phase = ytPhase(e.data);
+						tick(); // the time first, so a pause saves where it stopped
 						emit({ phase });
 						if (phase === 'playing') startPoll();
 						else stopPoll();
-						tick();
 					},
 					onError: () => emit({ failed: true })
 				}
@@ -128,14 +131,8 @@ export function youtubeRemote(host: HTMLElement, id: string, start: number, titl
 		.catch(() => !gone && emit({ failed: true }));
 
 	return {
-		play: () => {
-			wantPlay = true;
-			player?.playVideo();
-		},
-		pause: () => {
-			wantPlay = false;
-			player?.pauseVideo();
-		},
+		play: () => player?.playVideo(),
+		pause: () => player?.pauseVideo(),
 		seek: (s) => {
 			player?.seekTo(s, true);
 			emit({ time: s });
@@ -155,7 +152,6 @@ const TIKTOK_ORIGIN = 'https://www.tiktok.com';
 
 export function tiktokRemote(frame: HTMLIFrameElement, emit: Emit, start = 0): Remote {
 	let ready = false;
-	let wantPlay = false;
 	const send = (type: Parameters<typeof tiktokCommand>[0], value?: number) =>
 		frame.contentWindow?.postMessage(tiktokCommand(type, value), TIKTOK_ORIGIN);
 
@@ -168,20 +164,13 @@ export function tiktokRemote(frame: HTMLIFrameElement, emit: Emit, start = 0): R
 			ready = true;
 			emit({ ready: true });
 			if (start > 0) send('seekTo', start);
-			if (wantPlay) send('play');
 		} else if (ev.kind === 'phase') emit({ phase: ev.phase });
 		else emit({ time: ev.time, duration: ev.duration || undefined });
 	};
 	window.addEventListener('message', onMessage);
 	return {
-		play: () => {
-			wantPlay = true;
-			if (ready) send('play');
-		},
-		pause: () => {
-			wantPlay = false;
-			if (ready) send('pause');
-		},
+		play: () => ready && send('play'),
+		pause: () => ready && send('pause'),
 		seek: (s) => ready && send('seekTo', s),
 		destroy: () => window.removeEventListener('message', onMessage)
 	};

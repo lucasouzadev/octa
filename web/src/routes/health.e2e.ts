@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { mockNetwork, paste, patchVideo, readVideo, type NetworkOptions } from './e2e-helpers';
+import { fakeYouTube, mockNetwork, paste, patchVideo, readVideo, type NetworkOptions } from './e2e-helpers';
 
 // Slice 3b: link health on the device (SPEC §5).
 const HOUR = 3_600_000;
@@ -79,11 +79,12 @@ test.describe('link health (slice 3b)', () => {
 
 	test('the API being down never blocks playback or marks anything dead', async ({ page }) => {
 		await mockNetwork(page, { apiDown: true });
+		await fakeYouTube(page);
 		await paste(page, 'https://youtu.be/dQw4w9WgXcQ');
 		await expect(page).toHaveURL(/\/v\//);
 		await patchVideo(page, { checkedAt: ago(30) });
 		await page.goto(page.url());
-		await expect(page.getByRole('button', { name: /^Assistir “/ })).toBeVisible();
+		await expect(page.locator('.player iframe, .player video')).toHaveCount(1);
 		await expect(page.getByRole('alertdialog')).toHaveCount(0);
 		expect((await readVideo(page)).health).not.toBe('dead');
 	});

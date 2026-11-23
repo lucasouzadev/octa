@@ -31,7 +31,7 @@ test('Instagram reel: official embed, 9:16, source label, offline title', async 
 	await expect(page.getByText('Reel do Instagram').first()).toBeVisible();
 });
 
-test('TikTok video: player v1 without its chrome, 9:16, API title wins', async ({ page }) => {
+test('TikTok video: player v1, 9:16, API title wins', async ({ page }) => {
 	await net(page, () => ({
 		source: 'tiktok',
 		kind: 'short',
@@ -46,8 +46,7 @@ test('TikTok video: player v1 without its chrome, 9:16, API title wins', async (
 	}));
 	await paste(page, 'https://www.tiktok.com/@user.name/video/7234567890123456789?is_from_webapp=1');
 	await expect(page).toHaveURL(/\/v\//);
-	await page.getByRole('button', { name: /^Assistir/ }).click();
-	await expect(page.locator('.player iframe')).toHaveAttribute('src', 'https://www.tiktok.com/player/v1/7234567890123456789?controls=0&progress_bar=0&play_button=0&volume_control=0&fullscreen_button=0&timestamp=0&music_info=0&description=0&rel=0&native_context_menu=0');
+	await expect(page.locator('.player iframe')).toHaveAttribute('src', 'https://www.tiktok.com/player/v1/7234567890123456789');
 	await expect(page.getByText('Receita rápida').first()).toBeVisible();
 	await expect(page.getByText('TikTok').first()).toBeVisible();
 });
@@ -90,8 +89,7 @@ test('TikTok short link is expanded by the API; with the API down it says it cou
 	);
 	await paste(page, 'https://vm.tiktok.com/ZMabc123/');
 	await expect(page).toHaveURL(/\/v\//);
-	await page.getByRole('button', { name: /^Assistir/ }).click();
-	await expect(page.locator('.player iframe')).toHaveAttribute('src', 'https://www.tiktok.com/player/v1/7234567890123456789?controls=0&progress_bar=0&play_button=0&volume_control=0&fullscreen_button=0&timestamp=0&music_info=0&description=0&rel=0&native_context_menu=0');
+	await expect(page.locator('.player iframe')).toHaveAttribute('src', 'https://www.tiktok.com/player/v1/7234567890123456789');
 
 	const down = await page.context().newPage();
 	await net(down, () => null);

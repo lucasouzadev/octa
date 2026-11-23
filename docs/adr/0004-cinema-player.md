@@ -2,7 +2,10 @@
 
 Date: 2026-11-19 · Status: accepted (owner: "um cinema pessoal", option "Projetor oficial")
 
-## Decision
+## Amendment 2026-11-23 (R7.2, owner: "o player será mais 'nativo'")
+Supersedes the Decision below: no cover, no big play, no octa bar, no fullscreen of ours. The platform's own player and controls run the video (YouTube `controls=1`, `fs=1`; TikTok player v1 and Instagram embed plain; `<video controls>`). Adapters only listen (position, end) for resume and "assistido". Still official players only (ADR-0002). YouTube/TikTok fullscreen under the iframe `allow`/`sandbox` is not verified on a real iPhone.
+
+## Decision (original)
 The viewer shows one octa player look for every source: cover first, platform player loaded under the cover (amended 2026-11-19, slice 3d), platform chrome turned off where the platform documents a way (YouTube IFrame API `controls=0`, TikTok player v1 parameters), and one octa control bar below the picture driven through the official APIs (YouTube IFrame API, TikTok postMessage). Instagram keeps its embed. Direct files and HLS use a bare `<video>`.
 
 ## Why

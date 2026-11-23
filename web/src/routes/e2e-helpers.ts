@@ -92,6 +92,10 @@ window.YT = { Player: function (el, o) {
 	this.getDuration = function () { return d; };
 	this.destroy = function () { window.__yt.calls.push('destroy'); };
 	window.__yt.end = function () { o.events.onStateChange({ data: 0 }); };
+	// The platform's own controls drive the video now: a test imitates them.
+	// at(s) = the person dragged the platform's bar to s; state(n) = YT state (1 play, 2 pause).
+	window.__yt.at = function (s) { t = s; };
+	window.__yt.state = function (n) { o.events.onStateChange({ data: n }); };
 	setTimeout(function () { o.events.onReady({ target: self }); }, 30);
 } };
 window.onYouTubeIframeAPIReady && window.onYouTubeIframeAPIReady();`

@@ -3,6 +3,7 @@ import { fakeYouTube, mockNetwork, paste, fillField } from './e2e-helpers';
 
 test('smoke: paste a YouTube link, land on the player, see it in the library', async ({ page }) => {
 	await mockNetwork(page);
+	await fakeYouTube(page);
 	await page.goto('/');
 	await expect(page.getByRole('heading', { name: 'Nada aqui ainda.' })).toBeVisible();
 
@@ -13,9 +14,9 @@ test('smoke: paste a YouTube link, land on the player, see it in the library', a
 
 	await expect(page).toHaveURL(/\/v\/[0-9a-f-]{36}$/);
 	await expect(page.getByRole('heading', { name: 'Sessão ao vivo no terraço' })).toBeVisible();
-	// The cinema opens with the cover; YouTube's player loads only on the first tap.
-	await expect(page.locator('iframe')).toHaveCount(0);
-	await expect(page.getByRole('button', { name: 'Assistir “Sessão ao vivo no terraço”' })).toBeVisible();
+	// R7.2: the platform's own player is there at once, no cover of ours.
+	await expect(page.locator('.player iframe')).toHaveCount(1);
+	await expect(page.getByRole('button', { name: /^Assistir/ })).toHaveCount(0);
 
 	await page.getByRole('link', { name: 'Fechar' }).click();
 	await expect(page.getByRole('heading', { name: 'Todos' })).toBeVisible();
@@ -97,7 +98,6 @@ test('API down: the link is still saved and playable from the client parser', as
 	await paste(page, 'https://www.youtube.com/shorts/aBcDeFgHiJ0');
 	await expect(page).toHaveURL(/\/v\//);
 	await expect(page.getByRole('heading', { name: 'Vídeo do YouTube' })).toBeVisible();
-	await page.getByRole('button', { name: /^Assistir/ }).click();
 	await expect(page.locator('.player iframe')).toHaveAttribute('src', /embed\/aBcDeFgHiJ0/);
 });
 

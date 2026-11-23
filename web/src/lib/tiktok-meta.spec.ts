@@ -23,7 +23,7 @@ const ttMeta = (over: Partial<Meta> = {}): Meta => ({
 	kind: 'short',
 	id: '6718335390845095173',
 	canonicalUrl: URL_OK,
-	embed: { type: 'iframe', src: 'https://www.tiktok.com/player/v1/6718335390845095173?controls=0', aspect: '9:16' },
+	embed: { type: 'iframe', src: 'https://www.tiktok.com/player/v1/6718335390845095173', aspect: '9:16' },
 	title: 'Vídeo do TikTok',
 	durationSec: null,
 	health: 'alive',
