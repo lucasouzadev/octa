@@ -323,7 +323,6 @@
 {/if}
 
 <a class="origin" href={video.canonicalUrl} target="_blank" rel="noopener noreferrer" aria-label={`Abrir no ${provider}`}>
-	<span class="provider">{provider}</span>
 	<span class="link">{shortLink}</span>
 </a>
 </div>
@@ -604,15 +603,6 @@
 		text-decoration: none;
 		color: var(--color-muted-on-dark);
 		font-size: 13px;
-	}
-
-	.provider {
-		flex: none;
-		font-weight: 600;
-		letter-spacing: 0.08em;
-		text-transform: uppercase;
-		font-size: var(--size-label);
-		color: var(--color-text-dark);
 	}
 
 	.link {
