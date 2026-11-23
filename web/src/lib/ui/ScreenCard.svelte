@@ -5,6 +5,7 @@
 	// version can use the same numbers.
 	import type { Video } from '#lib/db/index.ts';
 	import { cardLabel } from '#lib/fan.ts';
+	import { platformOf } from '#lib/platform.ts';
 	import { formatDuration, screenTilt, statusOf } from '#lib/shelf.ts';
 	import { markSource } from '#lib/transition.ts';
 	import Icon from '#lib/ui/Icon.svelte';
@@ -38,6 +39,7 @@
 	const tilt = $derived(screenTilt(index));
 	const duration = $derived(formatDuration(video.durationSec));
 	const status = $derived(statusOf(video.health));
+	const plat = $derived(platformOf(video));
 </script>
 
 <a
@@ -51,7 +53,7 @@
 >
 	<span class="name">{video.title}</span>
 	<span class="meta">
-		<span class="src">{cardLabel(video)}</span>{#if duration}<span class="dur">· {duration}</span>{/if}
+		<span class="src" data-platform={plat.key} style={`color: ${plat.color}`}><Icon name={plat.icon} size={12} />{cardLabel(video)}</span>{#if duration}<span class="dur">· {duration}</span>{/if}
 		{#if status}<span class="status" class:dead={status.tone === 'dead'}>{status.label}</span>{/if}
 		{#if video.watched}<span class="status seen">Assistido</span>{/if}
 	</span>

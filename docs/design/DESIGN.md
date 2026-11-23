@@ -5,6 +5,7 @@ Status: approved 2026-11-19 (prototype in `README.md` here). Tokens: `tokens.jso
 ## 1. Principles
 1. **Content is the interface.** One focal element per screen; everything else steps back. Empty space is intentional, not unfinished.
 2. **Black and white by default.** Library is white; collection and player are black. **Color appears only on action screens** — a whole screen of one solid color, never accents sprinkled on chrome.
+   *Owner override, R7.3b (2026-11-23):* the player screen and library cards wear a small per-platform theme (own generic icon + accent colour on the source label) and the like heart turns into that icon and rises. Everything else stays B/W. Icons are our own simple drawings, not brand logos.
 3. **≤ 3 visible actions per screen** (one recorded exception: the viewer has four, Compartilhar · Mover · Curtir · Próximo, by owner order in QA round 1). Secondary actions live in gestures (swipe, long press, drag) and must also be reachable by keyboard/screen reader (a "Mais" menu in the a11y tree).
 4. **Same layout everywhere.** Phone, tablet and desktop share one composition; only scale and spacing grow. No separate "desktop version", no sidebars.
 5. **Objects, not widgets.** Videos behave like physical things (cards, paper, stacks) — that is where 3D lives. Controls stay flat and quiet.
@@ -71,7 +72,7 @@ Inline stroke SVG, 1.8px stroke, round caps, 20–22px in 44px targets. Set: sea
 Real `<button>`/`<a href>`; icon buttons have `aria-label`; favorite uses `aria-pressed`; iframes get `title` = video title; focus ring visible (2px, white on black / black on white, 2px offset); timeline is a horizontal list navigable by arrow keys; gestures always have a button equivalent.
 
 ## 10. Do not
-Gradient washes, glassmorphism on content, colored chrome on B&W screens, more than 3 primary actions, platform logos as decoration, copying Pocket Feeds (name, icon, copy, layout code) or any reference app's assets.
+Gradient washes, glassmorphism on content, colored chrome on B&W screens, more than 3 primary actions, platform logos as decoration (R7.3b exception: the generic per-platform icon + accent on source labels and the like animation), copying Pocket Feeds (name, icon, copy, layout code) or any reference app's assets.
 
 
 ## QA round 1 rules (owner, 2026-11-19)
@@ -101,7 +102,7 @@ Gradient washes, glassmorphism on content, colored chrome on B&W screens, more t
 ## Cinema player (slice 3c, owner 2026-11-19: "um cinema pessoal")
 
 - One look for every source. The viewer opens at once with the cover and our one big play button; the platform player (YouTube, TikTok) is already loaded under the cover, so the first tap starts the video with no wait. Instagram has no cover: its own player is the only one.
-- YouTube runs through the IFrame Player API with `controls=0` (nocookie host); TikTok through player v1 with its chrome hidden by its documented parameters. Our single control bar (play/pause, time, progress slider, duration, fullscreen) sits BELOW the picture, never over it: YouTube's Required Minimum Functionality forbids overlays on the embedded player, and its logo/title may still show at moments. That is accepted.
+- R7.2 (2026-11-23, owner): the player is the platform's OWN. No cover, no big play, no bar and no fullscreen of ours. YouTube runs through the IFrame Player API with `controls=1`, `fs=1` (nocookie host); TikTok through player v1 and Instagram through its embed, both plain; direct files use `<video controls>`. We only listen (position, end) to keep "continuar assistindo" and "assistido"; the original link sits below the picture.
 - Instagram has no control API: it keeps its own player and shows no bar of ours.
 - MP4/HLS: a plain `<video>` without browser controls, driven by the same bar.
 - Under the bar: the provider in caps and a pill with the truncated original link, which opens the platform in a new tab.

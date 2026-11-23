@@ -4,7 +4,7 @@
 
 	// Hearts rise from the button each time `fire` goes up. Decorative (aria-hidden) and
 	// skipped entirely under reduced motion. Each heart removes itself when it is done.
-	let { fire }: { fire: number } = $props();
+	let { fire, icon = 'heart', color, platform }: { fire: number; icon?: string; color?: string; platform?: string } = $props();
 
 	let hearts = $state<(Heart & { id: number })[]>([]);
 	let seen = 0;
@@ -22,13 +22,14 @@
 	});
 </script>
 
-<span class="hearts" aria-hidden="true">
+<span class="hearts" aria-hidden="true" style={color ? `--burst: ${color}` : undefined}>
 	{#each hearts as h (h.id)}
 		<span
 			class="heart"
+			data-platform={platform}
 			style={`--dx: ${h.dx}px; --rot: ${h.rotate}deg; --size: ${h.size}px; animation-duration: ${h.duration}ms; animation-delay: ${h.delay}ms`}
 		>
-			<Icon name="heart" size={h.size} filled />
+			<Icon name={icon as never} size={h.size} filled />
 		</span>
 	{/each}
 </span>
@@ -46,7 +47,7 @@
 		left: 50%;
 		top: 30%;
 		margin-left: calc(var(--size) / -2);
-		color: var(--color-action-alert);
+		color: var(--burst, var(--color-action-alert));
 		opacity: 0;
 		animation: rise ease-out forwards;
 	}

@@ -1,6 +1,6 @@
 <script lang="ts">
 	// Inline stroke icons (DESIGN §8). Decorative: the button carries the label.
-	type Name = 'search' | 'plus' | 'back' | 'close' | 'play' | 'next' | 'heart' | 'share' | 'link' | 'arrow' | 'move' | 'minus' | 'up' | 'paste' | 'folder-plus' | 'send' | 'more' | 'edit' | 'trash' | 'check' | 'eye' | 'pause' | 'expand' | 'tilt' | 'sort' | 'grip';
+	type Name = 'search' | 'plus' | 'back' | 'close' | 'play' | 'next' | 'heart' | 'share' | 'link' | 'arrow' | 'move' | 'minus' | 'up' | 'paste' | 'folder-plus' | 'send' | 'more' | 'edit' | 'trash' | 'check' | 'eye' | 'pause' | 'expand' | 'tilt' | 'sort' | 'grip' | 'p-youtube' | 'p-shorts' | 'p-tiktok' | 'p-instagram' | 'p-file';
 	let { name, size = 20, filled = false }: { name: Name; size?: number; filled?: boolean } = $props();
 </script>
 
@@ -70,6 +70,16 @@
 		<path d="M4.5 6h13M9 6V4.5h4V6M6 6l.8 11a1.5 1.5 0 0 0 1.5 1.4h5.4a1.5 1.5 0 0 0 1.5-1.4L16 6" /><path d="M9.2 9.5v5M12.8 9.5v5" />
 	{:else if name === 'check'}
 		<path d="M4.5 11.5l4.5 4.5 8.5-9" />
+	{:else if name === 'p-youtube'}
+		<rect x="2.5" y="5" width="17" height="12" rx="3.5" /><path d="M9.5 8.5l5 2.5-5 2.5z" fill="currentColor" stroke="none" />
+	{:else if name === 'p-shorts'}
+		<rect x="6" y="2.5" width="10" height="17" rx="3.5" /><path d="M9.8 8.6l3.4 2.4-3.4 2.4z" fill="currentColor" stroke="none" />
+	{:else if name === 'p-tiktok'}
+		<path d="M12 4v10.5a3 3 0 1 1-3-3" /><path d="M12 4c.4 2.4 2 3.8 4.5 4" />
+	{:else if name === 'p-instagram'}
+		<rect x="3.5" y="3.5" width="15" height="15" rx="4.5" /><circle cx="11" cy="11" r="3.4" /><circle cx="15.2" cy="6.8" r=".8" fill="currentColor" />
+	{:else if name === 'p-file'}
+		<rect x="3" y="5" width="16" height="12" rx="2" /><path d="M7 5v12M15 5v12M3 9h4M15 9h4M3 13h4M15 13h4" />
 	{:else if name === 'eye'}
 		<path d="M2.5 11S6 5.5 11 5.5 19.5 11 19.5 11 16 16.5 11 16.5 2.5 11 2.5 11z" /><circle cx="11" cy="11" r="2.5" />
 	{/if}

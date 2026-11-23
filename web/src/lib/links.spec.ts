@@ -139,7 +139,7 @@ describe('addLink: TikTok short links (only the API can follow the redirect)', (
 		expect(asked).toBe(1); // not asked a second time for metadata
 		expect(video.source).toBe('tiktok');
 		expect(video.canonicalUrl).toBe('https://www.tiktok.com/@u/video/7234567890123456789');
-		expect(video.embed.src).toMatch(/^https:\/\/www\.tiktok\.com\/player\/v1\/7234567890123456789\?controls=0/);
+		expect(video.embed.src).toMatch(/^https:\/\/www\.tiktok\.com\/player\/v1\/7234567890123456789$/);
 		expect(video.title).toBe('Receita rápida');
 	});
 

@@ -169,7 +169,16 @@
 	let pointerY = 0;
 	let frame = 0;
 
-	const rows = $derived(drag ? moveTo(draft, drag.from, drag.to) : draft);
+	/**
+	 * The rows keep their DOM order for the whole drag: moving the node under the finger ends the touch
+	 * on iOS. The others slide aside with a transform and the real order is written when the finger lifts.
+	 */
+	function shift(i: number, d: Drag): number {
+		if (i === d.from) return d.dy;
+		if (d.from < d.to && i > d.from && i <= d.to) return d.tops[i - 1] - d.tops[i];
+		if (d.from > d.to && i >= d.to && i < d.from) return d.tops[i + 1] - d.tops[i];
+		return 0;
+	}
 	const byKey = $derived(new Map((cards ?? []).map((c) => [c.key, c])));
 
 	function chooseMode(next: SortMode) {
@@ -218,7 +227,7 @@
 		const page = pointerY + scrollY;
 		const center = page - drag.grab + drag.height / 2;
 		const to = slotAt(center, drag.tops, drag.height);
-		drag = { ...drag, to, dy: page - drag.grab - drag.tops[to] };
+		drag = { ...drag, to, dy: page - drag.grab - drag.tops[drag.from] };
 	}
 
 	// While the finger is near an edge the page keeps scrolling under it.
@@ -334,14 +343,15 @@
 
 	{#if reordering}
 		<ul class="reorder" bind:this={listEl} aria-label="Coleções">
-			{#each rows as id (id)}
+			{#each draft as id, i (id)}
 				{@const c = byKey.get(id)}
 				{#if c}
 					<li
 						class="rrow"
 						class:lifted={drag?.id === id}
 						data-mine={id}
-						style:transform={drag?.id === id ? `translateY(${drag.dy}px)` : undefined}
+						class:slide={drag && drag.id !== id}
+						style:transform={drag ? `translateY(${shift(i, drag)}px)` : undefined}
 					>
 						<span class="rname">{c.name}</span>
 						<span class="rcount">{count(c.items.length)}</span>
@@ -524,6 +534,17 @@
 		background: var(--color-surface-light);
 	}
 
+
+	/* Only while dragging: on drop the order and the transforms change together, nothing may animate. */
+	.rrow.slide {
+		transition: transform 160ms ease;
+	}
+
+	@media (prefers-reduced-motion: reduce) {
+		.rrow.slide {
+			transition: none;
+		}
+	}
 
 	.rrow.lifted {
 		position: relative;

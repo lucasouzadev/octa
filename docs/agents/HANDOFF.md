@@ -1,30 +1,38 @@
-# HANDOFF — 2026-11-22 — QA round 6 (owner iPhone screenshots)
+# HANDOFF — 2026-11-23 — QA round 7 closed (owner iPhone screenshots)
 
 ## Goal
-Owner QA round 6, four items. All built on branch `claude/r52-collection-sort` (PR #44 targets `main`).
+Owner QA round 7 on branch `claude/r52-collection-sort`. Order approved 2026-11-23: R7.1, R7.2, R7.3.
 
 ## State
-- R6.1 Organizar sheet orders Todos/Favoritos/Assistidos with the collections (`764e76d`): device-only slots in `octa.order.defaults`.
-- R6.2 selection mode: a card tap selects, never opens the video (`a754f5a`).
-- R6.3 "Mover para" shows every selected cover, smaller and fanned (`e11d703`).
-- R6.4 delete-video screen in a collection: safe areas. Owner scoped it to "Apagar este vídeo?" in `/c/[id]`.
-  - Root cause (proven by probe): the `rise` animation moved the whole orange `.danger` surface down 24px for 220ms, so the black page showed in the top safe area. html, body and meta theme-color were already orange.
-  - Fix: the surface is static; only its content rises (`DangerScreen.svelte`). Also covers `/v/[id]`, which uses the same component.
-  - Not done on purpose: recreating the `meta theme-color` (no evidence it was needed).
-- Merge order (owner): #39, #40, #41, part B, #44. The agent never merges. Branch is behind `main`; expect conflicts.
+- R7.1 Reordenar drag stall: DONE `6354d49`.
+- R7.3a platform name shown once on the player screen: DONE `3ee355c`.
+- R7.2 native player (platform's own controls, nothing of ours on top): DONE `6c161e4`.
+- R7.3b per-platform theme (player + cards), heart morphs into platform icon and rises: DONE `db32fda`.
+  - Owner override of the B/W rule recorded in `docs/design/DESIGN.md` (§1 and the line-74 exception).
+  - `web/src/lib/platform.ts` maps source/kind to label, icon, colour.
+- All four commits are pushed to `origin/claude/r52-collection-sort`.
 
-## Evidence
-- R6.4 red first: `qa6-danger.e2e.ts` "edge and corner" failed on phone, tablet, desktop; green after the fix (9/9).
-- vitest 363/363 PASS; svelte-check 0 errors PASS.
-- e2e qa5 + qa2 + qa3 + qa6-danger: 207 passed; `qa2.e2e.ts:68` failed under load, 3/3 PASS alone (known flake).
-- CI for `764e76d` (run 45077689774): web and api succeeded; e2e verdict not confirmed at last check.
+## Repository state (checked 2026-11-23)
+- PR #44 is MERGED and CLOSED. It merged at `f8f5a36` (round 6), BEFORE the four R7 commits.
+- So R7.1/R7.2/R7.3a/R7.3b are NOT in `main` (`dacdd0f`). No open PR holds them. CI has not run on them (CI runs only on PRs to `main`).
+- Branch is 4 ahead, 9 behind `origin/main`. `git merge-tree` shows a clean merge.
+- Next step is the owner's: a new PR for these commits. The agent opens no PR unless asked.
 
-## Next
-1. Watch CI for the R6.4 commit.
-2. Physical test on iPhone Safari PWA, iPad, desktop: items R6.1 to R6.4, plus earlier parts B and C.
+## Evidence (at `db32fda`)
+- svelte-check 0 errors. Vitest 365/365 PASS.
+- e2e qa7-theme 15/15 PASS (phone/tablet/desktop); qa7-theme + qa7-title + cinema + sources + paste-to-player + qa3: 202 passed, 2 skipped.
+- Go tests PASS at `6c161e4`; not re-run after.
+- Full e2e NOT RUN. CI NOT RUN.
 
 ## Risks / not proven
-- iPhone not run: R6.4 is proven in Chromium only; the 24px slide is a plausible cause of what the owner saw, not confirmed on device.
-- Touch drag (part B) and remembered sort (part C) only proven in code.
-- Open owner decisions: final icon, Render /healthz, home card "Continuar assistindo", "Correções da 2e-3".
+- Physical, all NOT RUN: R6.1-R6.4, parts B/C, R7.1 drag on WebKit, R7.2 native fullscreen + YouTube params under sandbox, R7.3b theme and heart animation on iPhone Safari PWA, iPad, desktop.
+- R7.1 root cause not proven on WebKit; Chromium never reproduced the stall.
+- YouTube IFrame params (`controls`, `fs`, `playsinline`) known from memory, not re-read in the docs.
+- The "Continuar de X" cover label is gone; resume still works (YouTube `start`, native `currentTime`, TikTok seek).
+- `core.ts` helpers `clock`, `resumeLabel`, `staleEvent` are now unused by Cinema (dead code, not removed).
+- Platform colours/icons are generic glyphs, no brand logos.
 - Flaky tests: enrich, transitions:46, monitors:104, qa1:308, qa2:68.
+
+## Open owner decisions (non-blocking)
+- New PR for the four R7 commits (rebase/merge onto `main` first).
+- Final icon, Render /healthz, home card "Continuar assistindo", "Correções da 2e-3".
